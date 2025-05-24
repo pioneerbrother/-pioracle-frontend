@@ -1,0 +1,49 @@
+/* pioracle/src/components/common/LoadingSpinner.css */
+
+.loading-spinner-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    min-height: 150px; /* Ensure it has some height */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1); /* Light grey border */
+    border-left-color: #007bff; /* Blue spinner color - adjust to your theme */
+    border-radius: 50%;
+    width: 40px; /* Default size */
+    height: 40px; /* Default size */
+    animation: spin 1s linear infinite;
+}
+
+.loading-spinner-overlay.small .spinner {
+    width: 24px;
+    height: 24px;
+    border-width: 3px;
+}
+
+.loading-spinner-overlay.large .spinner {
+    width: 60px;
+    height: 60px;
+    border-width: 5px;
+}
+
+.loading-message {
+    margin-top: 15px;
+    font-size: 1em;
+    color: #333; /* Adjust to your theme */
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

@@ -1,0 +1,63 @@
+/* src/components/predictions/MarketOddsDisplay.css */
+.market-odds-display-container {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+}
+
+.market-odds-display-container h3 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.odds-grid {
+    display: flex;
+    justify-content: space-around; /* Distributes space between items */
+    gap: 15px; /* Adds space between the two odds options */
+}
+
+.odds-option {
+    flex-basis: 45%; /* Each option takes up roughly half the space */
+    padding: 15px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    text-align: center;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.odds-option.option-yes {
+    /* border-left: 3px solid #27ae60; /* Green accent for YES */
+}
+
+.odds-option.option-no {
+    /* border-left: 3px solid #c0392b; /* Red accent for NO */
+}
+
+.odds-label {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-size: 1em;
+    min-height: 40px; /* To align labels if one wraps */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.odds-value {
+    font-size: 1.4em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #2980b9; /* Blue for odds */
+}
+
+.pool-size {
+    font-size: 0.9em;
+    color: #555;
+}

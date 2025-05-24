@@ -1,0 +1,45 @@
+/* src/components/predictions/MarketCard.css */
+.market-card {
+    list-style: none;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+    overflow: hidden; /* Ensures content respects border-radius */
+}
+
+.market-card:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+}
+
+.market-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    padding: 20px;
+}
+
+.market-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Align items to the start for multi-line titles */
+    margin-bottom: 12px;
+}
+
+.market-card-title {
+    font-size: 1.2em;
+    margin: 0;
+    color: #2c3e50;
+    line-height: 1.4;
+    margin-right: 10px; /* Space between title and badge */
+}
+
+.market-card-body .market-card-expiry {
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 8px;
+}
+
+/* Add more styling as needed for V2 features like volume/odds */

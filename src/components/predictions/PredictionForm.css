@@ -1,0 +1,70 @@
+/* pioracle/src/components/predictions/PredictionForm.css */
+.prediction-form {
+    border: 1px solid #ccc;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+.prediction-form h4 {
+    margin-top: 0;
+    text-align: center;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.form-group input[type="text"],
+.form-group input[type="number"] { /* If you revert to number type */
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+.side-selection fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+.side-selection legend {
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 1em;
+}
+.radio-label {
+    display: block;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.radio-label input[type="radio"] {
+    margin-right: 8px;
+}
+.radio-label.active {
+    background-color: #e7f3ff;
+    border-color: #90cdf4;
+}
+.place-bet-btn { /* Assuming .button.primary from a global style */
+    display: block;
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1em;
+    /* Add your button styling here if not global */
+}
+.form-message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+.form-message.type-info { background-color: #e0f0ff; color: #31708f; border: 1px solid #bce8f1;}
+.form-message.type-success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
+.form-message.type-error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }

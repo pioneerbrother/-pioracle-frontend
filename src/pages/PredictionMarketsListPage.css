@@ -1,0 +1,50 @@
+/* src/pages/PredictionMarketsListPage.css */
+.prediction-markets-list-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.list-page-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.list-page-header h1 {
+    font-size: 2.5em;
+    color: #333;
+    margin: 0;
+}
+
+.loading-inline {
+    text-align: center;
+    padding: 10px;
+    color: #555;
+    font-style: italic;
+}
+
+.markets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Responsive grid */
+    gap: 25px;
+    padding: 0;
+    margin: 0;
+}
+
+.info-message {
+    text-align: center;
+    font-size: 1.1em;
+    color: #777;
+    padding: 40px 20px;
+}
+
+/* Styles for LoadingSpinner and ErrorMessage would be in their own CSS or a common one */
+.loading-container.page-centered, .error-container.page-centered {
+    /* Basic centering for full page messages */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px; 
+    text-align: center;
+}
