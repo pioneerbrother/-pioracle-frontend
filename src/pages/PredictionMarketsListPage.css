@@ -48,3 +48,102 @@
     min-height: 300px; 
     text-align: center;
 }
+/* src/pages/PredictionMarketsListPage.css */
+/* ... (your existing styles for .prediction-markets-list-page, .list-page-header, .markets-grid etc.) ... */
+
+.intro-section {
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 30px;
+    background-color: #f8f9fa; /* Light background for intro */
+    border-radius: 8px;
+}
+
+.intro-section h2 {
+    font-size: 1.8em;
+    margin-bottom: 15px;
+    color: #343a40;
+}
+
+.intro-section p {
+    font-size: 1.1em;
+    color: #495057;
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+.intro-section .cta-buttons {
+    margin-top: 20px;
+}
+
+.cta-buttons .button { /* Assuming you have a general .button class */
+    margin: 0 10px;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+}
+.cta-buttons .button-secondary { /* Example secondary button style */
+    background-color: #6c757d;
+    color: white;
+}
+.cta-buttons .button-secondary:hover {
+    background-color: #5a6268;
+}
+
+
+.markets-section-title {
+    text-align: center;
+    font-size: 1.8em;
+    color: #333;
+    margin-top: 40px; /* Space above markets list */
+    margin-bottom: 20px;
+}
+
+.how-to-guide-section {
+    margin-top: 50px;
+    padding: 20px;
+    border-top: 1px solid #eee;
+}
+
+.how-to-guide-section h2 {
+    text-align: center;
+    font-size: 2em;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.guide-step {
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+}
+
+.guide-step h3 {
+    font-size: 1.4em;
+    color: #007bff; /* Highlight step titles */
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.guide-step p, .guide-step ul {
+    font-size: 1em;
+    line-height: 1.7;
+    color: #495057;
+}
+
+.guide-step ul {
+    list-style-position: inside;
+    padding-left: 0;
+}
+.guide-step li {
+    margin-bottom: 8px;
+}
+.guide-step code {
+    background-color: #e9ecef;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+}
