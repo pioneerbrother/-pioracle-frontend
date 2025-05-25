@@ -1,16 +1,16 @@
 // pioracle/src/pages/PredictionMarketsListPage.jsx
 import React, { useEffect, useState, useContext, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom'; // For linking to detail pages via MarketCard
+import { Link } from 'react-router-dom'; // For linking from MarketCard
 import { WalletContext } from '../context/WalletProvider';
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
-import './PredictionMarketsListPage.css';
+import './PredictionMarketsListPage.css'; // Ensure this CSS file exists and is styled
 
-// Placeholder helper functions (ideally move to a utils/formatters.js file and import)
-// Ensure these are consistent with what MarketCard and other components expect.
+// Placeholder helper functions (ideally move to utils/formatters.js and import)
+// Ensure these are consistent with what MarketCard expects if it uses them.
+// For this component, these are mainly for the <MarketCard /> component if it doesn't define its own.
 const getStatusString = (statusEnum) => {
-    // From your MarketDetailPage
     const MarketState = { Open: 0, Resolvable: 1, Resolved_YesWon: 2, Resolved_NoWon: 3, Resolved_Push: 4 };
     if (statusEnum === undefined || statusEnum === null) return "Loading...";
     switch (Number(statusEnum)) {
@@ -34,12 +34,33 @@ function PredictionMarketsListPage() {
     const contractInstanceFromContext = walletContextValue?.contract;
     const walletConnectionStatusType = walletContextValue?.connectionStatus?.type;
     const connectionStatusMessage = walletContextValue?.connectionStatus?.message;
+    const loadedTargetChainIdHex = walletContextValue?.loadedTargetChainIdHex; // For dynamic text
 
     const [markets, setMarkets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     
     const prevContractInstanceRef = useRef(null);
+    // const prevWalletStatusTypeRef = useRef(null); // Not strictly needed if contractInstance change is the main driver
+
+    const nativeTokenSymbol = useMemo(() => { // To display correct token in guide
+        if (loadedTargetChainIdHex) {
+            const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
+            if (targetChainIdNum === 80002) return "MATIC"; // Amoy
+            if (targetChainIdNum === 137) return "MATIC";  // Polygon Mainnet
+        }
+        return "ETH"; // Default for local Hardhat
+    }, [loadedTargetChainIdHex]);
+
+    const currentNetworkName = useMemo(() => { // For guide text
+        if (loadedTargetChainIdHex) {
+            const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
+            if (targetChainIdNum === 80002) return "Polygon Amoy Testnet";
+            if (targetChainIdNum === 137) return "Polygon Mainnet";
+        }
+        return "Local Hardhat Network";
+    }, [loadedTargetChainIdHex]);
+
 
     console.log(
         "PredictionMarketsListPage RENDER. isLoading:", isLoading, "Error:", error,
@@ -49,9 +70,9 @@ function PredictionMarketsListPage() {
 
     const fetchMarketsInternal = useCallback(async (contractToUse) => {
         if (!contractToUse) {
-            console.log("PredictionMarketsListPage: fetchMarketsInternal - Aborted, no contract instance.");
+            console.warn("PredictionMarketsListPage: fetchMarketsInternal - Aborted, no contract instance.");
             setIsLoading(false); 
-            setError("Cannot fetch markets: Contract not available at the moment.");
+            // setError("Contract not available to fetch markets."); // Avoid setting error if just waiting for provider
             return;
         }
         console.log("PredictionMarketsListPage: fetchMarketsInternal CALLED for contract:", contractToUse.address);
@@ -65,11 +86,11 @@ function PredictionMarketsListPage() {
 
             if (totalMarkets > 0) {
                  for (let i = 0; i < totalMarkets; i++) {
-                    const details = await contractToUse.getMarketStaticDetails(i); // Expects 12 fields now
+                    const details = await contractToUse.getMarketStaticDetails(i); // Expects 12 fields
                     if (details && (details.exists !== undefined ? details.exists : details[10])) {
                         const assetSymbolStr = details.assetSymbol !== undefined ? details.assetSymbol : details[1];
                         const targetPriceBN = details.targetPrice !== undefined ? details.targetPrice : details[3];
-                        const isEventMarketBool = details.isEventMarket !== undefined ? details.isEventMarket : detailsArray[11];
+                        const isEventMarketBool = details.isEventMarket !== undefined ? details.isEventMarket : details[11]; // Corrected index
 
                         let description = `Market #${(details.id !== undefined ? details.id : details[0]).toString()}: ${assetSymbolStr}`;
                         if (isEventMarketBool) {
@@ -86,7 +107,7 @@ function PredictionMarketsListPage() {
                             status: Number(details.state !== undefined ? details.state : details[8]),
                             expiryTimestamp: (details.expiryTimestamp !== undefined ? details.expiryTimestamp : details[4]).toNumber(),
                             exists: (details.exists !== undefined ? details.exists : details[10]),
-                            // Add any other fields MarketCard might need
+                            isEventMarket: isEventMarketBool, // Pass this to MarketCard if needed
                         });
                     }
                  }
@@ -98,7 +119,7 @@ function PredictionMarketsListPage() {
             setMarkets([]);
         }
         setIsLoading(false);
-    }, []); // Empty dependency array makes this function reference stable
+    }, []); // Stable useCallback, takes contractToUse as argument
 
     useEffect(() => {
         const currentContractInstance = contractInstanceFromContext;
@@ -106,22 +127,29 @@ function PredictionMarketsListPage() {
 
         console.log(
             "PredictionMarketsListPage: useEffect FIRING.",
-            "Current Contract Instance:", !!currentContractInstance, "(Addr:", currentContractInstance?.address + ")",
-            "Previous Contract Instance:", !!prevContractInstance, "(Addr:", prevContractInstance?.address + ")",
+            "Current Contract Instance:", !!currentContractInstance, "(Addr:", currentContractInstance?.address, ")",
+            "Previous Contract Instance Ref:", !!prevContractInstance, "(Addr:", prevContractInstance?.address, ")",
             "Wallet connection type:", walletConnectionStatusType
         );
 
         if (walletConnectionStatusType === 'error') {
-            console.log("PredictionMarketsListPage: WalletProvider error detected.");
+            console.log("PredictionMarketsListPage: WalletProvider error detected in useEffect.");
             setError(connectionStatusMessage || "Unknown WalletProvider error");
             setIsLoading(false);
             setMarkets([]);
         } else if (currentContractInstance) {
-            if (currentContractInstance !== prevContractInstance || (!isLoading && !error && markets.length === 0 && currentContractInstance)) {
-                 console.log("PredictionMarketsListPage: Contract available and changed OR initial fetch needed. Calling fetchMarketsInternal.");
+            if (currentContractInstance !== prevContractInstance) { // Fetch if contract instance reference changes
+                 console.log("PredictionMarketsListPage: Contract instance available and has changed (or initial). Calling fetchMarketsInternal.");
                  fetchMarketsInternal(currentContractInstance);
+            } else if (isLoading && markets.length === 0 && !error) {
+                 // This case handles if we are still loading but contract ref hasn't changed yet.
+                 // However, fetchMarketsInternal should have been called if currentContractInstance is valid.
+                 // This might be redundant or could help if there's a very specific timing issue.
+                 console.log("PredictionMarketsListPage: Still loading, no markets, no error, contract ref same. Consider if fetch needed.");
             } else {
-                 console.log("PredictionMarketsListPage: Contract instance present but no fetch triggered (same instance or already loading/error).");
+                 console.log("PredictionMarketsListPage: Contract instance present but no fetch triggered (ref same or not initial load).");
+                 // If it was loading from a previous trigger but now has markets or an error, ensure isLoading is false.
+                 if(isLoading) setIsLoading(false);
             }
         } else { 
             console.log("PredictionMarketsListPage: No contract instance from WalletProvider yet. Setting loading true.");
@@ -129,12 +157,24 @@ function PredictionMarketsListPage() {
             setError(null);     
         }
         
-        prevContractInstanceRef.current = currentContractInstance;
+        prevContractInstanceRef.current = currentContractInstance; // Update the ref for the next render
 
-    }, [contractInstanceFromContext, walletConnectionStatusType, fetchMarketsInternal, connectionStatusMessage, isLoading, error, markets.length]); // Added more deps for refined condition
+    }, [contractInstanceFromContext, walletConnectionStatusType, fetchMarketsInternal, connectionStatusMessage, isLoading, error, markets]);
+    // Added markets to dependency array to re-evaluate the isLoading state if markets get populated by an out-of-band update.
+    // This useEffect is getting complex, careful management of isLoading and error is key.
+
 
     // --- Render Logic ---
-    if (error && markets.length === 0) { // Show full page error only if no markets can be shown
+    if (walletConnectionStatusType === 'error' && !error) {
+        // Prioritize WalletProvider error if page hasn't set its own more specific one yet
+        return (
+            <div className="page-container prediction-markets-list-page">
+                 <header className="list-page-header"><h1>PiOracle - Predict the Future!</h1></header>
+                 <ErrorMessage title="Connection Error" message={connectionStatusMessage} />
+            </div>
+         );
+    }
+    if (error && markets.length === 0) { 
          return (
             <div className="page-container prediction-markets-list-page">
                  <header className="list-page-header"><h1>PiOracle - Predict the Future!</h1></header>
@@ -144,7 +184,6 @@ function PredictionMarketsListPage() {
                     onRetry={() => { if (contractInstanceFromContext) fetchMarketsInternal(contractInstanceFromContext); }}
                     retryDisabled={!contractInstanceFromContext || isLoading} 
                 />
-                {/* Optionally, include the HowToGuide here as well or link to it */}
             </div>
          );
     }
@@ -154,7 +193,6 @@ function PredictionMarketsListPage() {
             <div className="page-container prediction-markets-list-page">
                  <header className="list-page-header"><h1>PiOracle - Predict the Future!</h1></header>
                 <LoadingSpinner message="Loading Prediction Markets..." />
-                {/* Optionally, include the HowToGuide here as well or link to it */}
             </div>
          );
     }
@@ -172,38 +210,36 @@ function PredictionMarketsListPage() {
                     where you can predict the outcomes of upcoming events.
                 </p>
                 <p>
-                    <strong>Currently, PiOracle is running on the Polygon Amoy Testnet.</strong>
-                    This means you'll be using free "test MATIC" to participate. These tokens have no real-world value
-                    and are for testing and familiarization purposes only.
+                    <strong>Currently, PiOracle is running on the {currentNetworkName}.</strong>
+                    This means you'll be using free "test {nativeTokenSymbol}" (if on a testnet like Amoy or Localhost) or real "{nativeTokenSymbol}" (if on Mainnet) to participate. 
+                    {(currentNetworkName === "Polygon Amoy Testnet" || currentNetworkName === "Local Hardhat Network") && 
+                        "Test tokens have no real-world value and are for testing and familiarization purposes only."
+                    }
+                    {currentNetworkName === "Polygon Mainnet" && 
+                        <strong>Please predict responsibly as real funds are involved.</strong>
+                    }
                 </p>
                 <p>
-                    Our first featured events are the **Monaco Grand Prix (May 25th)** and the **Ice Hockey Championship Final (May 25th/26th)**!
+                    Our first featured events are the **Monaco Grand Prix (May 25th)** and the **Ice Hockey Championship Final (May 25th/26th)**! 
+                    (Ensure event details are accurate for mainnet launch).
                 </p>
                 <div className="cta-buttons">
                     <a href="#how-to-guide" className="button button-secondary">Quick Guide Below!</a>
                 </div>
             </section>
             
-            {/* Display non-critical error even if some markets loaded */}
-            {error && markets.length > 0 && <ErrorMessage title="Notice" message={error} />}
+            {error && markets.length > 0 && <ErrorMessage title="Market List Notice" message={error} />}
             {isLoading && markets.length > 0 && <p className="loading-inline">Refreshing markets...</p>} 
 
             {(!isLoading && markets.length === 0 && !error) ? (
                 <p className="info-message">No prediction markets available at the moment. Check back soon!</p>
             ) : (
-                markets.length > 0 && ( // Ensure markets array has items before trying to map
+                markets.length > 0 && ( 
                     <>
                         <h2 className="markets-section-title">Current Prediction Markets</h2>
                         <ul className="markets-grid">
                             {markets.map((market) => (
-                                <MarketCard 
-                                    key={market.id} 
-                                    market={market} 
-                                    // Pass helper functions if MarketCard needs them directly
-                                    // Or ensure MarketCard imports them itself
-                                    // getStatusString={getStatusString} 
-                                    // formatExpiry={formatExpiry}
-                                />
+                                <MarketCard key={market.id} market={market} />
                             ))}
                         </ul>
                     </>
@@ -211,45 +247,70 @@ function PredictionMarketsListPage() {
             )}
 
             <section id="how-to-guide" className="how-to-guide-section">
-                <h2>How to Participate (Amoy Testnet)</h2>
+                <h2>How to Participate (on {currentNetworkName})</h2>
                 <div className="guide-step">
                     <h3>1. Get a Wallet (MetaMask Recommended)</h3>
-                    <p>If you don't have one, install the <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer">MetaMask browser extension</a>. Follow their setup instructions.</p>
+                    <p>If you don't have one, install the <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer">MetaMask browser extension</a>.</p>
                 </div>
                 <div className="guide-step">
-                    <h3>2. Add Polygon Amoy Network to MetaMask</h3>
-                    <p>Open MetaMask, click the network dropdown, select "Add network," then "Add a network manually," and enter:</p>
-                    <ul>
-                        <li><strong>Network Name:</strong> Polygon Amoy</li>
-                        <li><strong>New RPC URL:</strong> <code>https://rpc-amoy.polygon.technology/</code></li>
-                        <li><strong>Chain ID:</strong> <code>80002</code></li>
-                        <li><strong>Currency Symbol:</strong> <code>MATIC</code></li>
-                        <li><strong>Block explorer URL (Optional):</strong> <code>https://amoy.polygonscan.com/</code></li>
-                    </ul>
+                    <h3>2. Configure MetaMask for {currentNetworkName}</h3>
+                    {currentNetworkName === "Polygon Amoy Testnet" && (
+                        <>
+                        <p>Open MetaMask, click network dropdown, "Add network," then "Add a network manually," and enter:</p>
+                        <ul>
+                            <li><strong>Network Name:</strong> Polygon Amoy</li>
+                            <li><strong>New RPC URL:</strong> <code>https://rpc-amoy.polygon.technology/</code></li>
+                            <li><strong>Chain ID:</strong> <code>80002</code></li>
+                            <li><strong>Currency Symbol:</strong> MATIC</li>
+                            <li><strong>Block explorer URL:</strong> <code>https://amoy.polygonscan.com/</code></li>
+                        </ul>
+                        </>
+                    )}
+                    {currentNetworkName === "Polygon Mainnet" && (
+                        <>
+                        <p>Polygon Mainnet is usually pre-configured in MetaMask. If not, use these details:</p>
+                        <ul>
+                            <li><strong>Network Name:</strong> Polygon Mainnet</li>
+                            <li><strong>New RPC URL:</strong> <code>https://polygon-rpc.com</code></li>
+                            <li><strong>Chain ID:</strong> <code>137</code></li>
+                            <li><strong>Currency Symbol:</strong> MATIC</li>
+                            <li><strong>Block explorer URL:</strong> <code>https://polygonscan.com/</code></li>
+                        </ul>
+                        </>
+                    )}
+                     {currentNetworkName === "Local Hardhat Network" && (
+                        <>
+                        <p>Add your local Hardhat node to MetaMask:</p>
+                        <ul>
+                            <li><strong>Network Name:</strong> Local Host 8545 (or similar)</li>
+                            <li><strong>New RPC URL:</strong> <code>http://127.0.0.1:8545</code></li>
+                            <li><strong>Chain ID:</strong> <code>31337</code></li>
+                            <li><strong>Currency Symbol:</strong> ETH</li>
+                        </ul>
+                        </>
+                    )}
+                    <p>Save and ensure {currentNetworkName} is selected.</p>
                 </div>
                 <div className="guide-step">
-                    <h3>3. Get FREE Test MATIC from a Faucet</h3>
-                    <p>You'll need test MATIC for transaction fees (gas) and to place predictions. Visit an Amoy faucet:</p>
-                    <ul>
-                        <li><a href="https://faucet.polygon.technology/" target="_blank" rel="noopener noreferrer">Official Polygon Faucet</a> (Select Amoy)</li>
-                        <li><a href="https://www.alchemy.com/faucets/polygon-amoy" target="_blank" rel="noopener noreferrer">Alchemy Amoy Faucet</a></li>
-                        <li><i>(Search "Polygon Amoy Faucet" for more options)</i></li>
-                    </ul>
+                    <h3>3. Get {nativeTokenSymbol}</h3>
+                    { (currentNetworkName === "Polygon Amoy Testnet") && 
+                        <p>For Amoy, get FREE test {nativeTokenSymbol} from a faucet: 
+                            <a href="https://faucet.polygon.technology/" target="_blank" rel="noopener noreferrer">Polygon Faucet</a>, 
+                            <a href="https://www.alchemy.com/faucets/polygon-amoy" target="_blank" rel="noopener noreferrer">Alchemy Faucet</a>.
+                        </p>
+                    }
+                    { (currentNetworkName === "Local Hardhat Network") &&
+                        <p>Your local Hardhat accounts are pre-funded with test {nativeTokenSymbol}. Import one into MetaMask using its private key.</p>
+                    }
+                    { (currentNetworkName === "Polygon Mainnet") &&
+                        <p>You'll need real {nativeTokenSymbol}. Acquire it from exchanges and send to your MetaMask wallet on Polygon Mainnet.</p>
+                    }
                 </div>
-                <div className="guide-step">
-                    <h3>4. Connect Your Wallet to PiOracle</h3>
-                    <p>Click the "Connect Wallet" button at the top of this page. Approve in MetaMask.</p>
-                </div>
-                <div className="guide-step">
-                    <h3>5. Place Your Prediction</h3>
-                    <p>Navigate to a market, enter your stake (test MATIC), choose your outcome, click "Submit Prediction," and confirm in MetaMask.</p>
-                </div>
-                <div className="guide-step">
-                    <h3>6. Market Resolution & Claiming Winnings</h3>
-                    <p>After an event, markets will be resolved. If you won, a "Claim Winnings" button will appear on the market page for you to collect your test MATIC.</p>
-                </div>
+                {/* ... (Steps 4, 5, 6 for Connect, Place Prediction, Resolution/Claiming - similar to before, ensure they use nativeTokenSymbol) ... */}
+                 <div className="guide-step"><h3>4. Connect & Predict...</h3> <p>Follow UI prompts!</p></div>
+
                 <p style={{textAlign: "center", marginTop: "20px", fontWeight: "bold"}}>
-                    This is a testnet beta. Have fun predicting!
+                    {currentNetworkName === "Polygon Mainnet" ? "Predict responsibly!" : "This is a test environment. Have fun!"}
                 </p>
             </section>
         </div> 

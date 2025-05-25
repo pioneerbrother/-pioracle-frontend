@@ -1,12 +1,13 @@
 // pioracle/src/components/predictions/MarketOddsDisplay.jsx
-import React, { useContext, useMemo } from 'react'; // Added useMemo and useContext
+import React, { useContext, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from '../../context/WalletProvider'; // Import WalletContext
-import './MarketOddsDisplay.css';
+import { WalletContext } from '../../context/WalletProvider'; // Ensure this path is correct
+import './MarketOddsDisplay.css'; // Ensure this CSS file exists and is styled
 
-const DISPLAY_DECIMALS = 3; // How many decimal places to show for amounts
-const TOKEN_DECIMALS_NATIVE = 18; // ETH and MATIC both use 18 decimals
+const DISPLAY_DECIMALS = 3; 
+const TOKEN_DECIMALS_NATIVE = 18; // For ETH and MATIC
 
+// Helper function to format token amounts
 const formatTokenAmount = (
     weiString,
     tokenDecimalsParam = TOKEN_DECIMALS_NATIVE,
@@ -18,7 +19,10 @@ const formatTokenAmount = (
     }
     try {
         const formattedAmount = ethers.utils.formatUnits(weiString, tokenDecimalsParam);
-        return `${parseFloat(formattedAmount).toFixed(displayDecimalsParam)} ${tokenSymbolParam}`;
+        // Ensure it's a number before toFixed, then format
+        const numAmount = parseFloat(formattedAmount);
+        if (isNaN(numAmount)) return `Invalid Amount ${tokenSymbolParam}`;
+        return `${numAmount.toFixed(displayDecimalsParam)} ${tokenSymbolParam}`;
     } catch (e) {
         console.error("MarketOddsDisplay: Error formatting wei string:", weiString, e);
         return `Error ${tokenSymbolParam}`;
@@ -28,51 +32,61 @@ const formatTokenAmount = (
 function MarketOddsDisplay({ totalStakedYesNet, totalStakedNoNet, marketTarget, assetSymbol }) {
     const { loadedTargetChainIdHex } = useContext(WalletContext) || {};
 
+    // Determine current native token symbol based on network
     const currentNativeTokenSymbol = useMemo(() => {
         if (loadedTargetChainIdHex) {
             const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
-            if (targetChainIdNum === 80002) { // Amoy
-                return "MATIC"; // Or "POL"
-            }
-            // Add other mainnet checks here if needed:
-            // else if (targetChainIdNum === 137) { // Polygon Mainnet
-            //     return "MATIC";
-            // } else if (targetChainIdNum === 1) { // Ethereum Mainnet
-            //     return "ETH";
-            // }
+            if (targetChainIdNum === 80002) return "MATIC"; // Amoy
+            if (targetChainIdNum === 137) return "MATIC";  // Polygon Mainnet
         }
-        return "ETH"; // Default for local Hardhat (chainId 31337) or unknown
+        return "ETH"; // Default for local Hardhat (31337) or unknown
     }, [loadedTargetChainIdHex]);
 
-    const sA_bn = totalStakedYesNet ? ethers.BigNumber.from(totalStakedYesNet) : ethers.constants.Zero;
-    const sB_bn = totalStakedNoNet ? ethers.BigNumber.from(totalStakedNoNet) : ethers.constants.Zero;
+    // Convert string props from marketDetails (which are in wei) to BigNumbers
+    const sYes_bn = totalStakedYesNet ? ethers.BigNumber.from(totalStakedYesNet) : ethers.constants.Zero;
+    const sNo_bn = totalStakedNoNet ? ethers.BigNumber.from(totalStakedNoNet) : ethers.constants.Zero;
 
     let oddsForYes = "N/A";
     let oddsForNo = "N/A";
-    const isFirstBet = sA_bn.isZero() && sB_bn.isZero();
+
+    const isFirstBet = sYes_bn.isZero() && sNo_bn.isZero();
 
     if (isFirstBet) {
-        oddsForYes = "First Bet?";
-        oddsForNo = "First Bet?";
+        oddsForYes = "First Bet?"; // Or "1.00x" if you prefer to show initial odds
+        oddsForNo = "First Bet?";  // Or "1.00x"
     } else {
-        const totalPool_bn = sA_bn.add(sB_bn);
-        const scale = ethers.utils.parseUnits("1", TOKEN_DECIMALS_NATIVE);
-        if (!sA_bn.isZero() && !totalPool_bn.isZero()) {
-            const oddsRaw_bn = totalPool_bn.mul(scale).div(sA_bn);
-            oddsForYes = `${parseFloat(ethers.utils.formatUnits(oddsRaw_bn, TOKEN_DECIMALS_NATIVE)).toFixed(2)}x`;
-        } else if (!sA_bn.isZero() && sB_bn.isZero()) {
-            oddsForYes = "1.00x";
+        const totalPool_bn = sYes_bn.add(sNo_bn);
+        // Use a scaling factor for precision in division with BigNumbers
+        const scale = ethers.utils.parseUnits("1", TOKEN_DECIMALS_NATIVE); // e.g., 10^18 
+
+        if (!sYes_bn.isZero() && !totalPool_bn.isZero()) {
+            // Odds for YES = Total Pool / Stake on YES
+            // This calculates how many times your stake you get back (including your stake)
+            const oddsYesRaw_bn = totalPool_bn.mul(scale).div(sYes_bn);
+            oddsForYes = `${parseFloat(ethers.utils.formatUnits(oddsYesRaw_bn, TOKEN_DECIMALS_NATIVE)).toFixed(2)}x`;
+        } else if (!sYes_bn.isZero() && sNo_bn.isZero()) {
+            oddsForYes = "1.00x"; // Only money on this side, get stake back if wins
         }
-        if (!sB_bn.isZero() && !totalPool_bn.isZero()) {
-            const oddsRaw_bn = totalPool_bn.mul(scale).div(sB_bn);
-            oddsForNo = `${parseFloat(ethers.utils.formatUnits(oddsRaw_bn, TOKEN_DECIMALS_NATIVE)).toFixed(2)}x`;
-        } else if (!sB_bn.isZero() && sA_bn.isZero()) {
-            oddsForNo = "1.00x";
+        // If sYes_bn is zero but sNo_bn is not, oddsForYes remains "N/A" or could be "∞x" (harder to display)
+
+        if (!sNo_bn.isZero() && !totalPool_bn.isZero()) {
+            // Odds for NO = Total Pool / Stake on NO
+            const oddsNoRaw_bn = totalPool_bn.mul(scale).div(sNo_bn);
+            oddsForNo = `${parseFloat(ethers.utils.formatUnits(oddsNoRaw_bn, TOKEN_DECIMALS_NATIVE)).toFixed(2)}x`;
+        } else if (!sNo_bn.isZero() && sYes_bn.isZero()) {
+            oddsForNo = "1.00x"; // Only money on this side
         }
+        // If sNo_bn is zero but sYes_bn is not, oddsForNo remains "N/A"
     }
 
-    const yesLabel = assetSymbol?.includes("PRICE_ABOVE") ? `Price ≥ ${marketTarget}` : "Outcome: YES";
-    const noLabel = assetSymbol?.includes("PRICE_ABOVE") ? `Price < ${marketTarget?.replace('$', '')}` : "Outcome: NO";
+    // Determine labels for the outcomes based on assetSymbol and marketTarget
+    // These should match the labels used in PredictionForm for consistency
+    const yesLabel = assetSymbol?.includes("PRICE_ABOVE") 
+        ? `Price ≥ ${marketTarget}` 
+        : "Outcome: YES";
+    const noLabel = assetSymbol?.includes("PRICE_ABOVE") 
+        ? `Price < ${marketTarget?.replace('$', '')}` // Simple $ removal, might need refinement
+        : "Outcome: NO";
 
     return (
         <div className="market-odds-display-container">
@@ -96,4 +110,5 @@ function MarketOddsDisplay({ totalStakedYesNet, totalStakedNoNet, marketTarget, 
         </div>
     );
 }
+
 export default MarketOddsDisplay;

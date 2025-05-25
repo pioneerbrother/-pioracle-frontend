@@ -27,9 +27,11 @@ function PredictionForm({ marketId, onBetPlaced, marketTarget, assetSymbol }) {
     const nativeTokenSymbol = useMemo(() => {
         if (loadedTargetChainIdHex) {
             const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
-            if (targetChainIdNum === 80002) { // Amoy Chain ID
-                return "MATIC"; // Or "POL"
-            }
+            if (targetChainIdNum === 80002) return "MATIC";
+                   if (targetChainIdNum === 137) return "MATIC";  // Polygon Mainnet
+        
+              
+            
             // Add other network checks if needed (e.g., mainnets)
         }
         return "ETH"; // Default for local Hardhat or unknown
