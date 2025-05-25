@@ -1,5 +1,5 @@
 // pioracle/src/pages/PredictionMarketsListPage.jsx
-import React, { useEffect, useState, useContext, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useContext, useCallback, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom'; // For linking from MarketCard
 import { WalletContext } from '../context/WalletProvider';
 import MarketCard from '../components/predictions/MarketCard';
