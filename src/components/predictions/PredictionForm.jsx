@@ -18,6 +18,18 @@ function PredictionForm({ marketId, onBetPlaced, marketTarget, assetSymbol }) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "info" });
 
+    const PredictionForm = () => {
+  const [messageForForm, setMessageForForm] = useState(''); // Add this line
+  
+  const placeBet = async () => {
+    try {
+      // ... betting logic ...
+    } catch (error) {
+      setMessageForForm("Bet failed: " + error.message); // Now this will work
+    }
+  };
+};
+
     // Top-level log to see when form renders and with what props
     useEffect(() => {
         console.log("PredictionForm RENDERED or Props Updated. Props:", { marketId, marketTarget, assetSymbol });
