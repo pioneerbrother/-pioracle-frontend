@@ -1,8 +1,8 @@
 // pioracle/src/components/predictions/PredictionForm.jsx
-import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react'; // Added useCallback
+import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from '../../context/WalletProvider'; // Ensure path is correct
-import './PredictionForm.css'; // Create this CSS file for styling
+import { WalletContext } from '../../context/WalletProvider';
+import './PredictionForm.css';
 
 // Props: marketId, onBetPlaced (callback), marketTarget (for labels), assetSymbol (for labels)
 function PredictionForm({ marketId, onBetPlaced, marketTarget, assetSymbol }) {
@@ -11,24 +11,12 @@ function PredictionForm({ marketId, onBetPlaced, marketTarget, assetSymbol }) {
         walletAddress, 
         contract: predictionContractInstance,
         loadedTargetChainIdHex 
-    } = useContext(WalletContext) || {}; // Default to empty object
+    } = useContext(WalletContext) || {};
     
     const [stakeAmount, setStakeAmount] = useState("");
-    const [predictsYes, setPredictsYes] = useState(true); // true for YES/Above, false for NO/Below
+    const [predictsYes, setPredictsYes] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "info" });
-
-    const PredictionForm = () => {
-  const [messageForForm, setMessageForForm] = useState(''); // Add this line
-  
-  const placeBet = async () => {
-    try {
-      // ... betting logic ...
-    } catch (error) {
-      setMessageForForm("Bet failed: " + error.message); // Now this will work
-    }
-  };
-};
 
     // Top-level log to see when form renders and with what props
     useEffect(() => {
@@ -40,11 +28,8 @@ function PredictionForm({ marketId, onBetPlaced, marketTarget, assetSymbol }) {
         if (loadedTargetChainIdHex) {
             const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
             if (targetChainIdNum === 80002) return "MATIC";
-                   if (targetChainIdNum === 137) return "MATIC";  // Polygon Mainnet
-        
-              
-            
-            // Add other network checks if needed (e.g., mainnets)
+            if (targetChainIdNum === 137) return "MATIC"; // Polygon Mainnet
+            // Add other network checks if needed
         }
         return "ETH"; // Default for local Hardhat or unknown
     }, [loadedTargetChainIdHex]);
@@ -61,14 +46,15 @@ function PredictionForm({ marketId, onBetPlaced, marketTarget, assetSymbol }) {
     useEffect(() => {
         setMessage({ text: "", type: "info" });
         setStakeAmount("");
-        setPredictsYes(true); // Default to YES outcome when market changes
+        setPredictsYes(true);
         console.log(`PredictionForm: Cleared form for new Market ID: ${marketId}`);
     }, [marketId]);
 
     // Define handleSubmitBet using useCallback
     const handleSubmitBet = useCallback(async (e) => {
         e.preventDefault();
-        setMessage({ text: "", type: "info" }); // Clear previous message immediately
+        // Explicitly use setMessage to avoid any reference errors
+        setMessage({ text: "", type: "info" });
 
         if (!signer || !walletAddress || !predictionContractInstance) {
             setMessage({ text: "Wallet not properly connected or contract not ready. Please connect and try again.", type: "error" });
@@ -115,22 +101,27 @@ function PredictionForm({ marketId, onBetPlaced, marketTarget, assetSymbol }) {
         } catch (err) {
             console.error("PredictionForm: Error placing bet:", err);
             let readableError = "Transaction failed. Check console for details.";
-            if (err.code === 4001) { readableError = "Transaction rejected by user."; }
-            else if (err.reason) { readableError = err.reason; } 
-            else if (err.data?.message) { readableError = err.data.message; } 
-            else if (err.message) { readableError = err.message; }
+            if (err.code === 4001) {
+                readableError = "Transaction rejected by user.";
+            } else if (err.reason) {
+                readableError = err.reason;
+            } else if (err.data?.message) {
+                readableError = err.data.message;
+            } else if (err.message) {
+                readableError = err.message;
+            }
             if (typeof readableError === 'string' && readableError.toLowerCase().includes("insufficient funds")) {
                 readableError = `Insufficient funds for transaction (stake + gas in ${nativeTokenSymbol}).`;
             }
+            // Use setMessage explicitly to avoid any reference errors
             setMessage({ text: `Prediction failed: ${readableError}`, type: "error" });
         }
         setIsProcessing(false);
     }, [
         signer, walletAddress, predictionContractInstance, marketId, 
         stakeAmount, predictsYes, nativeTokenSymbol, onBetPlaced 
-    ]); // Dependencies for handleSubmitBet
+    ]);
 
-    // This is the main JSX return for the form
     return (
         <form onSubmit={handleSubmitBet} className="prediction-form">
             <h4>Make Your Prediction</h4>
