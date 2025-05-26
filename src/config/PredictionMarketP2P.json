@@ -1,5 +1,5 @@
 {
-  "address": "0x50dE150182959C5B809343454cB315Ef485dAA3B",
+  "address": "0xE4c0c04B532FD54571EB18792F377DaC2eB1AD66",
   "abi": [
     {
       "type": "constructor",
@@ -609,8 +609,5 @@
       "type": "receive",
       "stateMutability": "payable"
     }
-  ],
-  "deployer": "0xcC853a5bc3f4129353DB6d5f92C781010167D288",
-  "network": "polygon_mainnet",
-  "deployedAt": "2025-05-25T13:02:33.283Z"
+  ]
 }
