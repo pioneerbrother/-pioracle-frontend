@@ -147,3 +147,10 @@
     border-radius: 3px;
     font-family: monospace;
 }
+/* In your App.css or PredictionMarketsListPage.css */
+.markets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive columns */
+    gap: 20px; /* Space between cards */
+    padding: 20px 0;
+}

@@ -87,29 +87,21 @@ function PredictionMarketsListPage() {
             if (totalMarkets > 0) {
                  for (let i = 0; i < totalMarkets; i++) {
                     const details = await contractToUse.getMarketStaticDetails(i); // Expects 12 fields
-                    if (details && (details.exists !== undefined ? details.exists : details[10])) {
-                        const assetSymbolStr = details.assetSymbol !== undefined ? details.assetSymbol : details[1];
-                        const targetPriceBN = details.targetPrice !== undefined ? details.targetPrice : details[3];
-                        const isEventMarketBool = details.isEventMarket !== undefined ? details.isEventMarket : details[11]; // Corrected index
-
-                        let description = `Market #${(details.id !== undefined ? details.id : details[0]).toString()}: ${assetSymbolStr}`;
-                        if (isEventMarketBool) {
-                            description = `${assetSymbolStr.replace(/_/g, " ")}: Will the outcome be YES?`;
-                        } else if (assetSymbolStr.startsWith("BTC/USD_PRICE_ABOVE")) {
-                            const price = parseInt(targetPriceBN.toString()) / 100;
-                            const datePart = assetSymbolStr.split("_").pop();
-                            description = `Will ${assetSymbolStr.split("_PRICE_ABOVE_")[0].replace('BTC/USD', 'BTC/USD')} be ≥ $${price.toFixed(2)} on ${datePart}?`;
-                        }
-                        fetchedMarketsLocal.push({ 
-                            id: (details.id !== undefined ? details.id : details[0]).toString(), 
-                            description: description,
-                            assetSymbol: assetSymbolStr,
-                            status: Number(details.state !== undefined ? details.state : details[8]),
-                            expiryTimestamp: (details.expiryTimestamp !== undefined ? details.expiryTimestamp : details[4]).toNumber(),
-                            exists: (details.exists !== undefined ? details.exists : details[10]),
-                            isEventMarket: isEventMarketBool, // Pass this to MarketCard if needed
-                        });
-                    }
+                  // ... inside fetchMarketsInternal loop in PredictionMarketsListPage.jsx
+if (details && (details.exists !== undefined ? details.exists : details[10])) {
+    fetchedMarketsLocal.push({
+        id: (details.id !== undefined ? details.id : details[0]).toString(),
+        assetSymbol: details.assetSymbol !== undefined ? details.assetSymbol : details[1],
+        targetPrice: (details.targetPrice !== undefined ? details.targetPrice : details[3]).toString(),
+        priceFeedAddress: details.priceFeedAddress !== undefined ? details.priceFeedAddress : details[2], // Pass if needed by utils
+        isEventMarket: details.isEventMarket !== undefined ? details.isEventMarket : details[11],
+        expiryTimestamp: (details.expiryTimestamp !== undefined ? details.expiryTimestamp : details[4]).toNumber(),
+        state: Number(details.state !== undefined ? details.state : details[8]),
+        exists: (details.exists !== undefined ? details.exists : details[10]),
+        // Pass other raw fields if getMarketDisplayProperties needs them
+    });
+}
+// ...
                  }
             }
             setMarkets(fetchedMarketsLocal);

@@ -1,45 +1,95 @@
 /* src/components/predictions/MarketCard.css */
 .market-card {
-    list-style: none;
+    list-style: none; /* If used as <li> */
     background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    border: 1px solid #e0e0e0; /* Softer border */
+    border-radius: 10px; /* Slightly more rounded */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
-    overflow: hidden; /* Ensures content respects border-radius */
+    overflow: hidden;
 }
 
 .market-card:hover {
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12); /* Slightly stronger hover shadow */
+    transform: translateY(-4px); /* Slightly more lift */
 }
 
 .market-card-link {
     display: block;
     text-decoration: none;
     color: inherit;
-    padding: 20px;
+    padding: 16px; /* Consistent padding */
 }
 
 .market-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start; /* Align items to the start for multi-line titles */
-    margin-bottom: 12px;
+    align-items: flex-start; /* Good for multi-line title alignment */
+    margin-bottom: 10px;
 }
 
 .market-card-title {
-    font-size: 1.2em;
+    font-size: 1.15em; /* Adjusted slightly */
+    font-weight: 600;
+    color: #2c3e50; /* Your dark blue/grey - good choice */
+    line-height: 1.35;
     margin: 0;
-    color: #2c3e50;
-    line-height: 1.4;
-    margin-right: 10px; /* Space between title and badge */
+    margin-right: 10px; /* Space for status badge */
+    flex-grow: 1; /* Allow title to take space if badge is small */
 }
 
-.market-card-body .market-card-expiry {
-    font-size: 0.9em;
-    color: #555;
+/* --- STATUS BADGE STYLING (Crucial Addition) --- */
+.market-card-status {
+    font-size: 0.75em;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 16px; /* Pill shape */
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0; /* Prevent badge from shrinking too much */
+}
+
+/* Specific status colors - adapt class names if your getMarketDisplayProperties generates different ones */
+.status-open { background-color: #c6f6d5; color: #2f855a; border: 1px solid #9ae6b4;}
+.status-resolving { background-color: #feebc8; color: #975a16; border: 1px solid #fbd38d;}
+.status-resolved-yes-won,
+.status-resolved-no-won,
+.status-push, /* Assuming 'Push' is from getStatusString */
+.status-resolved-early-yes-won /* If you add early resolution */ {
+    background-color: #e2e8f0; color: #4a5568; border: 1px solid #cbd5e0;
+}
+/* Consider more distinct colors for different resolved states if desired */
+.status-resolved-yes-won { background-color: #c6f6d5; color: #2f855a; border: 1px solid #9ae6b4;} /* Example: Green for win */
+.status-resolved-no-won { background-color: #fed7d7; color: #c53030; border: 1px solid #fc8181;} /* Example: Red for loss */
+.status-push { background-color: #e2e8f0; color: #4a5568; border: 1px solid #cbd5e0;}
+
+/* --- END STATUS BADGE --- */
+
+
+.market-card-body {
+    margin-bottom: 10px;
+    padding-top: 5px; /* Small space if header is distinct */
+}
+
+.market-card-target-price { /* Styling for the explicit target price */
+    font-size: 1em;
+    color: #333;
     margin-bottom: 8px;
 }
 
-/* Add more styling as needed for V2 features like volume/odds */
+.market-card-target-price strong {
+    font-weight: 700;
+    color: #1a202c;
+}
+
+.market-card-footer {
+    font-size: 0.8em;
+    color: #718096; /* Slightly desaturated grey */
+    border-top: 1px solid #edf2f7; /* Lighter border */
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.market-card-expiry { /* Now inside the footer */
+    margin: 0;
+}
