@@ -1,191 +1,192 @@
 // pioracle/src/components/predictions/PredictionForm.jsx
-import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from '../../context/WalletProvider';
-import './PredictionForm.css';
+import { WalletContext } from '../../context/WalletProvider'; // Adjust path as needed
+import { useBettingEligibility } from '../../hooks/useBettingEligibility'; // Import the hook
+import './PredictionForm.css'; // Make sure you have this CSS file for styling
 
-// Props: marketId, onBetPlaced (callback), marketTarget (for labels), assetSymbol (for labels)
-function PredictionForm({ marketId, onBetPlaced, marketTarget, assetSymbol }) {
-    const { 
-        signer, 
-        walletAddress, 
-        contract: predictionContractInstance,
-        loadedTargetChainIdHex 
-    } = useContext(WalletContext) || {};
-    
-    const [stakeAmount, setStakeAmount] = useState("");
-    const [predictsYes, setPredictsYes] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [message, setMessage] = useState({ text: "", type: "info" });
-
-    // Top-level log to see when form renders and with what props
-    useEffect(() => {
-        console.log("PredictionForm RENDERED or Props Updated. Props:", { marketId, marketTarget, assetSymbol });
-    }, [marketId, marketTarget, assetSymbol]);
-
-    // Determine native token symbol based on network from context
-    const nativeTokenSymbol = useMemo(() => {
-        if (loadedTargetChainIdHex) {
-            const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
-            if (targetChainIdNum === 80002) return "MATIC";
-            if (targetChainIdNum === 137) return "MATIC"; // Polygon Mainnet
-            // Add other network checks if needed
-        }
-        return "ETH"; // Default for local Hardhat or unknown
-    }, [loadedTargetChainIdHex]);
-
-    // Determine labels for the betting options dynamically
-    const outcomeYesLabel = assetSymbol?.includes("PRICE_ABOVE") 
-        ? `Predict: Price ≥ ${marketTarget}` 
-        : "Predict: YES";
-    const outcomeNoLabel = assetSymbol?.includes("PRICE_ABOVE") 
-        ? `Predict: Price < ${marketTarget?.replace('$', '')}` 
-        : "Predict: NO";
-
-    // Effect to clear form message and reset stake/selection when marketId changes
-    useEffect(() => {
-        setMessage({ text: "", type: "info" });
-        setStakeAmount("");
-        setPredictsYes(true);
-        console.log(`PredictionForm: Cleared form for new Market ID: ${marketId}`);
-    }, [marketId]);
-
-    // Define handleSubmitBet using useCallback
-    const handleSubmitBet = useCallback(async (e) => {
-        e.preventDefault();
-        // Explicitly use setMessage to avoid any reference errors
-        setMessage({ text: "", type: "info" });
-
-        if (!signer || !walletAddress || !predictionContractInstance) {
-            setMessage({ text: "Wallet not properly connected or contract not ready. Please connect and try again.", type: "error" });
-            return;
-        }
-        if (!stakeAmount || isNaN(parseFloat(stakeAmount)) || parseFloat(stakeAmount) <= 0) {
-            setMessage({ text: `Please enter a valid stake amount > 0 ${nativeTokenSymbol}.`, type: "error" });
-            return;
-        }
-
-        setIsProcessing(true);
-        setMessage({ text: "Preparing your prediction transaction...", type: "info" });
-
+// Helper function to get native token symbol (can be moved to utils or WalletContext)
+const getNativeTokenSymbol = (chainIdHex) => {
+    if (chainIdHex) {
+        // Ensure chainIdHex is treated as hex if it's not already prefixed
+        const hexChainId = chainIdHex.startsWith('0x') ? chainIdHex : `0x${chainIdHex}`;
         try {
-            const stakeInWei = ethers.utils.parseUnits(stakeAmount, 18); 
-            console.log(
-                `PredictionForm: Placing prediction on Market ID: ${marketId}, PredictsYes: ${predictsYes}, Amount (${nativeTokenSymbol}): ${stakeAmount}, Wei: ${stakeInWei.toString()}`
-            );
-
-            const contractWithSigner = predictionContractInstance.connect(signer);
-            const tx = await contractWithSigner.placeBet(
-                marketId,       
-                predictsYes,    
-                { value: stakeInWei } 
-            );
-            
-            console.log("PredictionForm: Bet Transaction FULL HASH:", tx.hash); 
-            setMessage({ text: `Transaction Sent (TxHash: ${tx.hash.substring(0, 10)}...). Waiting for confirmation...`, type: "info" });
-            
-            const receipt = await tx.wait(1);
-            console.log("PredictionForm: Transaction Confirmed. Receipt:", receipt);
-            
-            if (receipt.status === 1) {
-                setMessage({ text: `Prediction placed successfully! (Tx: ${receipt.transactionHash.substring(0,10)}...)`, type: "success" });
-                setStakeAmount(""); 
-                if (typeof onBetPlaced === 'function') {
-                    onBetPlaced(); 
-                }
-            } else {
-                setMessage({ text: `Prediction transaction failed on-chain. Tx: ${receipt.transactionHash.substring(0,10)}...`, type: "error" });
-                console.error("PredictionForm: Transaction reverted on-chain. Receipt:", receipt);
-            }
-
-        } catch (err) {
-            console.error("PredictionForm: Error placing bet:", err);
-            let readableError = "Transaction failed. Check console for details.";
-            if (err.code === 4001) {
-                readableError = "Transaction rejected by user.";
-            } else if (err.reason) {
-                readableError = err.reason;
-            } else if (err.data?.message) {
-                readableError = err.data.message;
-            } else if (err.message) {
-                readableError = err.message;
-            }
-            if (typeof readableError === 'string' && readableError.toLowerCase().includes("insufficient funds")) {
-                readableError = `Insufficient funds for transaction (stake + gas in ${nativeTokenSymbol}).`;
-            }
-            // Use setMessage explicitly to avoid any reference errors
-            setMessage({ text: `Prediction failed: ${readableError}`, type: "error" });
+            const targetChainIdNum = parseInt(hexChainId, 16);
+            if (targetChainIdNum === 80002 || targetChainIdNum === 137) return "MATIC"; // Amoy or Polygon Mainnet
+            if (targetChainIdNum === 1 || targetChainIdNum === 5 || targetChainIdNum === 11155111) return "ETH"; // Mainnet, Goerli, Sepolia
+            // Add more mappings as needed
+        } catch (e) {
+            console.warn("Could not parse chainIdHex for native token symbol:", chainIdHex, e);
         }
-        setIsProcessing(false);
-    }, [
-        signer, walletAddress, predictionContractInstance, marketId, 
-        stakeAmount, predictsYes, nativeTokenSymbol, onBetPlaced 
-    ]);
+    }
+    return "ETH"; // Default
+};
+
+
+function PredictionForm({
+    marketId,
+    onBetPlaced,         // Callback function after a bet is successfully placed
+    marketTarget,        // Descriptive target string (e.g., "$111,000") for display in labels
+    assetSymbol,         // Asset symbol string (e.g., "BTCUSD_PRICE_ABOVE...")
+    currentOraclePriceData, // Prop: { price: BigNumber, decimals: number } | null
+    isFetchingOraclePrice,  // Prop: boolean, true if live oracle price is being fetched
+    marketTargetPrice,      // Prop: The contract's targetPrice (BigNumber or string convertible to BigNumber)
+    isEventMarket           // Prop: boolean, true if it's an event market
+}) {
+    const { walletAddress, signer, contract, loadedTargetChainIdHex } = useContext(WalletContext);
+    const [stakeAmount, setStakeAmount] = useState('');
+    const [predictedOutcome, setPredictedOutcome] = useState('YES'); // Default prediction
+    const [isLoading, setIsLoading] = useState(false); // For bet submission loading state
+    const [message, setMessage] = useState({ text: '', type: '' }); // For displaying messages to the user
+
+    const nativeToken = useMemo(() => getNativeTokenSymbol(loadedTargetChainIdHex), [loadedTargetChainIdHex]);
+
+    // Use the custom hook to determine bet eligibility
+    const {
+        disableYes,
+        disableNo,
+        reason: eligibilityReason,
+        livePriceFormatted: formattedLiveOraclePrice,
+        isCheckApplicable
+    } = useBettingEligibility(isEventMarket, currentOraclePriceData, marketTargetPrice);
+
+    // Effect to auto-adjust predicted outcome if the default choice becomes disabled
+    useEffect(() => {
+        if (predictedOutcome === 'YES' && disableYes && !disableNo) {
+            setPredictedOutcome('NO');
+        } else if (predictedOutcome === 'NO' && disableNo && !disableYes) {
+            setPredictedOutcome('YES');
+        }
+        // If both are disabled (e.g. due to an error in the hook), no change.
+    }, [disableYes, disableNo, predictedOutcome]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setMessage({ text: '', type: '' }); // Clear previous messages
+
+        if (!walletAddress || !signer || !contract) {
+            setMessage({ text: 'Please connect your wallet to place a bet.', type: 'error' });
+            return;
+        }
+        if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
+            setMessage({ text: 'Please enter a valid stake amount.', type: 'error' });
+            return;
+        }
+        // Double-check if the selected outcome is disabled before submitting
+        if ((predictedOutcome === 'YES' && disableYes) || (predictedOutcome === 'NO' && disableNo)) {
+             setMessage({ text: `Betting on '${predictedOutcome}' is currently not allowed. ${eligibilityReason}`, type: 'error' });
+             return;
+        }
+
+        setIsLoading(true);
+        try {
+            const amountInWei = ethers.utils.parseUnits(stakeAmount, 18); // Assuming native token (MATIC/ETH) has 18 decimals
+            const predictYesBool = predictedOutcome === 'YES';
+
+            const contractWithSigner = contract.connect(signer);
+            const tx = await contractWithSigner.placeBet(marketId, predictYesBool, { value: amountInWei });
+
+            setMessage({ text: `Bet submission transaction sent: ${tx.hash.substring(0,10)}... Waiting for confirmation.`, type: 'info' });
+            await tx.wait(1); // Wait for 1 block confirmation
+
+            setMessage({ text: 'Bet placed successfully!', type: 'success' });
+            setStakeAmount(''); // Clear stake amount input
+            if (onBetPlaced) {
+                onBetPlaced(); // Call parent callback (e.g., to refresh market data)
+            }
+        } catch (err) {
+            console.error("Error placing bet:", err);
+            // Try to get a more specific error message
+            const reason = err.reason || err.data?.message || err.message || "Failed to place bet due to an unknown error.";
+            setMessage({ text: `Error: ${reason}`, type: 'error' });
+        }
+        setIsLoading(false);
+    };
+
+    // Determine if the form can be submitted based on current selections and eligibility
+    const canSubmitForm = !isLoading && stakeAmount && parseFloat(stakeAmount) > 0 &&
+                          !((predictedOutcome === 'YES' && disableYes) || (predictedOutcome === 'NO' && disableNo));
 
     return (
-        <form onSubmit={handleSubmitBet} className="prediction-form">
-            <h4>Make Your Prediction</h4>
-            <div className="form-group amount-input">
-                <label htmlFor={`stakeAmount-${marketId}`}>Your Stake (Native Token e.g. {nativeTokenSymbol})</label>
-                <input
-                    id={`stakeAmount-${marketId}`}
-                    type="text" 
-                    value={stakeAmount}
-                    onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || /^(0|[1-9]\d*)(\.\d*)?$/.test(val) || /^(0\.)$/.test(val) ) { 
-                           setStakeAmount(val);
-                        }
-                    }}
-                    placeholder="e.g., 0.1"
-                    disabled={isProcessing}
-                    required 
-                    autoComplete="off"
-                />
-            </div>
+        <div className="prediction-form-container">
+            <h3>Make Your Prediction</h3>
+            <form onSubmit={handleSubmit} className="prediction-form">
+                {/* Stake Amount Input */}
+                <div className="form-group">
+                    <label htmlFor={`stakeAmount-${marketId}`}>Your Stake ({nativeToken})</label>
+                    <input
+                        type="number"
+                        id={`stakeAmount-${marketId}`}
+                        value={stakeAmount}
+                        onChange={(e) => setStakeAmount(e.target.value)}
+                        placeholder="e.g., 0.1"
+                        min="0" // HTML5 validation for non-negative
+                        step="any" // Allows decimal input
+                        required
+                        className="form-control"
+                    />
+                </div>
 
-            <div className="form-group side-selection">
-                <fieldset>
-                    <legend>Choose Your Predicted Outcome:</legend>
-                    <label className={`radio-label ${predictsYes === true ? 'active' : ''}`}>
-                        <input
-                            type="radio"
-                            name={`side-selection-${marketId}`}
-                            value="true" 
-                            checked={predictsYes === true}
-                            onChange={() => setPredictsYes(true)}
-                            disabled={isProcessing}
-                        />
-                        {outcomeYesLabel}
-                    </label>
-                    <label className={`radio-label ${predictsYes === false ? 'active' : ''}`}>
-                        <input
-                            type="radio"
-                            name={`side-selection-${marketId}`}
-                            value="false" 
-                            checked={predictsYes === false}
-                            onChange={() => setPredictsYes(false)}
-                            disabled={isProcessing}
-                        />
-                        {outcomeNoLabel}
-                    </label>
-                </fieldset>
-            </div>
-            
-            <button 
-                type="submit" 
-                className="button primary place-bet-btn"
-                disabled={isProcessing || !stakeAmount || isNaN(parseFloat(stakeAmount)) || parseFloat(stakeAmount) <= 0}
-            >
-                {isProcessing ? "Submitting..." : `Submit Prediction`}
-            </button>
+                {/* Outcome Selection */}
+                <div className="form-group">
+                    <label>Choose Your Predicted Outcome:</label>
+                    <div className="radio-group">
+                        <label htmlFor={`predictYes-${marketId}`} className={`radio-label ${disableYes ? 'disabled' : ''}`}>
+                            <input
+                                type="radio"
+                                id={`predictYes-${marketId}`}
+                                name={`prediction-${marketId}`}
+                                value="YES"
+                                checked={predictedOutcome === 'YES'}
+                                onChange={() => setPredictedOutcome('YES')}
+                                disabled={disableYes}
+                            />
+                            {` Predict: YES (Price will be ≥ ${marketTarget})`}
+                        </label>
+                        <label htmlFor={`predictNo-${marketId}`} className={`radio-label ${disableNo ? 'disabled' : ''}`}>
+                            <input
+                                type="radio"
+                                id={`predictNo-${marketId}`}
+                                name={`prediction-${marketId}`}
+                                value="NO"
+                                checked={predictedOutcome === 'NO'}
+                                onChange={() => setPredictedOutcome('NO')}
+                                disabled={disableNo}
+                            />
+                            {` Predict: NO (Price will be < ${marketTarget})`}
+                        </label>
+                    </div>
+                </div>
 
-            {message.text && (
-                <p className={`form-message type-${message.type}`}> 
-                    {message.text}
-                </p>
-            )}
-        </form>
+                {/* Informational Messages related to live price and eligibility */}
+                {isFetchingOraclePrice && <p className="info-message small-text">Fetching live price...</p>}
+                {isCheckApplicable && formattedLiveOraclePrice && !isEventMarket && (
+                    <p className="info-message small-text live-price-info">
+                        Current approx. {assetSymbol?.split('_')[0]} Price: ${formattedLiveOraclePrice}
+                    </p>
+                )}
+                {isCheckApplicable && eligibilityReason && !isEventMarket && (
+                    <p className="warning-message small-text" style={{ marginTop: '5px', color: 'orange' }}>
+                        Note: {eligibilityReason}
+                    </p>
+                )}
+
+                <button
+                    type="submit"
+                    disabled={!canSubmitForm}
+                    className="button primary submit-prediction-button"
+                >
+                    {isLoading ? "Submitting..." : "Submit Prediction"}
+                </button>
+
+                {/* General messages (success/error from submission) */}
+                {message.text && (
+                    <p className={`form-message type-${message.type}`} style={{ marginTop: '10px' }}>
+                        {message.text}
+                    </p>
+                )}
+            </form>
+        </div>
     );
 }
 
