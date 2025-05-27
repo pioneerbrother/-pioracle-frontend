@@ -8,7 +8,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { ethers } from 'ethers';
 // --- NEW ---
-import { getMarketDisplayProperties, MarketState as MarketStateEnumUtil, getStatusString as getStatusStringUtil, formatToUTC as formatToUTCUtil } from '../utils/marketUtils'; // Assuming this is your util file
+import { getMarketDisplayProperties, MarketState as MarketStateEnumUtil, getStatusString as getStatusStringUtil, formatToUTC as formatToUTCUtil } from '../utils/marketDisplayUtils'; // Assuming this is your util file
 import './MarketDetailPage.css';
 
 // --- NEW --- Minimal ABI for Chainlink AggregatorV3Interface
