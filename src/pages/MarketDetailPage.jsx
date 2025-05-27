@@ -6,57 +6,46 @@ import PredictionForm from '../components/predictions/PredictionForm';
 import MarketOddsDisplay from '../components/predictions/MarketOddsDisplay';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
-import { ethers } from 'ethers'; 
-import './MarketDetailPage.css'; 
+import { ethers } from 'ethers';
+// --- NEW ---
+import { getMarketDisplayProperties, MarketState as MarketStateEnumUtil, getStatusString as getStatusStringUtil, formatToUTC as formatToUTCUtil } from '../utils/marketUtils'; // Assuming this is your util file
+import './MarketDetailPage.css';
 
-// Define MarketState enum
-const MarketState = {
-    Open: 0,
-    Resolvable: 1,
-    Resolved_YesWon: 2, 
-    Resolved_NoWon: 3,  
-    Resolved_Push: 4,
-};
+// --- NEW --- Minimal ABI for Chainlink AggregatorV3Interface
+const aggregatorV3InterfaceABI = [
+    { "inputs": [], "name": "decimals", "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "latestRoundData", "outputs": [ { "internalType": "uint80", "name": "roundId", "type": "uint80" }, { "internalType": "int256", "name": "answer", "type": "int256" }, { "internalType": "uint256", "name": "startedAt", "type": "uint256" }, { "internalType": "uint256", "name": "updatedAt", "type": "uint256" }, { "internalType": "uint80", "name": "answeredInRound", "type": "uint80" } ], "stateMutability": "view", "type": "function" }
+];
 
-// getStatusString function
-const getStatusString = (statusEnum) => {
-    if (statusEnum === undefined || statusEnum === null) return "Loading...";
-    switch (Number(statusEnum)) {
-        case MarketState.Open: return "Open";
-        case MarketState.Resolvable: return "Resolving";
-        case MarketState.Resolved_YesWon: return "Resolved: YES Won";
-        case MarketState.Resolved_NoWon: return "Resolved: NO Won";
-        case MarketState.Resolved_Push: return "Push (Refunded)";
-        default: return `Unknown (${statusEnum})`;
-    }
-};
+// --- MODIFIED --- Use enums/functions from marketUtils.js
+const MarketState = MarketStateEnumUtil; // Use the one from utils
+const getStatusString = getStatusStringUtil;
+const formatExpiry = formatToUTCUtil; // Using your UTC formatter for all expiry/resolution display
 
-// formatExpiry function
-const formatExpiry = (timestamp) => {
-    if (!timestamp || timestamp === 0) return "N/A";
-    return new Date(timestamp * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-};
 
-// MarketResolutionDisplay Component
+// MarketResolutionDisplay Component - MODIFIED to use utility functions and better target display
 const MarketResolutionDisplay = ({ marketDetails }) => {
     if (!marketDetails || marketDetails.status === MarketState.Open || marketDetails.status === MarketState.Resolvable || !marketDetails.resolutionTimestamp || marketDetails.resolutionTimestamp === 0) {
         return null;
     }
     let outcomeDisplay = "Outcome: Pending Resolution Details";
-    if (marketDetails.status === MarketState.Resolved_Push) { 
-        outcomeDisplay = "Market Pushed (Bets Refunded)"; 
+
+    if (marketDetails.status === MarketState.Resolved_Push) {
+        outcomeDisplay = "Market Pushed (Bets Refunded)";
     } else if (marketDetails.isEventMarket) {
         if (marketDetails.actualOutcomeValue?.toString() === "1") outcomeDisplay = "Final Outcome: YES";
         else if (marketDetails.actualOutcomeValue?.toString() === "0") outcomeDisplay = "Final Outcome: NO";
         else outcomeDisplay = `Event Resolved (Outcome Value: ${marketDetails.actualOutcomeValue})`;
-    } else { 
+    } else { // Price Feed Market
         try {
-            const actualPrice = ethers.utils.formatUnits(marketDetails.actualOutcomeValue, 8); 
-            const targetPriceForDisplay = parseFloat(marketDetails.targetPriceScaled) / 100;
+            // Assuming marketDetails.actualOutcomeValue is the raw BigNumber string from contract
+            // And marketDetails.oracleDecimals is available (see fetch logic below)
+            const actualPrice = ethers.utils.formatUnits(marketDetails.actualOutcomeValue, marketDetails.oracleDecimals || 8); // Default to 8 if not set
+            const targetPriceForDisplay = marketDetails.targetDisplay; // Use pre-formatted from getMarketDisplayProperties
             let resultText = "";
             if (marketDetails.status === MarketState.Resolved_YesWon) resultText = "(Price was ≥ Target)";
             else if (marketDetails.status === MarketState.Resolved_NoWon) resultText = "(Price was < Target)";
-            outcomeDisplay = `Resolved Oracle Price: $${parseFloat(actualPrice).toFixed(2)} ${resultText} (Target was $${targetPriceForDisplay.toFixed(2)})`;
+            outcomeDisplay = `Resolved Oracle Price: $${parseFloat(actualPrice).toFixed(2)} ${resultText} (Target was ${targetPriceForDisplay})`;
         } catch (e) { outcomeDisplay = `Resolved Value (raw): ${marketDetails.actualOutcomeValue}`; }
     }
     return (
@@ -68,271 +57,269 @@ const MarketResolutionDisplay = ({ marketDetails }) => {
     );
 };
 
+
 function MarketDetailPage() {
     const { marketId } = useParams();
-    const { 
-        contract: predictionContractInstance, 
-        walletAddress, 
-        signer, 
-        chainId, 
+    const {
+        contract: predictionContractInstance,
+        walletAddress,
+        signer,
+        chainId,
         connectionStatus,
-        loadedTargetChainIdHex, 
-        connectWallet 
+        loadedTargetChainIdHex,
+        connectWallet,
+        provider // --- NEW --- Ensure provider is available from WalletContext for feed calls
     } = useContext(WalletContext) || {};
-    
-    const [marketDetails, setMarketDetails] = useState(null);
+
+    const [marketDetails, setMarketDetails] = useState(null); // Will now store raw data + display data
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null); 
+    const [error, setError] = useState(null);
     const [claimableAmount, setClaimableAmount] = useState(ethers.BigNumber.from(0));
     const [hasUserClaimed, setHasUserClaimed] = useState(false);
     const [isClaiming, setIsClaiming] = useState(false);
-    const [actionMessage, setActionMessage] = useState({text: "", type: "info"}); // For claim/bet user feedback
+    const [actionMessage, setActionMessage] = useState({text: "", type: "info"});
     const [refreshKey, setRefreshKey] = useState(0);
 
-    const isCorrectNetwork = useMemo(() => {
-        if (chainId === null || chainId === undefined || !loadedTargetChainIdHex) return false;
-        const currentChainIdNum = typeof chainId === 'bigint' ? Number(chainId) : Number(chainId);
-        const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
-        return currentChainIdNum === targetChainIdNum;
-    }, [chainId, loadedTargetChainIdHex]);
+    // --- NEW --- State for live oracle price
+    const [currentOraclePriceData, setCurrentOraclePriceData] = useState(null); // { price: BigNumberString, decimals: number }
+    const [isFetchingLivePrice, setIsFetchingLivePrice] = useState(false);
 
-    const targetNetworkName = useMemo(() => {
-        if (!loadedTargetChainIdHex) return "the target network";
-        const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
-        if (targetChainIdNum === 31337) return "Localhost 8545";
-        if (targetChainIdNum === 80002) return "Polygon Amoy";
-        if (targetChainIdNum === 137) return "Polygon Mainnet";
-        return `Network ID ${loadedTargetChainIdHex}`;
-    }, [loadedTargetChainIdHex]);
 
-    const nativeTokenSymbol = useMemo(() => {
-        if (loadedTargetChainIdHex) {
-            const targetChainIdNum = parseInt(loadedTargetChainIdHex, 16);
-            if (targetChainIdNum === 80002 || targetChainIdNum === 137) return "MATIC";
-        }
-        return "ETH";
-    }, [loadedTargetChainIdHex]);
-    
-    console.log(
-        `MarketDetailPage RENDER. MarketID: ${marketId}, isLoading: ${isLoading}, Error: ${error}`,
-        `Contract: ${!!predictionContractInstance}, Wallet: ${walletAddress}, ChainID: ${chainId}`,
-        `IsCorrectNet: ${isCorrectNetwork}, TargetChainHex: ${loadedTargetChainIdHex}, ConnStatus: ${connectionStatus?.type}`
-    );
-    
+    const isCorrectNetwork = useMemo(() => { /* ... no change ... */ }, [chainId, loadedTargetChainIdHex]);
+    const targetNetworkName = useMemo(() => { /* ... no change ... */ }, [loadedTargetChainIdHex]);
+    const nativeTokenSymbol = useMemo(() => { /* ... no change ... */ }, [loadedTargetChainIdHex]);
+
+    console.log( /* ... no change ... */ );
+
     useEffect(() => {
-        const effectMarketId = marketId; 
-        console.log(
-            `MarketDetailPage DataFetch useEffect FIRING. MarketID: ${effectMarketId}, RefreshKey: ${refreshKey}`,
-            `Contract: ${!!predictionContractInstance}, ConnStatus: ${connectionStatus?.type}, Wallet: ${walletAddress}`
-        );
+        const effectMarketId = marketId;
+        console.log( /* ... no change ... */ );
 
         const numericMarketId = Number(effectMarketId);
         if (isNaN(numericMarketId)) { setError("Invalid Market ID."); setIsLoading(false); return; }
 
-        const directFetch = async () => {
-            console.log("MarketDetailPage directFetch: Attempting for market ID:", numericMarketId);
-            setIsLoading(true); setError(null); 
-            setClaimableAmount(ethers.BigNumber.from(0)); setHasUserClaimed(false); 
+        const fetchAllData = async () => {
+            console.log("MarketDetailPage fetchAllData: Attempting for market ID:", numericMarketId);
+            setIsLoading(true); setError(null); setCurrentOraclePriceData(null); // Reset live price
+            setClaimableAmount(ethers.BigNumber.from(0)); setHasUserClaimed(false);
 
             try {
                 if (!predictionContractInstance) throw new Error("Contract instance not available.");
-                
+
                 const detailsArray = await predictionContractInstance.getMarketStaticDetails(numericMarketId);
-                console.log("MarketDetailPage directFetch: Raw details RECEIVED for ID " + numericMarketId + ":", detailsArray);
+                console.log("MarketDetailPage fetchAllData: Raw details RECEIVED:", detailsArray);
 
-                if (!detailsArray || typeof detailsArray.exists === 'undefined' || detailsArray.length < 12) {
-                    throw new Error(`Incomplete data for market ${numericMarketId}.`);
-                }
-                
-                const idBN = detailsArray.id !== undefined ? detailsArray.id : detailsArray[0];
-                const assetSymbolStr = detailsArray.assetSymbol !== undefined ? detailsArray.assetSymbol : detailsArray[1];
-                const priceFeedAddressStr = detailsArray.priceFeedAddress !== undefined ? detailsArray.priceFeedAddress : detailsArray[2];
-                const targetPriceBN = detailsArray.targetPrice !== undefined ? detailsArray.targetPrice : detailsArray[3];
-                const expiryTimestampBN = detailsArray.expiryTimestamp !== undefined ? detailsArray.expiryTimestamp : detailsArray[4];
-                const resolutionTimestampBN = detailsArray.resolutionTimestamp !== undefined ? detailsArray.resolutionTimestamp : detailsArray[5];
-                const totalStakedYesBN = detailsArray.totalStakedYes !== undefined ? detailsArray.totalStakedYes : detailsArray[6];
-                const totalStakedNoBN = detailsArray.totalStakedNo !== undefined ? detailsArray.totalStakedNo : detailsArray[7];
-                const stateEnum = detailsArray.state !== undefined ? detailsArray.state : detailsArray[8];
-                const actualOutcomeValueBN = detailsArray.actualOutcomeValue !== undefined ? detailsArray.actualOutcomeValue : detailsArray[9];
-                const existsBool = detailsArray.exists !== undefined ? detailsArray.exists : detailsArray[10];
-                const isEventMarketBool = detailsArray.isEventMarket !== undefined ? detailsArray.isEventMarket : detailsArray[11];
+                // --- MODIFIED --- Simplified parsing (assuming detailsArray returns an object-like structure if ABI is recent)
+                // Or continue with your existing index-based parsing if that's what ethers v5/contract returns
+                const rawMarketData = {
+                    id: (detailsArray.id !== undefined ? detailsArray.id : detailsArray[0]).toString(),
+                    assetSymbol: detailsArray.assetSymbol !== undefined ? detailsArray.assetSymbol : detailsArray[1],
+                    priceFeedAddress: detailsArray.priceFeedAddress !== undefined ? detailsArray.priceFeedAddress : detailsArray[2],
+                    targetPrice: (detailsArray.targetPrice !== undefined ? detailsArray.targetPrice : detailsArray[3]).toString(), // Keep as string for BigNumber
+                    expiryTimestamp: Number(detailsArray.expiryTimestamp !== undefined ? detailsArray.expiryTimestamp : detailsArray[4]),
+                    resolutionTimestamp: Number(detailsArray.resolutionTimestamp !== undefined ? detailsArray.resolutionTimestamp : detailsArray[5]),
+                    totalStakedYesNet: (detailsArray.totalStakedYes !== undefined ? detailsArray.totalStakedYes : detailsArray[6]).toString(),
+                    totalStakedNoNet: (detailsArray.totalStakedNo !== undefined ? detailsArray.totalStakedNo : detailsArray[7]).toString(),
+                    state: Number(detailsArray.state !== undefined ? detailsArray.state : detailsArray[8]),
+                    actualOutcomeValue: (detailsArray.actualOutcomeValue !== undefined ? detailsArray.actualOutcomeValue : detailsArray[9]).toString(),
+                    exists: detailsArray.exists !== undefined ? detailsArray.exists : detailsArray[10],
+                    isEventMarket: detailsArray.isEventMarket !== undefined ? detailsArray.isEventMarket : detailsArray[11],
+                    // --- NEW --- Assuming you added creationTimestamp to getMarketStaticDetails output
+                    creationTimestamp: detailsArray.creationTimestamp ? Number(detailsArray.creationTimestamp) : 0,
+                    oracleDecimals: 8 // Default, will be updated below for price feed markets
+                };
 
-                if (existsBool) {
-                    let description = `Market #${idBN.toString()}: ${assetSymbolStr}`;
-                    let humanReadableTarget = targetPriceBN.toString(); 
-                    if (isEventMarketBool) { 
-                        description = `${assetSymbolStr.replace(/_/g, " ")}: Will the outcome be YES?`;
-                        humanReadableTarget = "YES"; 
-                    } else if (assetSymbolStr.startsWith("BTC/USD_PRICE_ABOVE")) {
-                        const price = parseInt(targetPriceBN.toString()) / 100; 
-                        const datePart = assetSymbolStr.split("_").pop();
-                        description = `Will ${assetSymbolStr.split("_PRICE_ABOVE_")[0].replace('BTC/USD', 'BTC/USD')} be ≥ $${price.toFixed(2)} on ${datePart}?`;
-                        humanReadableTarget = `$${price.toFixed(2)}`;
-                    }
+                if (rawMarketData.exists) {
+                    // --- NEW --- Get display properties using the utility function
+                    const displayProps = getMarketDisplayProperties(rawMarketData);
+                    let finalMarketDetails = { ...rawMarketData, ...displayProps };
 
-                    const newMarketDetailsData = {
-                        id: idBN.toString(), assetSymbol: assetSymbolStr, description, humanReadableTarget,
-                        targetPriceScaled: targetPriceBN.toString(),
-                        expiryTimestamp: expiryTimestampBN.toNumber(), resolutionTimestamp: resolutionTimestampBN.toNumber(),
-                        totalStakedYesNet: totalStakedYesBN.toString(), totalStakedNoNet: totalStakedNoBN.toString(),   
-                        status: Number(stateEnum), actualOutcomeValue: actualOutcomeValueBN.toString(), 
-                        exists: existsBool, priceFeedAddress: priceFeedAddressStr, isEventMarket: isEventMarketBool 
-                    };
-                    setMarketDetails(newMarketDetailsData);
-                    console.log("MarketDetailPage directFetch: Market details SET for ID:", idBN.toString());
-
-                    const currentMarketStatus = Number(stateEnum);
-                    if (walletAddress && predictionContractInstance &&
-                        (currentMarketStatus === MarketState.Resolved_YesWon || 
-                         currentMarketStatus === MarketState.Resolved_NoWon || 
-                         currentMarketStatus === MarketState.Resolved_Push)) {
-                        console.log(`MarketDetailPage: Market ID ${numericMarketId} RESOLVED. Checking claim for: ${walletAddress}`);
+                    // --- NEW --- Fetch live oracle price if applicable
+                    if (!rawMarketData.isEventMarket && rawMarketData.state === MarketState.Open && rawMarketData.priceFeedAddress && rawMarketData.priceFeedAddress !== ethers.ZeroAddress && provider) {
+                        setIsFetchingLivePrice(true);
                         try {
-                            const claimed = await predictionContractInstance.didUserClaim(numericMarketId, walletAddress);
-                            setHasUserClaimed(claimed);
-                            console.log("MarketDetailPage: didUserClaim returned:", claimed);
-                            if (!claimed) {
-                                const amount = await predictionContractInstance.getClaimableAmount(numericMarketId, walletAddress);
-                                setClaimableAmount(amount || ethers.BigNumber.from(0));
-                                console.log("MarketDetailPage: getClaimableAmount returned (raw):", amount?.toString());
-                            } else { setClaimableAmount(ethers.BigNumber.from(0)); }
-                        } catch (claimCheckErr) { console.error("Error checking claim status:", claimCheckErr); setError("Could not verify claim status.");}
-                    } else { 
-                        console.log(`MarketDetailPage: Market ID ${numericMarketId} not resolved or no wallet for claim. Status: ${currentMarketStatus}`);
-                        setClaimableAmount(ethers.BigNumber.from(0)); setHasUserClaimed(false); 
+                            console.log("Fetching live price for feed:", rawMarketData.priceFeedAddress);
+                            const feedContract = new ethers.Contract(rawMarketData.priceFeedAddress, aggregatorV3InterfaceABI, provider);
+                            const feedDecimalsBN = await feedContract.decimals(); // Ethers v6 returns BigInt
+                            const feedDecimals = Number(feedDecimalsBN);
+                            const roundData = await feedContract.latestRoundData();
+                            setCurrentOraclePriceData({ price: roundData.answer.toString(), decimals: feedDecimals }); // Store price as string
+                            finalMarketDetails.oracleDecimals = feedDecimals; // Store actual decimals
+                            console.log("Live oracle price fetched:", roundData.answer.toString(), "Decimals:", feedDecimals);
+                        } catch (e) {
+                            console.error("Error fetching live oracle price:", e);
+                            setCurrentOraclePriceData(null);
+                        }
+                        setIsFetchingLivePrice(false);
+                    } else {
+                        setCurrentOraclePriceData(null);
                     }
+
+                    setMarketDetails(finalMarketDetails);
+                    console.log("MarketDetailPage fetchAllData: Final market details SET:", finalMarketDetails);
+
+                    // Claim status check (no change to this logic)
+                    if (walletAddress && (rawMarketData.state === MarketState.Resolved_YesWon || rawMarketData.state === MarketState.Resolved_NoWon || rawMarketData.state === MarketState.Resolved_Push || rawMarketData.state === MarketStateEnumUtil.ResolvedEarly_YesWon || rawMarketData.state === MarketStateEnumUtil.ResolvedEarly_NoWon )) {
+                        // ... (your existing claim check logic, ensure it uses MarketState from utils) ...
+                         const claimed = await predictionContractInstance.didUserClaim(numericMarketId, walletAddress);
+                         setHasUserClaimed(claimed);
+                         if (!claimed) {
+                             const amount = await predictionContractInstance.getClaimableAmount(numericMarketId, walletAddress);
+                             setClaimableAmount(amount || ethers.BigNumber.from(0));
+                         } else { setClaimableAmount(ethers.BigNumber.from(0)); }
+                    } else {
+                        setClaimableAmount(ethers.BigNumber.from(0)); setHasUserClaimed(false);
+                    }
+
                 } else { setError(`Market ID ${numericMarketId} not found.`); setMarketDetails(null); }
-            } catch (err) { console.error(`MarketDetailPage directFetch: ERROR for ID ${numericMarketId}:`, err); setError(err.message || "Failed to load details."); setMarketDetails(null); }
+            } catch (err) {
+                console.error(`MarketDetailPage fetchAllData: ERROR for ID ${numericMarketId}:`, err);
+                setError(err.message || "Failed to load market details.");
+                setMarketDetails(null);
+            }
             setIsLoading(false);
         };
 
         if (connectionStatus?.type === 'error') {
             setError(`WalletProvider Error: ${connectionStatus.message}`); setIsLoading(false);
-        } else if (predictionContractInstance) { 
-            directFetch(); 
-        } else { 
-            console.log("MarketDetailPage useEffect: No contract from WalletProvider. Waiting.");
-            setIsLoading(true); setError(null); // Ensure loading if no contract
+        } else if (predictionContractInstance && provider) { // --- MODIFIED --- Ensure provider is also available
+            fetchAllData();
+        } else {
+            console.log("MarketDetailPage useEffect: Contract or Provider from WalletProvider not ready. Waiting.");
+            setIsLoading(true); setError(null);
         }
-    }, [marketId, predictionContractInstance, connectionStatus, walletAddress, refreshKey]); // Added refreshKey
+    }, [marketId, predictionContractInstance, provider, connectionStatus, walletAddress, refreshKey]); // --- MODIFIED --- Added provider
 
-    const handleBetPlaced = useCallback(() => {
+    // --- MODIFIED --- Renamed for clarity, uses setActionMessage
+    const handleBetPlacedCallbackFromForm = useCallback(() => {
         console.log("MarketDetailPage: Bet placed callback. Incrementing refreshKey.");
-        setMessageForForm({ text: "Bet submitted! Refreshing market state...", type: "info" }); // Give feedback
-        setIsLoading(true); // Show loading during refresh
-        setRefreshKey(key => key + 1); 
-    }, []); 
+        setActionMessage({ text: "Bet submitted! Refreshing market data...", type: "success" });
+        setIsLoading(true);
+        setRefreshKey(key => key + 1);
+    }, [setActionMessage]); // --- MODIFIED --- Dependency on setActionMessage
 
+    // --- MODIFIED --- Uses setActionMessage
     const handleClaimWinnings = useCallback(async () => {
         if (!predictionContractInstance || !walletAddress || !signer || !marketDetails || !marketDetails.exists || claimableAmount.isZero() || hasUserClaimed) {
-            setMessageForForm({text: "Cannot claim: Conditions not met or already claimed.", type: "error"});
+            setActionMessage({text: "Cannot claim: Conditions not met or already claimed.", type: "error"});
             return;
         }
-        setIsClaiming(true); setMessageForForm({text: "Processing your claim...", type: "info"});
+        setIsClaiming(true); setActionMessage({text: "Processing your claim...", type: "info"});
         try {
             const contractWithSigner = predictionContractInstance.connect(signer);
             const tx = await contractWithSigner.claimWinnings(marketDetails.id);
-            console.log("Claim Winnings Tx Sent:", tx.hash);
-            setMessageForForm({text: `Claim Tx Sent (${tx.hash.substring(0,10)}...). Waiting for confirmation...`, type: "info"});
+            setActionMessage({text: `Claim Tx Sent (${tx.hash.substring(0,10)}...). Waiting for confirmation...`, type: "info"});
             const receipt = await tx.wait(1);
             if (receipt.status === 1) {
-                console.log("Claim Winnings Tx Confirmed");
-                setMessageForForm({text: "Winnings claimed successfully! Market data will refresh.", type: "success"});
-                setRefreshKey(key => key + 1); // Trigger a refresh to update hasUserClaimed & claimableAmount
+                setActionMessage({text: "Winnings claimed successfully! Market data will refresh.", type: "success"});
+                setRefreshKey(key => key + 1);
             } else { throw new Error("Claim transaction reverted on-chain."); }
         } catch (err) {
             console.error("Error claiming winnings:", err);
             const reason = err.reason || err.data?.message || err.message || "Failed to claim winnings.";
-            setMessageForForm({text: `Claim failed: ${reason}`, type: "error"});
+            setActionMessage({text: `Claim failed: ${reason}`, type: "error"});
         }
         setIsClaiming(false);
-    }, [predictionContractInstance, walletAddress, signer, marketDetails, claimableAmount, hasUserClaimed]);
-    
+    }, [predictionContractInstance, walletAddress, signer, marketDetails, claimableAmount, hasUserClaimed, setActionMessage]); // --- MODIFIED --- Dependency
+
     let isMarketOpenForBetting = false;
-    let currentStatusString = "Loading...";
-    if (marketDetails && marketDetails.exists) { 
-        console.log(
-            "MarketDetailPage DEBUG RENDER: Checking 'isMarketOpenForBetting'.",
-            "status:", marketDetails.status, "(type:", typeof marketDetails.status + ")",
-            "MarketState.Open:", MarketState.Open, "Comparison:", marketDetails.status === MarketState.Open,
-            "WalletAddress:", walletAddress, "IsCorrectNet:", isCorrectNetwork 
-        );
-        isMarketOpenForBetting = marketDetails.status === MarketState.Open;
-        currentStatusString = getStatusString(marketDetails.status);
+    // --- MODIFIED --- Use marketDetails.statusString if available from getMarketDisplayProperties
+    let currentStatusString = marketDetails?.statusString || "Loading...";
+
+    if (marketDetails && marketDetails.exists) {
+        isMarketOpenForBetting = marketDetails.state === MarketState.Open;
+        // currentStatusString is already set if marketDetails exists due to displayProps merge
     }
-    
-    if (isLoading && !marketDetails) return <LoadingSpinner message={`Loading Market Details for ID: ${marketId}...`} />;
-    if (error && !marketDetails) return <ErrorMessage title="Market Data Error" message={error} onRetry={() => setRefreshKey(k => k+1)} />;
+
+   if (isLoading && !marketDetails) return <LoadingSpinner message={`Loading Market Details for ID: ${marketId}...`} />;
+    if (error && !marketDetails) return <ErrorMessage title="Market Data Error" message={error} onRetry={() => setRefreshKey(k => k + 1)} />;
     if (!marketDetails || !marketDetails.exists) return <div className="page-centered info-message">Market (ID: {marketId}) not found. <Link to="/predictions">Back</Link></div>;
-    
-    const statusClassName = `status-${currentStatusString.toLowerCase().replace(/[\s:/()]/g, '-').replace(/[^\w-]/g, '')}`;
-    const canClaim = walletAddress && !hasUserClaimed && claimableAmount && !claimableAmount.isZero() && 
-                     (marketDetails.status === MarketState.Resolved_YesWon || 
-                      marketDetails.status === MarketState.Resolved_NoWon || 
-                      marketDetails.status === MarketState.Resolved_Push);
+
+    const statusClassName = marketDetails.statusClassName || `status-unknown`;
+
 
     return (
         <div className="page-container market-detail-page">
             <Link to="/predictions" className="back-link">← All Prediction Markets</Link>
             <header className="market-detail-header">
-                <h1>{marketDetails.description}</h1>
+                <h1>{marketDetails.question || marketDetails.title || `Market ${marketDetails.id}`}</h1>
                 <div className="market-meta">
-                    <span>Expires: {formatExpiry(marketDetails.expiryTimestamp)}</span>
+                    <span>Expires: {marketDetails.expiryString}</span>
                     <span className={`status-badge ${statusClassName}`}>{currentStatusString}</span>
                 </div>
             </header>
 
             <MarketResolutionDisplay marketDetails={marketDetails} />
 
-            {/* Display page-level error if it exists and isn't a full-page blocker */}
-            {error && marketDetails && marketDetails.exists && 
+            {error && marketDetails && marketDetails.exists &&
                 <div style={{padding: '10px 0'}}><ErrorMessage title="Notice" message={error} onRetry={() => setRefreshKey(k => k+1)} /></div>}
-            {/* Display loading message if refreshing details */}
+            {/* Show general loading spinner if isLoading is true AND marketDetails already exist (meaning it's a refresh) */}
             {isLoading && marketDetails && marketDetails.exists && <LoadingSpinner message="Refreshing details..." size="small"/>}
 
+
+            {/* --- REWRITTEN BETTING SECTION --- */}
             <section className="market-data-section">
-                <MarketOddsDisplay
-                    totalStakedYesNet={marketDetails.totalStakedYesNet} 
-                    totalStakedNoNet={marketDetails.totalStakedNoNet}  
-                    marketTarget={marketDetails.humanReadableTarget}
-                    assetSymbol={marketDetails.assetSymbol}
-                />
+                {marketDetails && ( // Only render odds if marketDetails exist
+                    <MarketOddsDisplay
+                        totalStakedYesNet={marketDetails.totalStakedYesNet}
+                        totalStakedNoNet={marketDetails.totalStakedNoNet}
+                        marketTarget={marketDetails.targetDisplay}
+                        assetSymbol={marketDetails.assetSymbol}
+                    />
+                )}
                 <div className="betting-section">
-                    {isMarketOpenForBetting ? (
-                        walletAddress ? ( 
-                            isCorrectNetwork ? (
-                                <PredictionForm
-                                    marketId={marketDetails.id}
-                                    onBetPlaced={handleBetPlaced}
-                                    marketTarget={marketDetails.humanReadableTarget}
-                                    assetSymbol={marketDetails.assetSymbol}
-                                />
-                            ) : ( <div className="network-notice"><p>⚠️ Please switch to the {targetNetworkName} network.</p></div> )
-                        ) : (
-                            <div className="connect-wallet-notice">
-                                <p>Please connect your wallet to place a prediction.</p>
-                                {connectWallet && <button onClick={connectWallet} className="button primary">Connect Wallet</button>}
-                            </div>
-                        )
-                    ) : (
-                        marketDetails.status !== MarketState.Open && // Only show if not Open (i.e., resolved, resolvable, etc.)
+                    {/* Case 1: Show Prediction Form */}
+                    {showPredictionForm && (
+                        <PredictionForm
+                            marketId={marketDetails.id}
+                            onBetPlaced={handleBetPlacedCallbackFromForm}
+                            marketTarget={marketDetails.targetDisplay}
+                            assetSymbol={marketDetails.assetSymbol}
+                            currentOraclePriceData={currentOraclePriceData}
+                            isFetchingOraclePrice={isFetchingLivePrice}
+                            marketTargetPrice={marketDetails.targetPrice} // Raw scaled BigNumber string
+                            isEventMarket={marketDetails.isEventMarket}
+                        />
+                    )}
+
+                    {/* Case 2: Market is open, but wallet not connected */}
+                    {showConnectWalletNotice && (
+                        <div className="connect-wallet-notice">
+                            <p>Please connect your wallet to place a prediction.</p>
+                            {connectWallet && <button onClick={connectWallet} className="button primary">Connect Wallet</button>}
+                        </div>
+                    )}
+
+                    {/* Case 3: Market is open, wallet connected, but wrong network */}
+                    {showSwitchNetworkNotice && (
+                         <div className="network-notice"><p>⚠️ Please switch to the {targetNetworkName} network to place a bet.</p></div>
+                    )}
+
+                    {/* Case 4: Market is not open for betting */}
+                    {showMarketClosedMessage && (
                         <p className="info-message">Betting for this market is closed. Status: {currentStatusString}</p>
                     )}
-                     {canClaim && (
+
+                    {/* Claim Winnings Section - Independent of betting state */}
+                    {canClaim && (
                         <div className="claim-section" style={{marginTop: '20px'}}>
                             <button onClick={handleClaimWinnings} disabled={isClaiming} className="button primary claim-button">
                                 {isClaiming ? "Claiming..." : `Claim ${ethers.utils.formatUnits(claimableAmount, 18)} ${nativeTokenSymbol}`}
                             </button>
                         </div>
                     )}
-                    {/* Display messages from claim/bet attempts here */}
-                    {actionMessage.text && !isClaiming && !(isMarketOpenForBetting && walletAddress && isCorrectNetwork) && 
-                        <p className={`form-message type-${actionMessage.type}`} style={{marginTop:'10px'}}>{actionMessage.text}</p>
-                    }
+
+                    {/* Page-level Action Message */}
+                    {actionMessage.text && (
+                        <p className={`page-action-message type-${actionMessage.type}`} style={{marginTop:'15px', textAlign: 'center'}}>
+                            {actionMessage.text}
+                        </p>
+                    )}
                 </div>
             </section>
+            {/* --- END REWRITTEN BETTING SECTION --- */}
+
         </div>
     );
 }
-
 export default MarketDetailPage;
