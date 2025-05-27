@@ -15,7 +15,7 @@ import {
     MarketState as MarketStateEnumFromUtil, // Renamed to avoid conflict if MarketState is defined locally
     getStatusString as getStatusStringFromUtil, 
     formatToUTC as formatToUTCFromUtil 
-} from '../utils/MarketDisplayUtils';
+} from '../utils/marketDisplayUtils';
 
 import './MarketDetailPage.css'; // Your specific styles for this page
 
