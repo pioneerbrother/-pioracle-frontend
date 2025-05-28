@@ -211,10 +211,7 @@ if (details && (details.exists !== undefined ? details.exists : details[10])) {
                         <strong>Please predict responsibly as real funds are involved.</strong>
                     }
                 </p>
-                <p>
-                    Our first featured events are the **Monaco Grand Prix (May 25th)** and the **Ice Hockey Championship Final (May 25th/26th)**! 
-                    (Ensure event details are accurate for mainnet launch).
-                </p>
+            <p>"Test your crypto foresight! Predict the future of Bitcoin and be one of the first to make predictions on Pi Coin's potential. Join the PiOracle community today!"</p>
                 <div className="cta-buttons">
                     <a href="#how-to-guide" className="button button-secondary">Quick Guide Below!</a>
                 </div>
