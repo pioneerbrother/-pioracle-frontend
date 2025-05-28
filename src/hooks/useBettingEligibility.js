@@ -2,25 +2,19 @@
 import { useMemo } from 'react';
 import { ethers } from 'ethers';
 
-/**
- * Custom hook to determine if betting options (YES/NO) should be enabled or disabled
- * based on the current live oracle price for price-feed markets.
- *
- * @param {boolean} isEventMarket - True if the market is an event-based market (not price-feed).
- * @param {object} currentOraclePriceData - Object containing { price: BigNumber, decimals: number } or null.
- * @param {ethers.BigNumber | string | null} marketTargetPriceBN - The market's target price, already scaled as a BigNumber (or string convertible to one).
- * @returns {object} - An object { disableYes: boolean, disableNo: boolean, reason: string, livePriceFormatted: string | null }
- */
-export const useBettingEligibility = (isEventMarket, currentOraclePriceData, marketTargetPriceBNInput) => {
+export const useBettingEligibility = (isEventMarket, currentOraclePriceData, marketTargetPriceBNInput, marketAssetSymbol) => {
     const eligibility = useMemo(() => {
-        if (isEventMarket || !currentOraclePriceData || !currentOraclePriceData.price || !marketTargetPriceBNInput) {
-            return {
-                disableYes: false,
-                disableNo: false,
-                reason: '',
-                livePriceFormatted: null,
-                isCheckApplicable: false // Indicates if the price check logic was even run
-            };
+        // Default: both enabled, no specific reason initially
+        let defaultReturn = {
+            disableYes: false,
+            disableNo: false,
+            reason: '',
+            livePriceFormatted: null,
+            isCheckApplicable: false
+        };
+
+        if (isEventMarket || !currentOraclePriceData || !currentOraclePriceData.price || !marketTargetPriceBNInput || !marketAssetSymbol) {
+            return defaultReturn;
         }
 
         try {
@@ -32,65 +26,63 @@ export const useBettingEligibility = (isEventMarket, currentOraclePriceData, mar
             let disableNo = false;
             let reason = '';
 
-            const formattedLivePrice = parseFloat(ethers.utils.formatUnits(livePriceBN, livePriceDecimals));
-            // Assuming targetPriceBN is scaled like the oracle price (e.g., 8 decimals for BTC/USD)
-            // For display, we format it. Comparison is done with BigNumbers.
-            const formattedTargetPrice = parseFloat(ethers.utils.formatUnits(targetPriceBN, livePriceDecimals));
+            const formattedLivePrice = parseFloat(ethers.utils.formatUnits(livePriceBN, livePriceDecimals)).toFixed(2); // Format early for messages
+            const formattedTargetPrice = parseFloat(ethers.utils.formatUnits(targetPriceBN, livePriceDecimals)).toFixed(2); // Assuming same decimals for display
 
+            // Determine market type from symbol (e.g., PRICE_ABOVE or PRICE_BELOW)
+            // For now, we'll assume your current markets are primarily PRICE_ABOVE
+            const isPriceAboveMarket = marketAssetSymbol.includes("_PRICE_ABOVE_");
+            // const isPriceBelowMarket = marketAssetSymbol.includes("_PRICE_BELOW_"); // For future expansion
 
-            // If current price is already >= target, betting YES is "unfair" / too certain
-            if (livePriceBN.gte(targetPriceBN)) {
-                disableYes = true;
-                reason = `Current price ($${formattedLivePrice.toFixed(2)}) already meets or exceeds target ($${formattedTargetPrice.toFixed(2)}). Predicting 'YES' is not a valid risk.`;
+            if (isPriceAboveMarket) {
+                // Market question: "Will Price be >= Target?"
+                // "YES" means Price >= Target
+                // "NO" means Price < Target
+
+                if (livePriceBN.gte(targetPriceBN)) {
+                    // Current price ALREADY meets the "YES" condition.
+                    disableYes = true;
+                    reason = `Current price ($${formattedLivePrice}) already meets or exceeds the target ($${formattedTargetPrice}). 'YES' option disabled.`;
+                }
+                // "NO" option remains enabled unless a separate condition for it exists (not in this market type usually)
+
             }
+            /*  // Example for handling PRICE_BELOW markets if you add them:
+            else if (isPriceBelowMarket) {
+                // Market question: "Will Price be < Target?"
+                // "YES" means Price < Target
+                // "NO" means Price >= Target
 
-            // If current price is already < target, betting NO is "unfair" / too certain
-            if (livePriceBN.lt(targetPriceBN)) {
-                disableNo = true;
-                const noReason = `Current price ($${formattedLivePrice.toFixed(2)}) is already below target ($${formattedTargetPrice.toFixed(2)}). Predicting 'NO' is not a valid risk.`;
-                reason = reason ? `${reason} ${noReason}` : noReason; // Append if both conditions are met (should not happen with strict gte/lt logic unless price = target)
+                if (livePriceBN.lt(targetPriceBN)) {
+                    // Current price ALREADY meets the "YES" condition for a "below" market.
+                    disableYes = true;
+                    reason = `Current price ($${formattedLivePrice}) is already below the target ($${formattedTargetPrice}). 'YES' option (predicting below) disabled.`;
+                }
             }
-            
-            // Refined logic for clarity:
-            // If livePrice >= targetPrice, YES is the "certain" outcome to bet on, so disable YES.
-            // If livePrice < targetPrice, NO is the "certain" outcome to bet on, so disable NO.
-            // This seems more direct than the above. Let's retry the disable flags:
-
-            disableYes = false;
-            disableNo = false;
-            reason = '';
-
-            if (livePriceBN.gte(targetPriceBN)) {
-                disableYes = true;
-                reason = `Current price ($${formattedLivePrice.toFixed(2)}) already meets or exceeds the target. 'YES' option disabled.`;
-            }
-            // Only disable NO if YES is not already disabled by the GTE condition.
-            // This handles the case where price == target. If price == target, YES is "decided", NO is not.
-            if (livePriceBN.lt(targetPriceBN)) {
-                disableNo = true;
-                reason = `Current price ($${formattedLivePrice.toFixed(2)}) is below the target. 'NO' option disabled.`;
+            */
+            else {
+                // If symbol type is unknown or not price-based for this logic, don't disable
+                return defaultReturn;
             }
 
 
             return {
                 disableYes,
-                disableNo,
+                disableNo, // disableNo will remain false for PRICE_ABOVE markets based on this logic
                 reason,
-                livePriceFormatted: formattedLivePrice.toFixed(livePriceDecimals === 8 ? 2 : livePriceDecimals), // Show 2 decimal for 8-decimal feeds like BTC
+                livePriceFormatted: formattedLivePrice,
                 isCheckApplicable: true
             };
 
         } catch (e) {
             console.error("Error in useBettingEligibility:", e);
             return {
-                disableYes: false,
-                disableNo: false,
+                ...defaultReturn,
                 reason: 'Error checking live price eligibility.',
-                livePriceFormatted: null,
-                isCheckApplicable: true // Still applicable, but errored
+                isCheckApplicable: true
             };
         }
-    }, [isEventMarket, currentOraclePriceData, marketTargetPriceBNInput]);
+    }, [isEventMarket, currentOraclePriceData, marketTargetPriceBNInput, marketAssetSymbol]);
 
     return eligibility;
 };
