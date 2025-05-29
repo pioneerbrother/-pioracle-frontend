@@ -7,8 +7,10 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { 
     getMarketDisplayProperties, 
-    MarketState as MarketStateEnumFromUtil 
-} from '../utils/MarketDisplayUtils'; // Ensure correct path
+    MarketState as MarketStateEnumFromUtil,
+    getStatusString as getStatusStringFromUtil, 
+    formatToUTC as formatToUTCFromUtil 
+} from '../utils/MarketDisplayUtils'; // or '../utils/MarketDisplayUtils.js'
 import './PredictionMarketsListPage.css';
 
 const MarketState = MarketStateEnumFromUtil;
