@@ -1,0 +1,43 @@
+/* pioracle/src/components/common/Header.css */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem; /* Adjust padding as needed */
+    background-color: #333; /* Example background */
+    color: white;
+    border-bottom: 1px solid #444;
+}
+
+.logo-container .logo-link {
+    text-decoration: none;
+    color: white;
+}
+
+.logo-container h1 {
+    margin: 0;
+    font-size: 1.8rem; /* Adjust size */
+}
+
+.logo-image {
+    height: 40px; /* Adjust size */
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.navigation-links a {
+    color: #f0f0f0;
+    text-decoration: none;
+    margin-left: 20px; /* Spacing between links */
+    font-size: 1rem;
+    transition: color 0.2s ease-in-out;
+}
+
+.navigation-links a:hover,
+.navigation-links a.active { /* You might need NavLink for active class styling */
+    color: #00bfff; /* Example hover/active color */
+}
+
+.wallet-section {
+    /* Styles for the wallet connect button area */
+}
