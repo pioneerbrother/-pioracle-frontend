@@ -1,5 +1,5 @@
 // pioracle/src/pages/PredictionMarketsListPage.jsx
-import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react'; // Ensure ALL hooks used are imported
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { WalletContext } from '../context/WalletProvider';
 import MarketCard from '../components/predictions/MarketCard';
@@ -7,37 +7,34 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { 
     getMarketDisplayProperties, 
-    MarketState as MarketStateEnumFromUtil 
-} from '../utils/marketDisplayUtils.js'; // Corrected import path
+    MarketState as MarketStateEnumFromUtil // Alias to avoid potential naming conflicts
+} from '../utils/marketutils.js'; // CORRECTED: Using 'marketutils.js' (all lowercase name part)
 import './PredictionMarketsListPage.css';
 
-const MarketState = MarketStateEnumFromUtil; // Alias for clarity
+// Use the aliased enum for clarity within this component
+const MarketState = MarketStateEnumFromUtil;
 
 function PredictionMarketsListPage() {
-    const { contract: predictionContractInstance, provider, connectionStatus } = useContext(WalletContext);
-    const [rawMarkets, setRawMarkets] = useState([]); // Stores raw data from contract
+    const { contract: predictionContractInstance, connectionStatus } = useContext(WalletContext);
+    const [rawMarkets, setRawMarkets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const fetchAllMarkets = useCallback(async () => {
         if (!predictionContractInstance) {
             if (connectionStatus?.type === 'error') {
-                setError("Cannot load markets: WalletProvider error - " + connectionStatus.message);
-                setIsLoading(false); // Set loading false if there's a definitive error
-            } else if (connectionStatus?.type !== 'info' && connectionStatus?.type !== null && connectionStatus?.type !== 'success') {
-                // If not connecting, not success, and no contract, then stop loading
-                setIsLoading(false);
-                // setError("Contract not available and wallet not actively connecting."); // Optional: more specific message
+                setError(`Cannot load markets: WalletProvider error - ${connectionStatus.message}`);
             }
-            // If connectionStatus is 'info' (connecting) or 'success' (but contract still null briefly),
-            // we might want to let isLoading be true or be handled by the outer useEffect.
-            // For now, if no contract, we exit or set loading false.
-            return; // Exit if no contract instance yet
+            // If not trying to connect and no contract, stop loading. Otherwise, let initial isLoading state persist.
+            if (connectionStatus?.type !== 'info' && connectionStatus?.type !== 'success' && connectionStatus?.type !== null) {
+                setIsLoading(false);
+            }
+            return;
         }
 
         setIsLoading(true);
         setError(null);
-        setRawMarkets([]); // Clear previous markets
+        setRawMarkets([]); 
 
         try {
             console.log("PredictionMarketsListPage: Fetching nextMarketId...");
@@ -53,6 +50,10 @@ function PredictionMarketsListPage() {
 
             const marketPromises = [];
             for (let i = 0; i < nextId; i++) {
+                // Ensure getMarketStaticDetails exists on the contract instance
+                if (typeof predictionContractInstance.getMarketStaticDetails !== 'function') {
+                    throw new Error("getMarketStaticDetails function not found on contract instance. ABI might be incorrect or contract not fully loaded.");
+                }
                 marketPromises.push(predictionContractInstance.getMarketStaticDetails(i));
             }
             
@@ -62,7 +63,15 @@ function PredictionMarketsListPage() {
 
             const processedMarkets = marketsDetailsArray
                 .map((detailsArray) => {
-                    if (!detailsArray || typeof detailsArray[10] === 'undefined' || !detailsArray[10]) return null;
+                    // Assuming detailsArray[10] is the 'exists' flag and detailsArray has at least 12 elements for basic data
+                    // For contracts with creationTimestamp, it would be 13 elements.
+                    const expectedLength = 13; // If creationTimestamp is included in getMarketStaticDetails
+                    // const expectedLength = 12; // If creationTimestamp is NOT included
+
+                    if (!detailsArray || detailsArray.length < expectedLength || typeof detailsArray[10] === 'undefined' || !detailsArray[10]) {
+                        console.warn("Skipping market due to incomplete data or 'exists' is false:", detailsArray);
+                        return null; 
+                    }
                     return {
                         id: detailsArray[0].toString(),
                         assetSymbol: detailsArray[1],
@@ -76,44 +85,57 @@ function PredictionMarketsListPage() {
                         actualOutcomeValue: detailsArray[9].toString(),
                         exists: detailsArray[10],
                         isEventMarket: detailsArray[11],
-                        creationTimestamp: detailsArray.length > 12 ? Number(detailsArray[12]) : 0,
-                        oracleDecimals: 8
+                        creationTimestamp: Number(detailsArray[12]), // Assumes creationTimestamp is the 13th element (index 12)
+                        oracleDecimals: 8 // Default, can be refined
                     };
                 })
-                .filter(market => market !== null && market.exists);
+                .filter(market => market !== null); // Remove nulls from non-existent/invalid markets
 
             setRawMarkets(processedMarkets);
+
         } catch (e) {
             console.error("Error fetching all markets:", e);
-            setError("Failed to load markets. Please ensure your wallet is connected to the correct network (Polygon Mainnet) and the contract is accessible. If the issue persists, the network might be experiencing issues.");
-        } finally { // Use finally to ensure setIsLoading(false) is always called
+            setError("Failed to load markets. Please ensure your wallet is connected to the correct network (Polygon Mainnet) and the contract is accessible. If the issue persists, the network might be experiencing issues or the ABI is incorrect.");
+        } finally {
             setIsLoading(false);
         }
-    }, [predictionContractInstance, connectionStatus?.type, setError, setIsLoading, setRawMarkets]); // Added setters to dependency array if they are stable (usually they are)
+    }, [predictionContractInstance, connectionStatus?.type]); // Removed setters as they are stable
 
     useEffect(() => {
         if (predictionContractInstance) {
             fetchAllMarkets();
         } else {
              if (connectionStatus?.type === 'error' || (connectionStatus?.type !== 'info' && connectionStatus?.type !== 'success' && connectionStatus?.type !== null)) {
-                setIsLoading(false); // Stop loading if no contract and not actively trying to connect/already connected
-                if(connectionStatus?.type === 'error') setError(`WalletProvider Error: ${connectionStatus.message}`);
+                setIsLoading(false);
+                if(connectionStatus?.type === 'error' && connectionStatus.message) {
+                    setError(`WalletProvider Error: ${connectionStatus.message}`);
+                } else if (!predictionContractInstance) {
+                    setError("Waiting for wallet connection or contract initialization...");
+                }
              } else {
-                setIsLoading(true); // Assume it's loading or waiting for connection/contract
+                setIsLoading(true); 
              }
         }
-    }, [predictionContractInstance, fetchAllMarkets, connectionStatus?.type])
+    }, [predictionContractInstance, fetchAllMarkets, connectionStatus?.type]);
 
 
     const openMarketsToDisplay = useMemo(() => {
-        if (!rawMarkets) return [];
+        if (!rawMarkets || rawMarkets.length === 0) return [];
         return rawMarkets
-            .filter(market => market.state === MarketState.Open) // Filter for ONLY OPEN markets
-            .map(market => ({ // Apply display properties AFTER filtering
-                ...market,
-                ...getMarketDisplayProperties(market) 
-            }))
-            .sort((a, b) => (a.expiryTimestamp || 0) - (b.expiryTimestamp || 0)); // Sort by soonest expiry first
+            .filter(market => market.state === MarketState.Open)
+            .map(market => {
+                try {
+                    return {
+                        ...market,
+                        ...getMarketDisplayProperties(market) // Ensure this function handles potentially undefined fields gracefully
+                    };
+                } catch (e) {
+                    console.error("Error processing market for display (getMarketDisplayProperties):", market, e);
+                    return null; // Skip markets that cause errors during display processing
+                }
+            })
+            .filter(market => market !== null) // Remove any markets that failed display processing
+            .sort((a, b) => (a.expiryTimestamp || 0) - (b.expiryTimestamp || 0));
     }, [rawMarkets]);
 
     return (
@@ -121,11 +143,6 @@ function PredictionMarketsListPage() {
             <div className="welcome-banner" style={{ textAlign: 'center', margin: '20px 0' }}>
                 <h2>Welcome to PiOracle!</h2>
                 <p>Make your predictions on exciting cryptocurrency markets, including Bitcoin and Pi Coin! Where do you see their prices heading?</p>
-                {/* 
-                <Link to="/how-it-works" className="button quick-guide-button" style={{margin: '10px auto', display: 'inline-block'}}>
-                    Quick Guide
-                </Link> 
-                */}
             </div>
 
             <div className="market-view-controls" style={{ marginBottom: '20px', marginTop: '10px', textAlign: 'center' }}>
