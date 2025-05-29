@@ -10,7 +10,7 @@ import {
     MarketState as MarketStateEnumFromUtil,
     getStatusString as getStatusStringFromUtil,
     formatToUTC as formatToUTCFromUtil
-} from '../utils/MarketDisplayUtils.js'; // <<<< CORRECTED: Explicit .js and correct case
+} from '../utils/marketutils.js'; // <<<< CORRECTED: Explicit .js and correct case
 import './MyPredictionsPage.css'; // Create this CSS file for styling
 
 const MarketState = MarketStateEnumFromUtil; // Alias for clarity

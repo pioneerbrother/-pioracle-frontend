@@ -1,4 +1,4 @@
-// src/utils/marketUtils.js (or a new src/utils/marketDisplayUtils.js)
+// src/utils/marketutils.js 
 import { ethers } from 'ethers';
 
 export const MarketState = { Open: 0, Resolvable: 1, Resolved_YesWon: 2, Resolved_NoWon: 3, Resolved_Push: 4 };

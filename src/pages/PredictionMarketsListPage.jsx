@@ -8,7 +8,7 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import { 
     getMarketDisplayProperties, 
     MarketState as MarketStateEnumFromUtil
-} from '../utils/MarketDisplayUtils.js'; // Explicitly add .js
+} from '../utils/marketutils.js'; // Explicitly add .js
 import './PredictionMarketsListPage.css';
 
 const MarketState = MarketStateEnumFromUtil;

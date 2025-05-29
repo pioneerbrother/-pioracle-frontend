@@ -1,7 +1,7 @@
 // src/components/predictions/MarketCard.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { getMarketDisplayProperties } from '../../utils/MarketDisplayUtils.js'; // Adjust path
+import { getMarketDisplayProperties } from '../../utils/marketutils.js'; // Adjust path
 import './MarketCard.css';
 
 function MarketCard({ market }) {
