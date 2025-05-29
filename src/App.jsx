@@ -5,6 +5,7 @@ import { WalletProvider } from './context/WalletProvider';
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
 import MarketDetailPage from './pages/MarketDetailPage';
 import MyPredictionsPage from './pages/MyPredictionsPage'; // <-- IMPORT
+import RecentlyResolvedPage from './pages/RecentlyResolvedPage'; // <-- IMPORT
 import Header from './components/common/Header'; // <-- IMPORT THE NEW HEADER
 import ConnectWalletButton from './components/common/ConnectWalletButton'; // IMPORT THE BUTTON
 import './App.css'; 
@@ -41,6 +42,7 @@ function App() {
             <Route path="/predictions" element={<PredictionMarketsListPage />} />
             <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
              <Route path="/my-predictions" element={<MyPredictionsPage />} /> {/* <-- ADD ROUTE */}
+              <Route path="/resolved-markets" element={<RecentlyResolvedPage />} /> {/* <-- ADD ROUTE */}
           </Routes>
         </main>
         {/* You can add a simple Footer component here too if desired */}
