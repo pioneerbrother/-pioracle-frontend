@@ -7,7 +7,7 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import { 
     getMarketDisplayProperties, 
     MarketState as MarketStateEnumFromUtil 
-} from '../utils/MarketDisplayUtils'; // Assuming this path is correct
+} from '../utils/MarketDisplayUtils.js'; // Assuming this path is correct
 import './PredictionMarketsListPage.css'; // Can reuse similar styling
 
 const MarketState = MarketStateEnumFromUtil;
