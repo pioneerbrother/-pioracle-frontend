@@ -1,5 +1,5 @@
 // pioracle/src/pages/PredictionMarketsListPage.jsx
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useCallback  } from 'react';
 import { Link } from 'react-router-dom'; // Ensure Link is imported
 import { WalletContext } from '../context/WalletProvider';
 import MarketCard from '../components/predictions/MarketCard';
@@ -19,14 +19,13 @@ function PredictionMarketsListPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const fetchAllMarkets = useCallback(async () => { // Wrapped in useCallback
-        if (!predictionContractInstance) {
-            if (connectionStatus?.type === 'error') {
-                setError("Cannot load markets: WalletProvider error - " + connectionStatus.message);
-            }
-            setIsLoading(false);
-            return;
-        }
+    const fetchAllMarkets = useCallback(async () => { /* ... */ }, [predictionContractInstance, connectionStatus]);
+    // ...
+    useEffect(() => { /* ... */ }, [predictionContractInstance, fetchAllMarkets, connectionStatus]);
+    // ...
+    const openMarketsToDisplay = useMemo(() => { /* ... */ }, [rawMarkets]);
+    // ...
+}
         setIsLoading(true);
         setError(null);
         try {
