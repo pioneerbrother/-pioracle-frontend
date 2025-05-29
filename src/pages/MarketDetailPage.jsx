@@ -177,7 +177,7 @@ function MarketDetailPage() {
                     const displayProps = getMarketDisplayProperties(rawMarketData);
                     let finalMarketDetails = { ...rawMarketData, ...displayProps };
 
-                    if (!rawMarketData.isEventMarket && rawMarketData.state === MarketState.Open && rawMarketData.priceFeedAddress && rawMarketData.priceFeedAddress !== ethers.ZeroAddress && provider) {
+                    if (!rawMarketData.isEventMarket && rawMarketData.state === MarketState.Open && rawMarketData.priceFeedAddress && rawMarketData.priceFeedAddress !== ethers.constants.AddressZero && provider) {
                         setIsFetchingLivePrice(true);
                         try {
                             const feedContract = new ethers.Contract(rawMarketData.priceFeedAddress, aggregatorV3InterfaceABI, provider);
