@@ -1,0 +1,66 @@
+.my-predictions-page {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.prediction-history-item {
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.prediction-history-item h4 {
+    margin-top: 0;
+}
+
+.market-link {
+    text-decoration: none;
+    color: #333;
+}
+.market-link:hover h4 {
+    color: #007bff;
+}
+
+.claim-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.claim-button {
+    margin-top: 5px;
+}
+
+/* Re-use status badge styles from your global CSS or MarketDetailPage.css */
+.status-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: white;
+}
+.status-open { background-color: #28a745; }
+.status-resolving { background-color: #ffc107; color: #333; }
+.status-resolved-yes-won { background-color: #007bff; }
+.status-resolved-no-won { background-color: #dc3545; }
+.status-push { background-color: #6c757d; }
+.status-resolvedearly-yes-won { background-color: #17a2b8; }
+.status-resolvedearly-no-won { background-color: #fd7e14; }
+/* Add more status styles as needed */
+
+.form-message { /* For claim success/error messages */
+    padding: 8px;
+    margin-top: 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.form-message.type-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.form-message.type-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.form-message.type-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+.small-text { font-size: 0.9em; color: #555; }

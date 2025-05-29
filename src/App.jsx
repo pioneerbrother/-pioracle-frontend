@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'reac
 import { WalletProvider } from './context/WalletProvider';
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
 import MarketDetailPage from './pages/MarketDetailPage';
+import MyPredictionsPage from './pages/MyPredictionsPage'; // <-- IMPORT
+import Header from './components/common/Header'; // <-- IMPORT THE NEW HEADER
 import ConnectWalletButton from './components/common/ConnectWalletButton'; // IMPORT THE BUTTON
 import './App.css'; 
 
@@ -27,14 +29,18 @@ const AppHeader = () => ( // Renamed for clarity
 
 function App() {
   return (
+  
     <Router>
-      <WalletProvider>
+        <WalletProvider>
+      <Header />
+      
         <AppHeader /> {/* UNCOMMENT AND USE THE NEW HEADER */}
         <main className="main-content-area" style={{ padding: '0 20px' }}>
           <Routes>
             <Route path="/" element={<PredictionMarketsListPage />} />
             <Route path="/predictions" element={<PredictionMarketsListPage />} />
             <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
+             <Route path="/my-predictions" element={<MyPredictionsPage />} /> {/* <-- ADD ROUTE */}
           </Routes>
         </main>
         {/* You can add a simple Footer component here too if desired */}
