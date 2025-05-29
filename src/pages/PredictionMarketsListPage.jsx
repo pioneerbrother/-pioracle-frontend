@@ -7,10 +7,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { 
     getMarketDisplayProperties, 
-    MarketState as MarketStateEnumFromUtil,
-    getStatusString as getStatusStringFromUtil, 
-    formatToUTC as formatToUTCFromUtil 
-} from '../utils/MarketDisplayUtils'; // or '../utils/MarketDisplayUtils.js'
+    MarketState as MarketStateEnumFromUtil
+} from '../utils/MarketDisplayUtils.js'; // Explicitly add .js
 import './PredictionMarketsListPage.css';
 
 const MarketState = MarketStateEnumFromUtil;
