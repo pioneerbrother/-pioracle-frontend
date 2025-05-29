@@ -108,8 +108,9 @@ function RecentlyResolvedPage() {
             )}
 
             <div className="market-list"> {/* Reuse market-list style */}
-                {resolvedMarkets.map(market => (
-                    <MarketCard key={market.id} market={market} />
+                 {displayableMarkets.map(market => (
+        <MarketCard key={market.id} market={market} />
+              
                 ))}
             </div>
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
