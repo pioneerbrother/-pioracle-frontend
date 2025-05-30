@@ -21,6 +21,8 @@ function App() {
           <title>PiOracle - Decentralized Prediction Markets on Polygon</title>
           <meta name="description" content="Predict the future of cryptocurrencies like Bitcoin, Pi Coin, and major events on PiOracle.online. Transparent, low-fee predictions on the Polygon blockchain." />
           <meta name="keywords" content="pioracle, prediction market, crypto, polygon, matic, bitcoin, pi coin, forecasts, decentralized" />
+          <meta name="google-site-verification" content="vqIiRAATxjLLS7USVp-0rl-uF2TCwwN3NH1_Xu_tCfQ" />
+         
           {/* Example Open Graph tags for general site sharing */}
           {/* 
           <meta property="og:title" content="PiOracle - Decentralized Prediction Markets" />
