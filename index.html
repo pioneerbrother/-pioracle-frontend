@@ -1,6 +1,6 @@
 <head>
   <meta charset="UTF-8" />
-<link rel="icon" type="image/svg+xml" href="/vite.svg" /> <!-- Consider your PiOracle favicon -->
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <!-- Google Site Verification Meta Tag -->
@@ -16,5 +16,21 @@
   </script>
   <!-- END GOOGLE ANALYTICS -->
 
+  {/* --- TEST SCRIPT --- */}
+  <script>
+    console.log("INDEX.HTML: Test script in HEAD executed!");
+  </script>
+  {/* --- END TEST SCRIPT --- */}
+
   <title>PiOracle - Predict the Future</title> 
 </head>
+<body>
+  <div id="root"></div>
+  {/* --- ANOTHER TEST SCRIPT --- */}
+  <script>
+    console.log("INDEX.HTML: Test script in BODY (before main.jsx) executed!");
+  </script>
+  {/* --- END TEST SCRIPT --- */}
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
