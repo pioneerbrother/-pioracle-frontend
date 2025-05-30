@@ -14,9 +14,8 @@ export default defineConfig(async () => {
           '/resolved-markets',
           '/my-predictions'
         ],
-        exclude: [
-          '/google3ea9863098b060a5.html' // <<<< Use the actual, correct filename
-        ]
+        // Exclude the Google HTML verification file PATH AS THE PLUGIN SEES IT
+        exclude: ['/google3ea9863098b060a5'] // <<< REMOVE .html FROM THE EXCLUDE PATH
       }),
     ],
   };
