@@ -10,7 +10,9 @@ import { WalletProvider } from './context/WalletProvider';
 import './App.css';
 
 function App() {
+      console.log("APP.JSX: App component rendering.");
   return (
+ 
     // WalletProvider and Router should wrap the parts of the app that need them
     <WalletProvider>
       <Router>

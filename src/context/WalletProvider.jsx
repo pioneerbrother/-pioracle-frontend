@@ -19,6 +19,7 @@ import {
 export const WalletContext = createContext(null);
 
 export const WalletProvider = ({ children }) => {
+      console.log("WALLETPROVIDER.JSX: WalletProvider rendering.");
     const [walletAddress, setWalletAddress] = useState(null);
     const [provider, setProvider] = useState(null);
     const [signer, setSigner] = useState(null);
