@@ -9,7 +9,7 @@ import {
     getMarketDisplayProperties, 
     MarketState as MarketStateEnumFromUtil // Alias to avoid potential naming conflicts
 } from '../utils/marketutils.js'; // CORRECTED: Using 'marketutils.js' (all lowercase name part)
-import { Helmet } from 'react-helmet-async';
+
 import './PredictionMarketsListPage.css';
 
 // Use the aliased enum for clarity within this component

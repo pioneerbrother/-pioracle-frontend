@@ -8,7 +8,7 @@ import MyPredictionsPage from './pages/MyPredictionsPage'; // <-- IMPORT
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage'; // <-- IMPORT
 import Header from './components/common/Header'; // <-- IMPORT THE NEW HEADER
 import ConnectWalletButton from './components/common/ConnectWalletButton'; // IMPORT THE BUTTON
-import { HelmetProvider } from 'react-helmet-async';
+
 import './App.css'; 
 
 const AppHeader = () => ( // Renamed for clarity
@@ -36,7 +36,7 @@ function App() {
     <Router>
         <WalletProvider>
       <Header />
-          <HelmetProvider></HelmetProvider>
+      
       
         <AppHeader /> {/* UNCOMMENT AND USE THE NEW HEADER */}
         <main className="main-content-area" style={{ padding: '0 20px' }}>
