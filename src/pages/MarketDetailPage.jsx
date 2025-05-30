@@ -278,6 +278,21 @@ function MarketDetailPage() {
     const showSwitchNetworkNotice = isMarketOpenForBetting && walletAddress && !isCorrectNetwork && marketDetails;
     const showMarketClosedMessage = marketDetails && marketDetails.state !== MarketState.Open; // Simplified: if not Open, it's closed for betting
 
+    let pageTitle = "Market Details | PiOracle";
+    let pageDescription = "View details and participate in a prediction market on PiOracle.";
+
+    if (marketDetails && marketDetails.exists) {
+        pageTitle = `${marketDetails.question || marketDetails.title} | PiOracle`;
+        pageDescription = `Predict if ${marketDetails.question || marketDetails.title} on PiOracle.online. Current status: ${marketDetails.statusString}.`;
+        if (pageDescription.length > 160) {
+            pageDescription = pageDescription.substring(0, 157) + "..."; // Truncate if too long
+        }
+    } else if (error) {
+        pageTitle = "Market Not Found | PiOracle";
+        pageDescription = `Could not load market ID ${marketId}. It might not exist or there was an error.`;
+    }
+
+    // ... (early returns for loading, error, market not found) ...
 
     if (isLoading && !marketDetails) return <LoadingSpinner message={`Loading Market Details for ID: ${marketId}...`} />;
     if (error && !marketDetails) return <ErrorMessage title="Market Data Error" message={error} onRetry={() => setRefreshKey(k => k + 1)} />;

@@ -1,58 +1,58 @@
 // pioracle/src/App.jsx
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom';
-import { WalletProvider } from './context/WalletProvider';
+import React from 'react'; // useContext is not needed directly in App if Header handles it
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
 import MarketDetailPage from './pages/MarketDetailPage';
-import MyPredictionsPage from './pages/MyPredictionsPage'; // <-- IMPORT
-import RecentlyResolvedPage from './pages/RecentlyResolvedPage'; // <-- IMPORT
-import Header from './components/common/Header'; // <-- IMPORT THE NEW HEADER
-import ConnectWalletButton from './components/common/ConnectWalletButton'; // IMPORT THE BUTTON
-
-import './App.css'; 
-
-const AppHeader = () => ( // Renamed for clarity
-  <header style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      padding: '10px 20px', 
-      backgroundColor: '#333', /* Darker background */
-      color: 'white', /* White text */
-      marginBottom: '20px' 
-    }}>
-    <nav style={{ display: 'flex', gap: '20px' }}>
-      <RouterLink to="/" style={{ color: 'white', textDecoration: 'none' }}>Prediction Markets</RouterLink>
-      {/* Add other global navigation links here if needed */}
-    </nav>
-    <ConnectWalletButton /> {/* ADD THE BUTTON COMPONENT HERE */}
-  </header>
-);
+import MyPredictionsPage from './pages/MyPredictionsPage';
+import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
+import Header from './components/common/Header';
+import { WalletProvider } from './context/WalletProvider';
+import './App.css';
 
 function App() {
   return (
-         
-  
-    <Router>
-        <WalletProvider>
-      <Header />
-      
-      
-        <AppHeader /> {/* UNCOMMENT AND USE THE NEW HEADER */}
-        <main className="main-content-area" style={{ padding: '0 20px' }}>
+    // WalletProvider and Router should wrap the parts of the app that need them
+    <WalletProvider>
+      <Router>
+        <> {/* Fragment to hold head tags and the rest of the app */}
+          {/* --- DEFAULT SITE-WIDE HEAD TAGS --- */}
+          {/* These are effectively "defaults" if no deeper component overrides them. */}
+          {/* React 19 hoists these to the document <head>. */}
+          <title>PiOracle - Decentralized Prediction Markets on Polygon</title>
+          <meta name="description" content="Predict the future of cryptocurrencies like Bitcoin, Pi Coin, and major events on PiOracle.online. Transparent, low-fee predictions on the Polygon blockchain." />
+          <meta name="keywords" content="pioracle, prediction market, crypto, polygon, matic, bitcoin, pi coin, forecasts, decentralized" />
+          {/* Example Open Graph tags for general site sharing */}
+          {/* 
+          <meta property="og:title" content="PiOracle - Decentralized Prediction Markets" />
+          <meta property="og:description" content="Join PiOracle to predict outcomes on crypto and real-world events." />
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content="https://pioracle.online" />
+          <meta property="og:image" content="https://pioracle.online/default-social-image.png" /> // Replace with your actual image URL
+          */}
+          {/* --- END DEFAULT HEAD TAGS --- */}
+
+          <Header /> {/* Header is now a child of Router and WalletProvider */}
           
-          <Routes>
-            <Route path="/" element={<PredictionMarketsListPage />} />
-            <Route path="/predictions" element={<PredictionMarketsListPage />} />
-            <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
-             <Route path="/my-predictions" element={<MyPredictionsPage />} /> {/* <-- ADD ROUTE */}
-              <Route path="/resolved-markets" element={<RecentlyResolvedPage />} /> {/* <-- ADD ROUTE */}
-          </Routes>
-        </main>
-        {/* You can add a simple Footer component here too if desired */}
-        {/* <footer style={{textAlign: 'center', padding: '20px', marginTop: '30px', borderTop: '1px solid #eee'}}>PiOracle © 2024</footer> */}
-      </WalletProvider>
-    </Router>
+          <main className="app-content">
+            <Routes>
+              <Route path="/" element={<Navigate replace to="/predictions" />} />
+              <Route path="/predictions" element={<PredictionMarketsListPage />} />
+              <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
+              <Route path="/my-predictions" element={<MyPredictionsPage />} />
+              <Route path="/resolved-markets" element={<RecentlyResolvedPage />} />
+              {/* You could add a How It Works page later */}
+              {/* <Route path="/how-it-works" element={<HowItWorksPage />} /> */}
+            </Routes>
+          </main>
+
+          {/* 
+          <footer className="app-footer" style={{textAlign: 'center', padding: '20px', borderTop: '1px solid #eee', marginTop: '30px'}}>
+            <p>© {new Date().getFullYear()} PiOracle.online - Predict Responsibly.</p>
+          </footer> 
+          */}
+        </>
+      </Router>
+    </WalletProvider>
   );
 }
 

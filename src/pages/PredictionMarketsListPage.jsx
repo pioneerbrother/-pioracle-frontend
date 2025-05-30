@@ -1,45 +1,31 @@
 // pioracle/src/pages/PredictionMarketsListPage.jsx
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { WalletContext } from '../context/WalletProvider';
-import MarketCard from '../components/predictions/MarketCard';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorMessage from '../components/common/ErrorMessage';
+import { WalletContext } from '../context/WalletProvider'; // Ensure this path is correct
+import MarketCard from '../components/predictions/MarketCard'; // Ensure this path is correct
+import LoadingSpinner from '../components/common/LoadingSpinner'; // Ensure this path is correct
+import ErrorMessage from '../components/common/ErrorMessage';   // Ensure this path is correct
 import { 
     getMarketDisplayProperties, 
-    MarketState as MarketStateEnumFromUtil // Alias to avoid potential naming conflicts
-} from '../utils/marketutils.js'; // CORRECTED: Using 'marketutils.js' (all lowercase name part)
+    MarketState as MarketStateEnumFromUtil 
+} from '../utils/marketutils.js'; // Using lowercase and explicit .js
+import './PredictionMarketsListPage.css'; // Your styles for this page
 
-import './PredictionMarketsListPage.css';
-
-// Use the aliased enum for clarity within this component
-const MarketState = MarketStateEnumFromUtil;
-function PredictionMarketsListPage() {
-  return (
-    <>
-      <Helmet>
-        <title>PiOracle | Decentralized Prediction Markets on Polygon</title>
-        <meta name="description" content="Predict Bitcoin, Pi Coin, and more on PiOracle.online..." />
-        {/* Add other meta tags: keywords, Open Graph tags for social sharing */}
-        <meta name="keywords" content="prediction market, crypto, polygon, bitcoin, pi coin, matic" />
-      </Helmet>
-      {/* ... rest of your page JSX ... */}
-    </>
-  );
-}
+const MarketState = MarketStateEnumFromUtil; // Alias for clarity
 
 function PredictionMarketsListPage() {
     const { contract: predictionContractInstance, connectionStatus } = useContext(WalletContext);
-    const [rawMarkets, setRawMarkets] = useState([]);
+    const [rawMarkets, setRawMarkets] = useState([]); // Stores raw data from contract before display processing
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const fetchAllMarkets = useCallback(async () => {
         if (!predictionContractInstance) {
-            if (connectionStatus?.type === 'error') {
+            if (connectionStatus?.type === 'error' && connectionStatus.message) {
                 setError(`Cannot load markets: WalletProvider error - ${connectionStatus.message}`);
             }
-            // If not trying to connect and no contract, stop loading. Otherwise, let initial isLoading state persist.
+            // If not actively trying to connect and no contract, stop loading.
+            // Otherwise, let initial isLoading state persist or be handled by useEffect.
             if (connectionStatus?.type !== 'info' && connectionStatus?.type !== 'success' && connectionStatus?.type !== null) {
                 setIsLoading(false);
             }
@@ -64,7 +50,6 @@ function PredictionMarketsListPage() {
 
             const marketPromises = [];
             for (let i = 0; i < nextId; i++) {
-                // Ensure getMarketStaticDetails exists on the contract instance
                 if (typeof predictionContractInstance.getMarketStaticDetails !== 'function') {
                     throw new Error("getMarketStaticDetails function not found on contract instance. ABI might be incorrect or contract not fully loaded.");
                 }
@@ -77,11 +62,7 @@ function PredictionMarketsListPage() {
 
             const processedMarkets = marketsDetailsArray
                 .map((detailsArray) => {
-                    // Assuming detailsArray[10] is the 'exists' flag and detailsArray has at least 12 elements for basic data
-                    // For contracts with creationTimestamp, it would be 13 elements.
-                    const expectedLength = 13; // If creationTimestamp is included in getMarketStaticDetails
-                    // const expectedLength = 12; // If creationTimestamp is NOT included
-
+                    const expectedLength = 13; // Assumes getMarketStaticDetails returns 13 items including creationTimestamp
                     if (!detailsArray || detailsArray.length < expectedLength || typeof detailsArray[10] === 'undefined' || !detailsArray[10]) {
                         console.warn("Skipping market due to incomplete data or 'exists' is false:", detailsArray);
                         return null; 
@@ -99,11 +80,11 @@ function PredictionMarketsListPage() {
                         actualOutcomeValue: detailsArray[9].toString(),
                         exists: detailsArray[10],
                         isEventMarket: detailsArray[11],
-                        creationTimestamp: Number(detailsArray[12]), // Assumes creationTimestamp is the 13th element (index 12)
-                        oracleDecimals: 8 // Default, can be refined
+                        creationTimestamp: Number(detailsArray[12]),
+                        oracleDecimals: 8 
                     };
                 })
-                .filter(market => market !== null); // Remove nulls from non-existent/invalid markets
+                .filter(market => market !== null);
 
             setRawMarkets(processedMarkets);
 
@@ -113,7 +94,7 @@ function PredictionMarketsListPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [predictionContractInstance, connectionStatus?.type]); // Removed setters as they are stable
+    }, [predictionContractInstance, connectionStatus?.type]); // Removed state setters from deps
 
     useEffect(() => {
         if (predictionContractInstance) {
@@ -124,7 +105,8 @@ function PredictionMarketsListPage() {
                 if(connectionStatus?.type === 'error' && connectionStatus.message) {
                     setError(`WalletProvider Error: ${connectionStatus.message}`);
                 } else if (!predictionContractInstance) {
-                    setError("Waiting for wallet connection or contract initialization...");
+                    // Don't set error if just waiting for wallet, but stop loading if it's clear nothing will load soon.
+                    // setError("Connect wallet to load markets."); // Or just let it be blank
                 }
              } else {
                 setIsLoading(true); 
@@ -141,56 +123,76 @@ function PredictionMarketsListPage() {
                 try {
                     return {
                         ...market,
-                        ...getMarketDisplayProperties(market) // Ensure this function handles potentially undefined fields gracefully
+                        ...getMarketDisplayProperties(market) 
                     };
                 } catch (e) {
                     console.error("Error processing market for display (getMarketDisplayProperties):", market, e);
-                    return null; // Skip markets that cause errors during display processing
+                    return null; 
                 }
             })
-            .filter(market => market !== null) // Remove any markets that failed display processing
-            .sort((a, b) => (a.expiryTimestamp || 0) - (b.expiryTimestamp || 0));
+            .filter(market => market !== null)
+            .sort((a, b) => (a.expiryTimestamp || 0) - (b.expiryTimestamp || 0)); // Soonest expiry first
     }, [rawMarkets]);
 
     return (
-        <div className="page-container prediction-markets-list-page">
-            <div className="welcome-banner" style={{ textAlign: 'center', margin: '20px 0' }}>
-                <h2>Welcome to PiOracle!</h2>
-                <p>Make your predictions on exciting cryptocurrency markets, including Bitcoin and Pi Coin! Where do you see their prices heading?</p>
+        <>
+            {/* --- REACT 19 NATIVE HEAD TAGS --- */}
+            <title>PiOracle | Open Prediction Markets | Polygon Blockchain</title>
+            <meta name="description" content="Explore and predict on open cryptocurrency markets including Bitcoin, Pi Coin, and more on PiOracle.online. Decentralized predictions on the Polygon blockchain with low fees." />
+            <meta name="keywords" content="prediction market, crypto, cryptocurrency, polygon, matic, bitcoin prediction, pi coin prediction, open markets, pioracle, decentralized prediction" />
+            {/* Add Open Graph meta tags for social sharing if desired */}
+            {/* 
+            <meta property="og:title" content="PiOracle | Open Prediction Markets" />
+            <meta property="og:description" content="Predict Bitcoin, Pi Coin, and more on a decentralized Polygon platform." />
+            <meta property="og:image" content="https://pioracle.online/your-social-image.png" /> 
+            <meta property="og:url" content="https://pioracle.online/predictions" />
+            <meta property="og:type" content="website" />
+            */}
+            {/* --- END REACT 19 NATIVE HEAD TAGS --- */}
+
+            <div className="page-container prediction-markets-list-page">
+                <div className="welcome-banner" style={{ textAlign: 'center', margin: '20px 0', padding: '0 15px' }}>
+                    <h2>Welcome to PiOracle!</h2>
+                    <p>Make your predictions on exciting cryptocurrency markets, including Bitcoin and Pi Coin! Where do you see their prices heading?</p>
+                    {/* You can add a "Quick Guide" button later if you create that page */}
+                    {/* <Link to="/how-it-works" className="button quick-guide-button" style={{margin: '10px auto', display: 'inline-block'}}>
+                        Quick Guide
+                    </Link> */}
+                </div>
+
+                <div className="market-view-controls" style={{ marginBottom: '20px', marginTop: '10px', textAlign: 'center' }}>
+                    <Link to="/resolved-markets" className="button secondary">View Recently Resolved Markets</Link>
+                </div>
+
+                <h2>Open Prediction Markets</h2>
+
+                {isLoading && <LoadingSpinner message="Loading open markets..." />}
+                {error && <ErrorMessage title="Error Loading Markets" message={error} onRetry={fetchAllMarkets} />}
+                
+                {!isLoading && !error && openMarketsToDisplay.length === 0 && (
+                    <p style={{ textAlign: 'center' }}>No open markets available right now. Check the "Recently Resolved" section or come back soon!</p>
+                )}
+
+                <div className="market-list">
+                    {openMarketsToDisplay.map(market => (
+                        <MarketCard key={market.id} market={market} />
+                    ))}
+                </div>
+
+                <section className="how-to-participate" style={{marginTop: '40px', padding: '0 20px', marginBottom: '30px'}}>
+                     <h2>How to Participate (on Polygon Mainnet)</h2>
+                    <ol>
+                        <li><strong>Get a Wallet (MetaMask Recommended):</strong> Ensure you have a browser extension wallet like MetaMask installed and configured for the Polygon Mainnet.</li>
+                        <li><strong>Get MATIC:</strong> You'll need MATIC tokens in your wallet to pay for transaction gas fees and to place your predictions. You can acquire MATIC from most major exchanges.</li>
+                        <li><strong>Connect Your Wallet:</strong> Click the "Connect Wallet" button at the top of PiOracle.</li>
+                        <li><strong>Browse Markets:</strong> Explore the available "Open Prediction Markets".</li>
+                        <li><strong>Make Your Prediction:</strong> Click on a market, select your predicted outcome (YES or NO), and enter the amount of MATIC you wish to stake.</li>
+                        <li><strong>Confirm Transaction:</strong> Approve the transaction in your MetaMask wallet.</li>
+                        <li><strong>Check Back & Claim:</strong> After a market resolves (check "Recently Resolved Markets" or "My Predictions"), if your prediction was correct, return to the market page to claim your winnings!</li>
+                    </ol>
+                </section>
             </div>
-
-            <div className="market-view-controls" style={{ marginBottom: '20px', marginTop: '10px', textAlign: 'center' }}>
-                <Link to="/resolved-markets" className="button secondary">View Recently Resolved Markets</Link>
-            </div>
-
-            <h2>Open Prediction Markets</h2>
-
-            {isLoading && <LoadingSpinner message="Loading open markets..." />}
-            {error && <ErrorMessage title="Error Loading Markets" message={error} onRetry={fetchAllMarkets} />}
-            
-            {!isLoading && !error && openMarketsToDisplay.length === 0 && (
-                <p style={{ textAlign: 'center' }}>No open markets available right now. Check the "Recently Resolved" section or come back soon!</p>
-            )}
-
-            <div className="market-list">
-                {openMarketsToDisplay.map(market => (
-                    <MarketCard key={market.id} market={market} />
-                ))}
-            </div>
-
-            <section className="how-to-participate" style={{marginTop: '40px', padding: '0 20px'}}>
-                 <h2>How to Participate (on Polygon Mainnet)</h2>
-                <ol>
-                    <li><strong>Get a Wallet (MetaMask Recommended):</strong> Ensure you have a browser extension wallet like MetaMask installed and configured for the Polygon Mainnet.</li>
-                    <li><strong>Get MATIC:</strong> You'll need MATIC tokens in your wallet to pay for transaction gas fees and to place your predictions. You can acquire MATIC from most major exchanges.</li>
-                    <li><strong>Connect Your Wallet:</strong> Click the "Connect Wallet" button at the top of PiOracle.</li>
-                    <li><strong>Browse Markets:</strong> Explore the available "Open Prediction Markets".</li>
-                    <li><strong>Make Your Prediction:</strong> Click on a market, select your predicted outcome (YES or NO), and enter the amount of MATIC you wish to stake.</li>
-                    <li><strong>Confirm Transaction:</strong> Approve the transaction in your MetaMask wallet.</li>
-                    <li><strong>Check Back & Claim:</strong> After a market resolves (check "Recently Resolved Markets" or "My Predictions"), if your prediction was correct, return to the market page to claim your winnings!</li>
-                </ol>
-            </section>
-        </div>
+        </>
     );
 }
 
