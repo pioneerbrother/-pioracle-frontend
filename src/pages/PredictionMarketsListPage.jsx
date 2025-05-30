@@ -9,10 +9,24 @@ import {
     getMarketDisplayProperties, 
     MarketState as MarketStateEnumFromUtil // Alias to avoid potential naming conflicts
 } from '../utils/marketutils.js'; // CORRECTED: Using 'marketutils.js' (all lowercase name part)
+import { Helmet } from 'react-helmet-async';
 import './PredictionMarketsListPage.css';
 
 // Use the aliased enum for clarity within this component
 const MarketState = MarketStateEnumFromUtil;
+function PredictionMarketsListPage() {
+  return (
+    <>
+      <Helmet>
+        <title>PiOracle | Decentralized Prediction Markets on Polygon</title>
+        <meta name="description" content="Predict Bitcoin, Pi Coin, and more on PiOracle.online..." />
+        {/* Add other meta tags: keywords, Open Graph tags for social sharing */}
+        <meta name="keywords" content="prediction market, crypto, polygon, bitcoin, pi coin, matic" />
+      </Helmet>
+      {/* ... rest of your page JSX ... */}
+    </>
+  );
+}
 
 function PredictionMarketsListPage() {
     const { contract: predictionContractInstance, connectionStatus } = useContext(WalletContext);
