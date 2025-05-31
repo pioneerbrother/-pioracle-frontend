@@ -1,13 +1,13 @@
 /* MarketCard.css */
 .market-card-list-item {
-    list-style-type: none; /* If using <li> */
+    list-style-type: none; /* Good if using <ul> for market-list */
     margin-bottom: 20px;
 }
 
 .market-card-link {
     text-decoration: none;
-    color: inherit; /* Inherit text color from parent */
-    display: block; /* Make the whole link area clickable */
+    color: inherit; 
+    display: block; 
 }
 
 .market-card {
@@ -34,12 +34,13 @@
 }
 
 .market-title {
-    font-size: 1.2rem;
+    font-size: 1.2rem; /* Consider adjusting if titles can be long */
     font-weight: 600;
     margin: 0;
     color: #333;
-    flex-grow: 1; /* Allow title to take available space */
-    margin-right: 10px; /* Space before badge */
+    flex-grow: 1; 
+    margin-right: 10px; 
+    word-break: break-word; /* Helps if title is very long without spaces */
 }
 
 .market-card-body .market-info,
@@ -58,24 +59,30 @@
 .market-card-footer {
     margin-top: 10px;
     padding-top: 10px;
-    /* border-top: 1px dashed #eee; */ /* Optional: line above footer */
 }
 
-.expiry-info {
+.expiry-info { /* This class was in your example, good */
     font-style: italic;
     font-size: 0.85rem;
 }
 
-/* --- Status Badge Styles (can be global or here) --- */
+.resolution-info { /* Added this for potentially showing resolution time */
+    font-size: 0.8em;
+    font-style: italic;
+    color: #777;
+}
+
+
+/* --- Status Badge Styles --- */
 .status-badge {
-    padding: 5px 12px; /* Increased padding */
-    border-radius: 16px; /* More pill-like */
-    font-size: 0.75rem; /* Smaller font for badge */
+    padding: 5px 12px; 
+    border-radius: 16px; 
+    font-size: 0.75rem; 
     font-weight: bold;
     text-transform: uppercase;
     color: white;
-    white-space: nowrap; /* Prevent badge text from wrapping */
-    flex-shrink: 0; /* Prevent badge from shrinking if title is long */
+    white-space: nowrap; 
+    flex-shrink: 0; 
 }
 
 .status-badge.status-open {
@@ -83,12 +90,12 @@
 }
 
 .status-badge.status-resolved-yes-won,
-.status-badge.status-resolvedearly-yes-won {
+.status-badge.status-resolvedearly-yes-won { /* Combined early and regular resolved states */
     background-color: #007bff; /* Blue */
 }
 
 .status-badge.status-resolved-no-won,
-.status-badge.status-resolvedearly-no-won {
+.status-badge.status-resolvedearly-no-won { /* Combined early and regular resolved states */
     background-color: #dc3545; /* Red */
 }
 
@@ -96,8 +103,8 @@
     background-color: #6c757d; /* Grey */
 }
 
-.status-badge.status-resolving {
+.status-badge.status-resolving { /* If you add a 'Resolvable' state to getStatusString */
     background-color: #ffc107; /* Yellow */
-    color: #212529; /* Dark text for yellow */
+    color: #212529; 
 }
-/* Add any other status class styles your getMarketDisplayProperties might generate */
+/* Ensure your getMarketDisplayProperties generates class names like 'status-open', 'status-resolved-yes-won' etc. */
