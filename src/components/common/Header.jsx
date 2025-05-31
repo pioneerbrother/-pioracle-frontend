@@ -22,12 +22,15 @@ function Header() {
                 <Link to="/resolved-markets">Recently Resolved</Link>
                 {walletAddress && (
                     <Link to="/my-predictions">My Predictions</Link>
+                  
+    )}
+
                       
-                )}
-                // In Header.jsx
-{walletAddress && ( // Only show if wallet is connected
-    <Link to="/create-market">Create Market</Link>
-)}
+                  {walletAddress && ( 
+        <Link to="/create-market">Create Market</Link>
+    )}
+              
+
                 {/* Example: <Link to="/how-it-works">How It Works</Link> */}
             </nav>
             <div className="wallet-section">
