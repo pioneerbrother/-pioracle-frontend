@@ -1,0 +1,80 @@
+/* pioracle/src/pages/CreateMarketPage.css */
+.create-market-page {
+    max-width: 700px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+}
+
+.create-market-form .form-group {
+    margin-bottom: 20px;
+}
+
+.create-market-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+.create-market-form input[type="text"],
+.create-market-form input[type="number"],
+.create-market-form input[type="date"],
+.create-market-form input[type="time"],
+.create-market-form select,
+.create-market-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Important for padding and width */
+    font-size: 1rem;
+}
+
+.create-market-form textarea {
+    resize: vertical;
+}
+
+.create-market-form input:focus,
+.create-market-form select:focus,
+.create-market-form textarea:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+
+.create-market-form small {
+    display: block;
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 5px;
+}
+
+.form-group-inline {
+    display: flex;
+    gap: 20px; /* Space between inline items */
+}
+.form-group-inline > div {
+    flex: 1; /* Each item takes equal space */
+}
+
+
+/* Re-use your button styles from global CSS or define here */
+.button.primary { /* Assuming you have these classes defined */
+    /* Your styles */
+}
+.button.secondary {
+    /* Your styles */
+}
+
+.form-message {
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: 4px;
+    text-align: center;
+}
+.form-message.type-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.form-message.type-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.form-message.type-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }

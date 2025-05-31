@@ -7,6 +7,7 @@ import MyPredictionsPage from './pages/MyPredictionsPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import Header from './components/common/Header';
 import { WalletProvider } from './context/WalletProvider';
+import CreateMarketPage from './pages/CreateMarketPage';
 import './App.css';
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/resolved-markets" element={<RecentlyResolvedPage />} />
+              <Route path="/create-market" element={<CreateMarketPage />} />
               {/* You could add a How It Works page later */}
               {/* <Route path="/how-it-works" element={<HowItWorksPage />} /> */}
             </Routes>
