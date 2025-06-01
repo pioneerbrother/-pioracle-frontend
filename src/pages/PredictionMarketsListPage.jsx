@@ -21,13 +21,11 @@ function PredictionMarketsListPage() {
 
     console.log("PMLP RENDER: predictionContractInstance:", predictionContractInstance, "ConnectionStatus:", connectionStatus);
 
-    const fetchAllMarkets = useCallback(async () => {
-        console.log("PMLP fetchAllMarkets: Entered. Contract Instance:", !!predictionContractInstance);
+      const fetchAllMarkets = useCallback(async () => {
         if (!predictionContractInstance) {
-            console.log("PMLP fetchAllMarkets: No contract instance, checking connection status.");
+            // ... (existing initial checks and error setting) ...
             if (connectionStatus?.type === 'error' && connectionStatus.message) {
                 setError(`Cannot load markets: WalletProvider error - ${connectionStatus.message}`);
-                console.error("PMLP fetchAllMarkets: WalletProvider error", connectionStatus.message);
             }
             if (connectionStatus?.type !== 'info' && connectionStatus?.type !== 'success' && connectionStatus?.type !== null) {
                 setIsLoading(false);
@@ -37,57 +35,69 @@ function PredictionMarketsListPage() {
 
         setIsLoading(true);
         setError(null);
-        setRawMarkets([]);
+        setRawMarkets([]); 
         console.log("PMLP fetchAllMarkets: Set loading true, cleared errors/markets.");
 
         try {
-            console.log("PMLP fetchAllMarkets: Calling nextMarketId()...");
-            const nextIdBigNumber = await predictionContractInstance.nextMarketId();
+            console.log("PMLP fetchAllMarkets: Calling nextMarketId() for debug check...");
+            const nextIdBigNumber = await predictionContractInstance.nextMarketId(); // Still good to know total
             const nextId = Number(nextIdBigNumber);
-            console.log("PMLP fetchAllMarkets: nextMarketId raw:", nextIdBigNumber, "Parsed:", nextId);
+            console.log("PMLP fetchAllMarkets: Actual nextMarketId from contract =", nextId);
 
-            if (nextId === 0) {
-                console.log("PMLP fetchAllMarkets: nextMarketId is 0. No markets to fetch.");
-                setRawMarkets([]);
-                setIsLoading(false);
-                return;
-            }
+            let marketsDetailsArray = []; // Initialize as an empty array
 
-            const marketPromises = [];
-            for (let i = 0; i < nextId; i++) {
-                console.log(`PMLP fetchAllMarkets: Pushing promise for getMarketStaticDetails(${i})`);
-                marketPromises.push(predictionContractInstance.getMarketStaticDetails(i));
+            // --- START OF TEMPORARY DEBUGGING BLOCK ---
+            // This replaces the loop that fetches all markets.
+            // We will only attempt to fetch details for market ID 0 if any markets exist.
+            if (nextId > 0) { // Check if there's at least one market (ID 0 would exist)
+                console.log("PMLP fetchAllMarkets: DEBUG - Attempting to fetch only details for market ID 0");
+                try {
+                    const detailsForMarket0 = await predictionContractInstance.getMarketStaticDetails(0);
+                    console.log("PMLP fetchAllMarkets: DEBUG - Raw details for market ID 0:", JSON.stringify(detailsForMarket0));
+                    if (detailsForMarket0 && typeof detailsForMarket0[10] !== 'undefined' && detailsForMarket0[10]) { // Check exists flag at index 10
+                        marketsDetailsArray = [detailsForMarket0]; // Put it in an array
+                    } else {
+                        console.warn("PMLP fetchAllMarkets: DEBUG - Market ID 0 does not exist or data is invalid.");
+                        marketsDetailsArray = [];
+                    }
+                } catch (e) {
+                    console.error("PMLP fetchAllMarkets: DEBUG - Error fetching market ID 0 specifically:", e);
+                    setError("Failed to load details for even the first market.");
+                    marketsDetailsArray = []; // Ensure it's empty on error
+                }
+            } else {
+                console.log("PMLP fetchAllMarkets: DEBUG - No markets exist (nextId is 0).");
+                marketsDetailsArray = [];
             }
+            // --- END OF TEMPORARY DEBUGGING BLOCK ---
             
-            const marketsDetailsArray = await Promise.all(marketPromises);
-            console.log("PMLP fetchAllMarkets: marketsDetailsArray RAW from contract:", JSON.stringify(marketsDetailsArray));
+            console.log("PMLP fetchAllMarkets: marketsDetailsArray (after potential single fetch):", JSON.stringify(marketsDetailsArray));
 
-            const processedMarkets = marketsDetailsArray.map((detailsArray, index) => {
-                console.log(`PMLP fetchAllMarkets: Processing market index ${index}, raw details:`, JSON.stringify(detailsArray));
+            const processedMarkets = marketsDetailsArray.map((detailsArray) => {
+                // ... (your existing mapping logic to convert detailsArray to an object) ...
+                // (Make sure this mapping logic is robust for potentially undefined detailsArray if the fetch failed)
                 const expectedLength = 13; 
                 if (!detailsArray || detailsArray.length < expectedLength || typeof detailsArray[10] === 'undefined' || !detailsArray[10]) {
-                    console.warn(`PMLP fetchAllMarkets: Skipping market index ${index} - Invalid structure or exists=false. Array length:`, detailsArray?.length, "Content:", detailsArray);
+                    console.warn("PMLP fetchAllMarkets: Skipping market in process - Invalid structure or exists=false. Array length:", detailsArray?.length);
                     return null; 
                 }
-                const marketData = {
+                return {
                     id: detailsArray[0].toString(), assetSymbol: detailsArray[1], priceFeedAddress: detailsArray[2],
                     targetPrice: detailsArray[3].toString(), expiryTimestamp: Number(detailsArray[4]),
                     resolutionTimestamp: Number(detailsArray[5]), totalStakedYesNet: detailsArray[6].toString(),
-                    totalStakedNoNet: detailsArray[7].toString(), state: Number(detailsArray[8]), // <<< Check this 'state' value
+                    totalStakedNoNet: detailsArray[7].toString(), state: Number(detailsArray[8]),
                     actualOutcomeValue: detailsArray[9].toString(), exists: detailsArray[10],
                     isEventMarket: detailsArray[11], creationTimestamp: Number(detailsArray[12]),
                     oracleDecimals: 8 
                 };
-                console.log(`PMLP fetchAllMarkets: Processed market index ${index}:`, marketData);
-                return marketData;
             }).filter(market => market !== null);
             
             console.log("PMLP fetchAllMarkets: Final processedMarkets (before setRawMarkets):", processedMarkets);
             setRawMarkets(processedMarkets);
 
         } catch (e) {
-            console.error("PMLP fetchAllMarkets: Error during fetch:", e);
-            setError("Failed to load markets. Ensure wallet is connected to Polygon Mainnet and contract/ABI are correct.");
+            console.error("PMLP fetchAllMarkets: Error during main fetchAllMarkets try block:", e);
+            setError("Failed to load markets. Please ensure your wallet is connected to Polygon Mainnet and contract/ABI are correct.");
         } finally {
             setIsLoading(false);
             console.log("PMLP fetchAllMarkets: Set loading false in finally block.");
