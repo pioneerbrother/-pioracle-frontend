@@ -42,11 +42,14 @@ function CreateMarketPage() {
     const [listingFeeWei, setListingFeeWei] = useState(null);
     const [isFeeLoading, setIsFeeLoading] = useState(true);
     const [feeError, setFeeError] = useState('');
+     console.log("CreateMarketPage RENDER - Fee States:", { isFeeLoading, feeError, listingFeeDisplay, listingFeeWei: listingFeeWei?.toString() });
 
     // Submission State
     const [isSubmitting, setIsSubmitting] = useState(false); // Renamed from isLoading for clarity
     const [submitError, setSubmitError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+
+   
 
     // Fetch listing fee from contract
     useEffect(() => {
@@ -67,6 +70,7 @@ function CreateMarketPage() {
                     setFeeError("Could not load listing fee.");
                     setListingFeeDisplay("N/A"); 
                     setListingFeeWei(null);
+                     console.log("CreateMarketPage fetchFee CATCH - Error set, fee display N/A");
                 } finally {
                     setIsFeeLoading(false);
                 }
