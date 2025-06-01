@@ -8,6 +8,7 @@ import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import Header from './components/common/Header';
 import { WalletProvider } from './context/WalletProvider';
 import CreateMarketPage from './pages/CreateMarketPage';
+import GuidePage from './pages/GuidePage';
 import './App.css';
 
 function App() {
@@ -46,8 +47,9 @@ function App() {
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/resolved-markets" element={<RecentlyResolvedPage />} />
               <Route path="/create-market" element={<CreateMarketPage />} />
-              {/* You could add a How It Works page later */}
-              {/* <Route path="/how-it-works" element={<HowItWorksPage />} /> */}
+              <Route path="/guide" element={<GuidePage />} /> 
+             
+            
             </Routes>
           </main>
 

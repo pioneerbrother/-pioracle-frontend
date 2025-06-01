@@ -20,6 +20,7 @@ function Header() {
             <nav className="navigation-links">
                 <Link to="/predictions">Open Markets</Link>
                 <Link to="/resolved-markets">Recently Resolved</Link>
+
                 {walletAddress && (
                     <Link to="/my-predictions">My Predictions</Link>
                   
@@ -30,8 +31,7 @@ function Header() {
         <Link to="/create-market">Create Market</Link>
     )}
               
-
-                {/* Example: <Link to="/how-it-works">How It Works</Link> */}
+           <Link to="/guide">Guide / How It Works</Link>
             </nav>
             <div className="wallet-section">
                 <ConnectWalletButton />
