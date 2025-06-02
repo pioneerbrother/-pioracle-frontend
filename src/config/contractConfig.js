@@ -9,18 +9,24 @@ const LOCAL_CONTRACT_ADDRESS = import.meta.env.VITE_LOCAL_PREDICTION_MARKET_CONT
 const LOCAL_RPC_URL = import.meta.env.VITE_LOCALHOST_RPC_URL || 'http://127.0.0.1:8545/';
 const LOCAL_CHAIN_ID_HEX = import.meta.env.VITE_LOCAL_CHAIN_ID_HEX || '0x7a69'; // 31337 (decimal)
 const LOCAL_NETWORK_NAME = 'Localhost 8545';
+const LOCAL_CURRENCY_SYMBOL = 'ETH';
+const LOCAL_EXPLORER_URL = ''; // No standard explorer for generic localhost
 
 // --- Polygon Amoy Testnet Configuration ---
 const AMOY_CONTRACT_ADDRESS = import.meta.env.VITE_AMOY_PREDICTION_MARKET_CONTRACT_ADDRESS;
 const AMOY_RPC_URL = import.meta.env.VITE_AMOY_RPC_URL;
 const AMOY_CHAIN_ID_HEX = import.meta.env.VITE_AMOY_CHAIN_ID_HEX || '0x13882'; // 80002 (decimal)
 const AMOY_NETWORK_NAME = 'Polygon Amoy';
+const AMOY_CURRENCY_SYMBOL = 'MATIC';
+const AMOY_EXPLORER_URL = 'https://www.oklink.com/amoy'; // Or 'https://amoy.polygonscan.com/'
 
 // --- Polygon Mainnet Configuration ---
 const MAINNET_CONTRACT_ADDRESS = import.meta.env.VITE_POLYGON_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS;
 const MAINNET_RPC_URL = import.meta.env.VITE_POLYGON_MAINNET_RPC_URL;
 const MAINNET_CHAIN_ID_HEX = import.meta.env.VITE_POLYGON_MAINNET_CHAIN_ID_HEX || '0x89'; // 137 (decimal)
 const MAINNET_NETWORK_NAME = 'Polygon Mainnet';
+const MAINNET_CURRENCY_SYMBOL = 'MATIC';
+const MAINNET_EXPLORER_URL = 'https://polygonscan.com/';
 
 
 export const getContractAddress = () => {
@@ -50,7 +56,7 @@ export const getTargetChainIdHex = () => {
     return chainIdHex;
 };
 
-export const getTargetNetworkName = () => {
+export const getTargetNetworkName = () => { // This is what WalletProvider's getChainName() effectively uses
     let networkName;
     if (VITE_NETWORK_TARGET === 'amoy') networkName = AMOY_NETWORK_NAME;
     else if (VITE_NETWORK_TARGET === 'polygon_mainnet') networkName = MAINNET_NETWORK_NAME;
@@ -58,6 +64,30 @@ export const getTargetNetworkName = () => {
     console.log(`[contractConfig] getTargetNetworkName() for target '${VITE_NETWORK_TARGET}' will return:`, networkName);
     return networkName;
 };
+
+// Helper for WalletProvider's expected getChainName
+export const getChainName = () => {
+    return getTargetNetworkName();
+};
+
+export const getCurrencySymbol = () => {
+    let symbol;
+    if (VITE_NETWORK_TARGET === 'amoy') symbol = AMOY_CURRENCY_SYMBOL;
+    else if (VITE_NETWORK_TARGET === 'polygon_mainnet') symbol = MAINNET_CURRENCY_SYMBOL;
+    else symbol = LOCAL_CURRENCY_SYMBOL;
+    console.log(`[contractConfig] getCurrencySymbol() for target '${VITE_NETWORK_TARGET}' will return:`, symbol);
+    return symbol;
+};
+
+export const getExplorerUrl = () => {
+    let url;
+    if (VITE_NETWORK_TARGET === 'amoy') url = AMOY_EXPLORER_URL;
+    else if (VITE_NETWORK_TARGET === 'polygon_mainnet') url = MAINNET_EXPLORER_URL;
+    else url = LOCAL_EXPLORER_URL;
+    console.log(`[contractConfig] getExplorerUrl() for target '${VITE_NETWORK_TARGET}' will return:`, url);
+    return url;
+};
+
 
 export const getContractAbi = () => {
     const abi = PREDICTION_MARKET_ABI_JSON.abi || PREDICTION_MARKET_ABI_JSON;
@@ -68,5 +98,5 @@ export const getContractAbi = () => {
 export const PREDICTION_MARKET_ABI = getContractAbi();
 export const PREDICTION_MARKET_CONTRACT_ADDRESS = getContractAddress();
 export const TARGET_CHAIN_ID_HEX = getTargetChainIdHex();
-export const TARGET_NETWORK_NAME = getTargetNetworkName();
+export const TARGET_NETWORK_NAME = getTargetNetworkName(); // You already had this
 export const CURRENT_RPC_URL = getRpcUrl();
