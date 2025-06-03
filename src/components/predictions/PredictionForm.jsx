@@ -1,7 +1,7 @@
 // pioracle/src/components/predictions/PredictionForm.jsx
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from '../../context/WalletProvider'; // Adjust path as needed
+import { WalletContext } from '../../pages/WalletProvider';
 import { useBettingEligibility } from '../../hooks/useBettingEligibility'; // Import the hook
 import './PredictionForm.css'; // Make sure you have this CSS file for styling
 
