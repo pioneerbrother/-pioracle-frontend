@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom'; // If you link back or to market details
-import { WalletContext } from './pages/WalletProvider';
+import { WalletContext } from './WalletProvider'; 
 import MarketCard from '../components/predictions/MarketCard'; // Reuse your MarketCard
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
