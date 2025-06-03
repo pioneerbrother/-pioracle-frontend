@@ -113,6 +113,11 @@ export const WalletProvider = ({ children }) => {
 
             // VVVV ADD THESE NEW LOGS HERE VVVV
             console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Web3ModalEthers imported object:", Web3ModalEthers);
+            if (Web3ModalEthers && typeof Web3ModalEthers === 'object') {
+    console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Keys of Web3ModalEthers:", Object.keys(Web3ModalEthers));
+}
+console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Type of Web3ModalEthers.EthereumWeb3Modal:", typeof Web3ModalEthers.EthereumWeb3Modal);
+console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Value of Web3ModalEthers.EthereumWeb3Modal:", Web3ModalEthers.EthereumWeb3Modal); // Log the value too
             console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Type of Web3ModalEthers.EthereumWeb3Modal:", typeof Web3ModalEthers.EthereumWeb3Modal);
             // ^^^^ END OF NEW LOGS ^^^^
 
