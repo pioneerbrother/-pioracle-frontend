@@ -8,7 +8,7 @@ import React, {
     // useRef // Not currently used directly, can be removed if not needed later
 } from 'react';
 import { ethers } from 'ethers';
-import { EthereumWeb3Modal } from '@web3modal/ethers5';
+import * as Web3ModalEthers from '@web3modal/ethers5';
 
 import {
     getContractAddress,
@@ -122,7 +122,7 @@ export const WalletProvider = ({ children }) => {
                 const ethersConfig = ethers.providers.getDefaultProvider(loadedReadOnlyRpcUrl);
                 console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - ethersConfig for modal created using RPC:", loadedReadOnlyRpcUrl);
 
-                const modal = new EthereumWeb3Modal(
+                const modal = new Web3ModalEthers.EthereumWeb3Modal (
                     {
                         ethersConfig: ethersConfig,
                         chains: [targetChainConfig],
