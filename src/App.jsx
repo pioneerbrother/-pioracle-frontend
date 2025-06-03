@@ -9,6 +9,7 @@ import Header from './components/common/Header';
 import { WalletProvider } from './context/WalletProvider';
 import CreateMarketPage from './pages/CreateMarketPage';
 import GuidePage from './pages/GuidePage';
+import ConnectTestPage from './pages/ConnectTestPage'; // Adjust path
 import './App.css';
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
               <Route path="/resolved-markets" element={<RecentlyResolvedPage />} />
               <Route path="/create-market" element={<CreateMarketPage />} />
               <Route path="/guide" element={<GuidePage />} /> 
+               <Route path="/connect-test" element={<ConnectTestPage />} />
              
             
             </Routes>
