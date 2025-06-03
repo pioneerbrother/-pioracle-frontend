@@ -456,7 +456,7 @@ useEffect(() => {
         setConnectionStatus({ type: 'info', message: 'Opening wallet modal...' });
 
         try {
-            await web3ModalInstance.openModal();
+            await web3ModalInstance.open(); // <--- CORRECTED METHOD NAME
             const rawEip1193Provider = web3ModalInstance.getWalletProvider();
 
             if (rawEip1193Provider) {
