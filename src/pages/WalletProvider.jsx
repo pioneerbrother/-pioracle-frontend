@@ -8,7 +8,7 @@ import React, {
     // useRef // Not currently used directly, can be removed if not needed later
 } from 'react';
 import { ethers } from 'ethers';
-import { EthereumWeb3Modal } from '@web3modal/ethers5';
+import EthereumWeb3Modal from '@web3modal/ethers5';
 
 import {
     getContractAddress,

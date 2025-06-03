@@ -6,7 +6,8 @@ import MarketDetailPage from './pages/MarketDetailPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import Header from './components/common/Header';
-import { WalletProvider } from './context/WalletProvider';
+// In App.jsx
+import { WalletProvider } from './pages/WalletProvider'; // Adjust path if needed
 import CreateMarketPage from './pages/CreateMarketPage';
 import GuidePage from './pages/GuidePage';
 import ConnectTestPage from './pages/ConnectTestPage'; // Adjust path
