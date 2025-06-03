@@ -1,7 +1,7 @@
 // pioracle/src/pages/PredictionMarketsListPage.jsx
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { WalletContext } from '../context/WalletProvider';
+import { WalletContext } from './WalletProvider';
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
