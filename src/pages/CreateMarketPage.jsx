@@ -2,7 +2,7 @@
 import React, { useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers'; // Using Ethers v5 as per your project
-import { WalletContext } from '../context/WalletProvider';
+import { WalletContext } from './WalletProvider'; 
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import './CreateMarketPage.css'; // Create this CSS file for styling
