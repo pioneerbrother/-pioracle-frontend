@@ -1,45 +1,85 @@
-// pioracle/src/context/WalletProvider.jsx
+// src/contexts/WalletProvider.jsx
 import React, {
     createContext,
     useState,
     useEffect,
     useCallback,
     useMemo,
-    useRef
+    // useRef // Not currently used directly, can be removed if not needed later
 } from 'react';
 import { ethers } from 'ethers';
+import { EthereumWeb3Modal } from '@web3modal/ethers5';
 
 import {
     getContractAddress,
     getContractAbi,
     getRpcUrl,
     getTargetChainIdHex,
+    getChainName,
+    getCurrencySymbol,
+    getExplorerUrl,
 } from '../config/contractConfig';
 
 export const WalletContext = createContext(null);
 
+const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+
+// Moved the check inside the component to log it during render cycle if needed
+// if (!WALLETCONNECT_PROJECT_ID) {
+//     console.error("PiOracle WalletProvider: VITE_WALLETCONNECT_PROJECT_ID is not set. WalletConnect will not work.");
+// }
+
+const metadata = {
+    name: "Pioracle.online",
+    description: "Decentralized Prediction Markets",
+    url: "https://pioracle.online",
+    icons: ["https://pioracle.online/pioracle_logo_eyes_only_192.png"],
+};
+
 export const WalletProvider = ({ children }) => {
-      console.log("WALLETPROVIDER.JSX: WalletProvider rendering.");
+    console.log("MOB_DEBUG: WalletProvider START RENDER");
+    if (!WALLETCONNECT_PROJECT_ID) {
+        console.error("MOB_DEBUG: FATAL - VITE_WALLETCONNECT_PROJECT_ID is MISSING in .env. WalletConnect WILL NOT WORK.");
+    }
+
     const [walletAddress, setWalletAddress] = useState(null);
     const [provider, setProvider] = useState(null);
     const [signer, setSigner] = useState(null);
     const [contract, setContract] = useState(null);
     const [isConnecting, setIsConnecting] = useState(false);
-    const [connectionStatus, setConnectionStatus] = useState({ type: null, message: '' });
-    const [chainId, setChainId] = useState(null); 
+    const [connectionStatus, setConnectionStatus] = useState({ type: 'info', message: 'Initializing...' });
+    const [chainId, setChainId] = useState(null);
 
     const [loadedContractAddress, setLoadedContractAddress] = useState(null);
     const [loadedReadOnlyRpcUrl, setLoadedReadOnlyRpcUrl] = useState(null);
     const [loadedTargetChainIdHex, setLoadedTargetChainIdHex] = useState(null);
+    const [loadedTargetChainIdNum, setLoadedTargetChainIdNum] = useState(null);
 
-    console.log("PiOracle WalletProvider: Using ethers version:", ethers.version);
+    const [web3ModalInstance, setWeb3ModalInstance] = useState(null);
+    const [eip1193ProviderState, setEip1193ProviderState] = useState(null);
+    const [web3ModalInitError, setWeb3ModalInitError] = useState(null); // New state for specific error
 
     // Effect 1: Load dynamic configuration ONCE on mount
     useEffect(() => {
-        console.log("PiOracle WalletProvider: Effect 1 (ConfigLoad) - Loading dynamic configuration...");
+        console.log("MOB_DEBUG: Effect 1 (ConfigLoad) - Loading dynamic configuration...");
         const addr = getContractAddress();
         const rpc = getRpcUrl();
         const targetChainHex = getTargetChainIdHex();
+
+        // Log raw values from import.meta.env for Netlify debugging
+        console.log("MOB_DEBUG: Raw Env Values Used by Config:", {
+            VITE_NETWORK_TARGET: import.meta.env.VITE_NETWORK_TARGET,
+            VITE_LOCAL_CONTRACT_ADDRESS: import.meta.env.VITE_LOCAL_PREDICTION_MARKET_CONTRACT_ADDRESS,
+            VITE_LOCALHOST_RPC_URL: import.meta.env.VITE_LOCALHOST_RPC_URL,
+            VITE_LOCAL_CHAIN_ID_HEX: import.meta.env.VITE_LOCAL_CHAIN_ID_HEX,
+            VITE_AMOY_CONTRACT_ADDRESS: import.meta.env.VITE_AMOY_PREDICTION_MARKET_CONTRACT_ADDRESS,
+            VITE_AMOY_RPC_URL: import.meta.env.VITE_AMOY_RPC_URL,
+            VITE_AMOY_CHAIN_ID_HEX: import.meta.env.VITE_AMOY_CHAIN_ID_HEX,
+            VITE_POLYGON_MAINNET_CONTRACT_ADDRESS: import.meta.env.VITE_POLYGON_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
+            VITE_POLYGON_MAINNET_RPC_URL: import.meta.env.VITE_POLYGON_MAINNET_RPC_URL,
+            VITE_POLYGON_MAINNET_CHAIN_ID_HEX: import.meta.env.VITE_POLYGON_MAINNET_CHAIN_ID_HEX,
+        });
+
 
         setLoadedContractAddress(addr);
         setLoadedReadOnlyRpcUrl(rpc);
@@ -47,293 +87,429 @@ export const WalletProvider = ({ children }) => {
 
         if (!addr || !rpc || !targetChainHex) {
             const missing = [!addr && "Contract Address", !rpc && "RPC URL", !targetChainHex && "Target Chain ID"].filter(Boolean).join(", ");
-            console.error(`PiOracle WalletProvider: Effect 1 (ConfigLoad) - Critical DApp configuration missing: ${missing}. Check .env and contractConfig.js.`);
-            setConnectionStatus({ type: 'error', message: `Critical DApp configuration missing: ${missing}.` });
+            console.error(`MOB_DEBUG: Effect 1 (ConfigLoad) - Critical DApp configuration missing: ${missing}. Used target: ${import.meta.env.VITE_NETWORK_TARGET}`);
+            setConnectionStatus({ type: 'error', message: `Critical DApp configuration missing: ${missing}. Please check Netlify env vars.` });
         } else {
-            console.log("PiOracle WalletProvider: Effect 1 (ConfigLoad) - Dynamic configuration loaded:", { addr, rpc, targetChainHex });
+            console.log("MOB_DEBUG: Effect 1 (ConfigLoad) - Dynamic configuration loaded:", { addr, rpc, targetChainHex });
+            setLoadedTargetChainIdNum(parseInt(targetChainHex, 16));
         }
-    }, []); // Empty dependency array: runs once on mount
+    }, []);
 
-    // useCallback for initializeContract
+    // Effect 1.5: Initialize Web3Modal Instance once config is loaded
+    useEffect(() => {
+        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Evaluating conditions.");
+        const conditions = {
+            loadedReadOnlyRpcUrl: !!loadedReadOnlyRpcUrl,
+            loadedTargetChainIdNum: !!loadedTargetChainIdNum,
+            WALLETCONNECT_PROJECT_ID: !!WALLETCONNECT_PROJECT_ID,
+            web3ModalInstanceExists: !!web3ModalInstance,
+        };
+        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Conditions:", conditions);
+
+        if (loadedReadOnlyRpcUrl && loadedTargetChainIdNum && WALLETCONNECT_PROJECT_ID && !web3ModalInstance) {
+            console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - ALL CONDITIONS MET. Initializing Web3Modal...");
+            setWeb3ModalInitError(null); // Clear previous init error
+            try {
+                const targetChainConfig = {
+                    chainId: loadedTargetChainIdNum,
+                    name: getChainName() || `Chain ${loadedTargetChainIdNum}`,
+                    currency: getCurrencySymbol() || 'ETH',
+                    explorerUrl: getExplorerUrl() || '',
+                    rpcUrl: loadedReadOnlyRpcUrl,
+                };
+                console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - targetChainConfig:", JSON.stringify(targetChainConfig));
+
+                const ethersConfig = ethers.providers.getDefaultProvider(loadedReadOnlyRpcUrl);
+                console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - ethersConfig for modal created using RPC:", loadedReadOnlyRpcUrl);
+
+                const modal = new EthereumWeb3Modal(
+                    {
+                        ethersConfig: ethersConfig,
+                        chains: [targetChainConfig],
+                        projectId: WALLETCONNECT_PROJECT_ID,
+                        enableAnalytics: false,
+                    },
+                    metadata
+                );
+                setWeb3ModalInstance(modal);
+                console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Web3Modal initialized successfully. YAY_MODAL_INIT_SUCCESS");
+            } catch (error) {
+                console.error("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - FAILED to initialize Web3Modal:", error);
+                setWeb3ModalInitError(`Modal Error: ${error.message}`); // Set specific error
+                // Avoid setting general connectionStatus here to prevent potential loops
+                // setConnectionStatus({type: 'error', message: 'Wallet connection library failed to load.'});
+            }
+        } else {
+            console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - SKIPPED (conditions not met or already initialized).");
+        }
+    }, [loadedReadOnlyRpcUrl, loadedTargetChainIdNum, web3ModalInstance]); // WALLETCONNECT_PROJECT_ID is a const from module scope, not needed here
+
+    // initializeContract: Removed connectionStatus from dependencies.
+    // The function's ability to create a contract instance doesn't depend on the current connection message.
+    // It *sets* connectionStatus on error, but shouldn't re-run because of it.
     const initializeContract = useCallback((currentSignerOrProvider, addressToUse) => {
-        const abiToUse = getContractAbi();
-        console.log("PiOracle WalletProvider (initializeContract): Attempting with address:", addressToUse, "Provider/Signer:", currentSignerOrProvider ? currentSignerOrProvider.constructor.name : 'null');
+        const abiToUse = getContractAbi(); // This is stable as it's from a static import
+        console.log("MOB_DEBUG: initializeContract - Attempting with address:", addressToUse, "Provider/Signer:", currentSignerOrProvider ? currentSignerOrProvider.constructor.name : 'null');
 
-        if (!currentSignerOrProvider) { console.warn("PiOracle WalletProvider (initializeContract): No provider/signer."); setContract(null); return false; }
-        if (!addressToUse || !ethers.utils.isAddress(addressToUse)) { console.error("PiOracle WalletProvider (initializeContract): Invalid or missing contract address:", addressToUse); setContract(null); setConnectionStatus({type: 'error', message: "Contract address configuration error."}); return false; }
-        if (!abiToUse || abiToUse.length === 0) { console.error("PiOracle WalletProvider (initializeContract): Contract ABI missing or empty."); setContract(null); setConnectionStatus({type: 'error', message: "Contract ABI configuration error."}); return false; }
+        if (!currentSignerOrProvider) {
+            console.warn("MOB_DEBUG: initializeContract - No provider/signer.");
+            setContract(null); return false;
+        }
+        if (!addressToUse || !ethers.utils.isAddress(addressToUse)) {
+            console.error("MOB_DEBUG: initializeContract - Invalid or missing contract address:", addressToUse);
+            setContract(null);
+            setConnectionStatus({ type: 'error', message: "Contract address configuration error." });
+            return false;
+        }
+        if (!abiToUse || abiToUse.length === 0) {
+            console.error("MOB_DEBUG: initializeContract - Contract ABI missing or empty.");
+            setContract(null);
+            setConnectionStatus({ type: 'error', message: "Contract ABI configuration error." });
+            return false;
+        }
 
         try {
             const instance = new ethers.Contract(addressToUse, abiToUse, currentSignerOrProvider);
-            setContract(instance); // This will update the context value
-            console.log(`PiOracle WalletProvider: Contract instance INITIALIZED at ${addressToUse} with ${currentSignerOrProvider.constructor.name}.`);
-            if (connectionStatus.type === 'error' && (connectionStatus.message.includes('contract') || connectionStatus.message.includes('RPC') || connectionStatus.message.includes('signer'))) {
-                 setConnectionStatus({ type: null, message: '' });
-            }
+            setContract(instance);
+            console.log(`MOB_DEBUG: initializeContract - Contract instance INITIALIZED at ${addressToUse} with ${currentSignerOrProvider.constructor.name}.`);
+            // Clearing status only if it was an error related to contract/RPC/signer
+            // This check needs to be careful not to cause loops if initializeContract is called frequently
+            // It's generally safer for the calling code (effects) to manage clearing status messages upon success.
+            // if (connectionStatus.type === 'error' && (connectionStatus.message.includes('contract') || connectionStatus.message.includes('RPC') || connectionStatus.message.includes('signer'))) {
+            //      setConnectionStatus({ type: null, message: '' });
+            // }
             return true;
-        } catch (e) { console.error("PiOracle WalletProvider: ERROR INITIALIZING CONTRACT INSTANCE:", e); setContract(null); setConnectionStatus({ type: 'error', message: `Failed to initialize contract: ${e.message}` }); return false; }
-    }, [connectionStatus.type, connectionStatus.message]);
+        } catch (e) {
+            console.error("MOB_DEBUG: initializeContract - ERROR INITIALIZING CONTRACT INSTANCE:", e);
+            setContract(null);
+            setConnectionStatus({ type: 'error', message: `Failed to initialize contract: ${e.message}` });
+            return false;
+        }
+    }, []); // getContractAbi is from module scope, ethers.utils.isAddress and ethers.Contract are stable.
 
+    const disconnectWalletF = useCallback(async () => {
+        console.log('MOB_DEBUG: disconnectWalletF called.');
+        if (web3ModalInstance && eip1193ProviderState) { // Check eip1193ProviderState to ensure session was active
+            try {
+                console.log("MOB_DEBUG: disconnectWalletF - Attempting to disconnect Web3Modal session.");
+                await web3ModalInstance.disconnect();
+            } catch (e) {
+                console.error("MOB_DEBUG: disconnectWalletF - Error during Web3Modal disconnect:", e);
+            }
+        }
+        setWalletAddress(null);
+        setSigner(null);
+        setEip1193ProviderState(null);
+        setChainId(null); // Clear chainId on disconnect
 
-    // useCallback for disconnectWalletF
-    const disconnectWalletF = useCallback(() => {
-       console.log('PiOracle WalletProvider: disconnectWalletF called.');
-       setWalletAddress(null);
-       setSigner(null);
-       // setChainId(null); // Keep chainId of read-only provider if it's set next
-       setConnectionStatus({ type: 'info', message: 'Wallet disconnected.' });
+        // Revert to read-only provider and contract
+        if (loadedReadOnlyRpcUrl && loadedContractAddress) {
+            console.log("MOB_DEBUG: disconnectWalletF - Re-initializing read-only provider with RPC:", loadedReadOnlyRpcUrl);
+            try {
+                const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
+                setProvider(defaultProvider);
+                // initializeContract will be called by Effect 3 due to provider change and walletAddress being null
+                defaultProvider.getNetwork().then(net => {
+                    if (net?.chainId) {
+                        setChainId(net.chainId); // Set chainId for read-only provider
+                        setConnectionStatus({ type: 'info', message: `Wallet disconnected. Using read-only mode (Network: ${net.chainId}).` });
+                    } else {
+                        setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Using read-only mode.' });
+                    }
+                }).catch(err => {
+                    console.error("MOB_DEBUG: disconnectWalletF - Error getting network for new read-only provider:", err);
+                    setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Read-only network info unavailable.' });
+                });
+            } catch (e) {
+                console.error("MOB_DEBUG: disconnectWalletF - Error re-initializing read-only provider:", e);
+                setProvider(null); setContract(null); // Ensure contract is also nulled
+                setConnectionStatus({ type: 'error', message: 'Failed to restore read-only access.' });
+            }
+        } else {
+            console.warn("MOB_DEBUG: disconnectWalletF - Cannot re-init read-only, config (RPC/Address) not loaded.");
+            setProvider(null); setContract(null);
+            setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Read-only config missing.' });
+        }
+    }, [initializeContract, loadedReadOnlyRpcUrl, loadedContractAddress, web3ModalInstance, eip1193ProviderState, loadedTargetChainIdNum]); // loadedTargetChainIdNum added to deps
 
-       if (loadedReadOnlyRpcUrl && loadedContractAddress) {
-           try {
-               console.log("PiOracle WalletProvider DisconnectWalletF: Re-initializing read-only provider with RPC:", loadedReadOnlyRpcUrl);
-               const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
-               setProvider(defaultProvider); 
-               initializeContract(defaultProvider, loadedContractAddress);
-               defaultProvider.getNetwork().then(net => {
-                   if (net?.chainId) setChainId(net.chainId); // Set chainId for read-only
-               }).catch(err => console.error("PiOracle DisconnectWalletF: Error getting network for new read-only provider:", err));
-           } catch(e) {
-               console.error("PiOracle DisconnectWalletF: Error re-initializing read-only provider:", e);
-               setProvider(null); setContract(null); setChainId(null);
-               setConnectionStatus({type: 'error', message: 'Failed to restore read-only access.'});
-           }
-       } else {
-           console.warn("PiOracle DisconnectWalletF: Cannot re-init read-only, config (RPC/Address) not loaded.");
-           setProvider(null); setContract(null); setChainId(null);
-       }
-    }, [initializeContract, loadedReadOnlyRpcUrl, loadedContractAddress]);
-
-
-    // useCallback for handleAccountsChanged
     const handleAccountsChanged = useCallback(async (accounts) => {
-        console.log('PiOracle WalletProvider: handleAccountsChanged. Accounts:', accounts, 'Current provider before logic:', provider?.constructor.name);
+        console.log('MOB_DEBUG: handleAccountsChanged (from EIP-1193). Accounts:', accounts);
         const firstAccount = accounts?.[0];
 
-        if (firstAccount && ethers.utils.isAddress(firstAccount) && provider instanceof ethers.providers.Web3Provider) {
+        if (provider instanceof ethers.providers.Web3Provider && firstAccount && ethers.utils.isAddress(firstAccount)) {
             const validAddress = ethers.utils.getAddress(firstAccount);
-            console.log("PiOracle WalletProvider (handleAccountsChanged): Valid account detected/changed to:", validAddress);
-            setWalletAddress(validAddress); // This will trigger Effect 3 if signer isn't set
-            // Signer and contract re-initialization will be handled by Effect 3
-        } else {
-            console.log('PiOracle WalletProvider (handleAccountsChanged): No valid account from MetaMask or provider not Web3Provider.');
-            if (!accounts || accounts.length === 0) {
-                console.log("PiOracle WalletProvider (handleAccountsChanged): Accounts array is empty (MetaMask disconnected from site). Calling disconnectWalletF.");
-                disconnectWalletF(); 
+            console.log("MOB_DEBUG: handleAccountsChanged - Valid account detected/changed to:", validAddress);
+            setWalletAddress(validAddress);
+            // Chain ID and connection status will be updated by Effect 3 reacting to provider and new walletAddress
+            // Or can optimistically try to set connection status here
+            const network = await provider.getNetwork(); // Re-fetch network as context might change
+            setChainId(network.chainId);
+            if (network.chainId === loadedTargetChainIdNum) {
+                setConnectionStatus({ type: 'success', message: `Account switched to ${validAddress.substring(0, 6)}... on target network.` });
             } else {
-                // This case means accounts might exist, but provider is not Web3Provider.
-                // This could happen if the initial provider was JsonRpc and an accountsChanged event fires (less common).
-                // Or if handleAccountsChanged was called before `provider` state was updated to Web3Provider.
-                // Ensure walletAddress and signer are null if we don't have a valid Web3Provider connection.
-                if (!(provider instanceof ethers.providers.Web3Provider)) {
-                    setWalletAddress(null);
-                    setSigner(null);
-                }
+                setConnectionStatus({ type: 'error', message: `Account ${validAddress.substring(0, 6)}... but on wrong network (Chain ${network.chainId}). Target: ${loadedTargetChainIdNum}.` });
+                setSigner(null); // Critical: Invalidate signer if on wrong chain
             }
-        }
-    }, [provider, initializeContract, loadedContractAddress, disconnectWalletF]);
-
-
-    // useCallback for handleChainChanged
-    const handleChainChanged = useCallback(async (newChainIdHex) => {
-        console.log(`PiOracle WalletProvider: handleChainChanged. New Chain ID (hex): ${newChainIdHex}`);
-        const newChainIdNum = parseInt(newChainIdHex, 16);
-        // setChainId(newChainIdNum); // Set by Effect 3 or pre-auth after provider is confirmed
-
-        if (typeof window.ethereum !== 'undefined') {
-            try {
-                const newWeb3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-                setProvider(newWeb3Provider); // Set the new provider. Effect 3 will handle the rest.
-                // Set chainId directly from new provider
-                newWeb3Provider.getNetwork().then(net => { if(net?.chainId) setChainId(net.chainId);});
-
-                // If walletAddress was already set, Effect 3 will try to get a new signer for the new chain
-                // If no walletAddress, Effect 3 will try to init read-only contract on new chain with newWeb3Provider (if signer is null)
-                // or more correctly, with a new JsonRpcProvider for the new chain if we had such logic.
-                // For now, handleChainChanged primarily focuses on updating the provider from MetaMask.
-            } catch (e) {
-                console.error("PiOracle WalletProvider: Error creating new Web3Provider on chain change", e);
-                setProvider(null); setSigner(null); setContract(null); setChainId(null);
-                setConnectionStatus({ type: 'error', message: 'Error adapting to network change.' });
-            }
-        }
-    }, []); // Removed dependencies as it mainly resets provider from window.ethereum
-
-
-    // Refs for stable event handlers
-    const handleAccountsChangedRef = useRef(handleAccountsChanged);
-    const handleChainChangedRef = useRef(handleChainChanged);
-    useEffect(() => { handleAccountsChangedRef.current = handleAccountsChanged; }, [handleAccountsChanged]);
-    useEffect(() => { handleChainChangedRef.current = handleChainChanged; }, [handleChainChanged]);
-
-    // Effect 2: Initial setup (listeners & read-only or pre-authorized setup)
-    useEffect(() => {
-        console.log("PiOracle WalletProvider: Effect 2 (MainSetup) - RUNNING.");
-        let didCancel = false;
-
-        if (!loadedContractAddress || !loadedReadOnlyRpcUrl || !loadedTargetChainIdHex) {
-            console.log("PiOracle WalletProvider: Effect 2 (MainSetup) - Waiting for dynamic configuration.");
-            return; 
-        }
-
-        const listenerAccountWrapper = (accounts) => { console.log("MetaMask event: 'accountsChanged' triggered by extension."); if (!didCancel) handleAccountsChangedRef.current(accounts); };
-        const listenerChainWrapper = (chainIdHex) => { console.log("MetaMask event: 'chainChanged' triggered by extension."); if (!didCancel) handleChainChangedRef.current(chainIdHex); };
-
-        if (typeof window.ethereum !== 'undefined' && window.ethereum.isMetaMask) {
-            console.log("PiOracle WalletProvider: Effect 2 (MainSetup) - MetaMask detected.");
-            const ethProviderInstanceFromMetaMask = new ethers.providers.Web3Provider(window.ethereum, "any");
-
-            window.ethereum.on('accountsChanged', listenerAccountWrapper);
-            window.ethereum.on('chainChanged', listenerChainWrapper);
-            console.log("PiOracle WalletProvider: Effect 2 (MainSetup) - MetaMask event listeners attached.");
-
-            ethProviderInstanceFromMetaMask.listAccounts().then(accounts => {
-                if (didCancel) return;
-                if (accounts.length > 0 && ethers.utils.isAddress(accounts[0])) {
-                    console.log("PiOracle WalletProvider: Effect 2 (MainSetup) - Wallet previously authorized with account:", accounts[0]);
-                    setProvider(ethProviderInstanceFromMetaMask); // Set MetaMask provider
-                    setWalletAddress(ethers.utils.getAddress(accounts[0])); // Set address
-                    ethProviderInstanceFromMetaMask.getNetwork().then(net => { 
-                         if (!didCancel && net?.chainId) setChainId(net.chainId);
-                    }).catch(e => console.error("PiOracle WalletProvider: Effect 2 (MainSetup) - Error getting network for pre-auth", e));
-                    // Signer and contract will be set by Effect 3 based on provider and walletAddress updates
-                } else if (!provider && !signer) { // Only init read-only if no provider/signer already set
-                    console.log("PiOracle WalletProvider: Effect 2 (MainSetup) - No pre-authorized accounts. Setting up read-only with RPC:", loadedReadOnlyRpcUrl);
-                    if (!loadedReadOnlyRpcUrl) { setConnectionStatus({ type: 'error', message: 'Read-only RPC URL not configured.' }); return; }
-                    try {
-                        const defaultJsonRpcProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
-                        setProvider(defaultJsonRpcProvider); // Set read-only provider
-                        // Contract and chainId for read-only will be set by Effect 3
-                    } catch (jsonRpcErr) {
-                        console.error("PiOracle WalletProvider: Effect 2 (MainSetup) - Error creating JsonRpcProvider:", jsonRpcErr);
-                        setConnectionStatus({ type: 'error', message: 'Could not create read-only provider.' });
-                    }
-                }
-            }).catch(listAccErr => console.error("PiOracle WalletProvider: Effect 2 (MainSetup) - Error listing initial accounts:", listAccErr));
         } else {
-            if (!didCancel) {
-                console.log("PiOracle WalletProvider: Effect 2 (MainSetup) - MetaMask NOT detected.");
-                setConnectionStatus({ type: 'info', message: 'MetaMask not detected.' });
-                setProvider(null); setSigner(null); setContract(null); setChainId(null); // Clear all if no MM
-            }
+            console.log('MOB_DEBUG: handleAccountsChanged - No valid account from EIP-1193 provider or provider not Web3Provider. Disconnecting.');
+            disconnectWalletF();
         }
-        return () => {
-            didCancel = true;
-            if (window.ethereum?.removeListener) {
-                window.ethereum.removeListener('accountsChanged', listenerAccountWrapper);
-                window.ethereum.removeListener('chainChanged', listenerChainWrapper);
-            }
-        };
-    }, [loadedContractAddress, loadedReadOnlyRpcUrl, loadedTargetChainIdHex]); // Only depends on loaded config
+    }, [provider, disconnectWalletF, loadedTargetChainIdNum]);
 
-    // Effect 3: Setup signer and contract when provider and walletAddress are available, or setup read-only contract.
+    const handleChainChanged = useCallback(async (newChainIdHex) => {
+        console.log(`MOB_DEBUG: handleChainChanged (from EIP-1193). New Chain ID (hex): ${newChainIdHex}`);
+        const newChainIdNum = parseInt(newChainIdHex, 16);
+        setChainId(newChainIdNum); // Update chainId state immediately
+
+        if (provider instanceof ethers.providers.Web3Provider && walletAddress) { // Only if connected
+            if (newChainIdNum === loadedTargetChainIdNum) {
+                setConnectionStatus({ type: 'success', message: `Switched to target network (Chain ${newChainIdNum}). Re-evaluating signer...` });
+                // Effect 3 will attempt to re-create signer because chainId changed and it's a dependency.
+                // Forcing signer to null ensures Effect 3 re-runs its signer logic for the new chain.
+                setSigner(null);
+            } else {
+                setConnectionStatus({ type: 'error', message: `Switched to wrong network (Chain ${newChainIdNum}). Target: ${loadedTargetChainIdNum}.` });
+                setSigner(null); // Invalidate signer if on wrong chain
+            }
+        } else if (!walletAddress) {
+            console.log("MOB_DEBUG: handleChainChanged - Chain changed but no wallet connected. New chain:", newChainIdNum);
+            // Update status only if it makes sense for read-only or initial state
+            // This can be noisy if a user has MM and frequently changes networks without being connected to the dapp
+        }
+    }, [provider, walletAddress, loadedTargetChainIdNum]); // Removed signer, initializeContract. Let Effect 3 handle contract.
+
+
+    // Effect 2: Setup EIP-1193 Event Listeners
     useEffect(() => {
-        console.log( // LOG 1
-            "PiOracle WalletProvider: Effect 3 (SignerContractSetup) - FIRING.",
-            "Provider type:", provider?.constructor.name, 
-            "Wallet Address:", walletAddress, 
+        console.log("MOB_DEBUG: Effect 2 (EIP1193 Listeners) - Checking for eip1193ProviderState to attach/detach listeners.");
+        if (eip1193ProviderState?.on) {
+            console.log("MOB_DEBUG: Effect 2 (EIP1193 Listeners) - Attaching listeners.");
+            const accountsChangedWrapper = (accounts) => { console.log("MOB_DEBUG: EIP-1193 event: 'accountsChanged'"); handleAccountsChanged(accounts); };
+            const chainChangedWrapper = (chainIdHex) => { console.log("MOB_DEBUG: EIP-1193 event: 'chainChanged'"); handleChainChanged(chainIdHex); };
+            const disconnectWrapper = (error) => { console.log("MOB_DEBUG: EIP-1193 event: 'disconnect'", error); disconnectWalletF(); };
+
+            eip1193ProviderState.on('accountsChanged', accountsChangedWrapper);
+            eip1193ProviderState.on('chainChanged', chainChangedWrapper);
+            eip1193ProviderState.on('disconnect', disconnectWrapper);
+
+            return () => {
+                console.log("MOB_DEBUG: Effect 2 (EIP1193 Listeners) - Removing listeners.");
+                if (eip1193ProviderState?.removeListener) {
+                    eip1193ProviderState.removeListener('accountsChanged', accountsChangedWrapper);
+                    eip1193ProviderState.removeListener('chainChanged', chainChangedWrapper);
+                    eip1193ProviderState.removeListener('disconnect', disconnectWrapper);
+                }
+            };
+        }
+    }, [eip1193ProviderState, handleAccountsChanged, handleChainChanged, disconnectWalletF]);
+
+    // Effect 2.5: Initial Read-Only Provider Setup
+    useEffect(() => {
+        console.log("MOB_DEBUG: Effect 2.5 (ReadOnlySetup) - Evaluating conditions.");
+        const conditions = {
+            loadedReadOnlyRpcUrl: !!loadedReadOnlyRpcUrl,
+            loadedContractAddress: !!loadedContractAddress,
+            providerExists: !!provider,
+            walletAddressExists: !!walletAddress,
+            isConnecting: isConnecting,
+        };
+        console.log("MOB_DEBUG: Effect 2.5 (ReadOnlySetup) - Conditions:", conditions);
+
+        if (loadedReadOnlyRpcUrl && loadedContractAddress && !provider && !walletAddress && !isConnecting) {
+            console.log("MOB_DEBUG: Effect 2.5 (ReadOnlySetup) - ALL CONDITIONS MET. Setting up initial read-only provider.");
+            try {
+                const defaultJsonRpcProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
+                setProvider(defaultJsonRpcProvider);
+                defaultJsonRpcProvider.getNetwork().then(net => {
+                    if (net?.chainId) {
+                        setChainId(net.chainId);
+                        setConnectionStatus({ type: 'info', message: `Using read-only mode. Connect wallet to interact. (Network: ${net.chainId})` });
+                    } else {
+                         setConnectionStatus({ type: 'info', message: `Using read-only mode. Connect wallet to interact.` });
+                    }
+                }).catch(e => {
+                    console.error("MOB_DEBUG: Effect 2.5 (ReadOnlySetup) - Error getting network for read-only provider:", e);
+                    setConnectionStatus({ type: 'error', message: 'Could not connect to read-only network.' });
+                });
+            } catch (jsonRpcErr) {
+                console.error("MOB_DEBUG: Effect 2.5 (ReadOnlySetup) - Error creating JsonRpcProvider:", jsonRpcErr);
+                setConnectionStatus({ type: 'error', message: 'Could not create read-only provider.' });
+            }
+        } else {
+            console.log("MOB_DEBUG: Effect 2.5 (ReadOnlySetup) - SKIPPED (conditions not met).");
+        }
+    }, [loadedReadOnlyRpcUrl, loadedContractAddress, provider, walletAddress, isConnecting]); // Removed initializeContract, Effect 3 will handle it.
+
+    // Effect 3: Setup signer and contract
+    // Removed connectionStatus.message from deps to prevent loops if status is set within this effect's path.
+    useEffect(() => {
+        console.log(
+            "MOB_DEBUG: Effect 3 (SignerContractSetup) - FIRING.",
+            "Provider type:", provider?.constructor.name,
+            "Wallet Address:", walletAddress,
             "Signer exists?", !!signer,
-            "Contract Address Loaded?", !!loadedContractAddress,
-            "Contract exists:", !!contract, "Contract has signer?", !!contract?.signer
+            "Loaded Contract Address:", loadedContractAddress,
+            "Chain ID:", chainId, "Target Chain ID:", loadedTargetChainIdNum
         );
 
-        if (provider instanceof ethers.providers.Web3Provider && walletAddress && !signer && loadedContractAddress) {
-            console.log("PiOracle WalletProvider: Effect 3 (SignerContractSetup) - CONDITIONS MET for signer. Attempting to set signer & contract."); // LOG 2
-            try {
-                const currentSigner = provider.getSigner();
-                setSigner(currentSigner); 
-                initializeContract(currentSigner, loadedContractAddress);
-                console.log("PiOracle WalletProvider: Effect 3 (SignerContractSetup) - Signer and contract init with signer attempted.");
-            } catch (e) { 
-                console.error("PiOracle WalletProvider: Effect 3 (SignerContractSetup) - Error setting up signer/contract:", e);
-                setConnectionStatus({ type: 'error', message: `Could not get signer: ${e.message}` });
-            }
-        } else if (provider instanceof ethers.providers.JsonRpcProvider && !walletAddress && loadedContractAddress) {
-            if (!contract || (contract && contract.provider !== provider)) { 
-                console.log("PiOracle WalletProvider: Effect 3 (SignerContractSetup) - Ensuring read-only contract with JsonRpcProvider.");
-                initializeContract(provider, loadedContractAddress);
-                if (!chainId && provider) { // Set chainId if not already set by MM
-                    provider.getNetwork().then(net => {
-                        if (net?.chainId) setChainId(net.chainId);
-                    }).catch(e => console.error("PiOracle WalletProvider: Effect 3 - Error getting network for JsonRpcProvider", e));
+        if (provider instanceof ethers.providers.Web3Provider && walletAddress && loadedContractAddress && chainId === loadedTargetChainIdNum) {
+            if (!signer) {
+                console.log("MOB_DEBUG: Effect 3 (SignerContractSetup) - CONDITIONS MET for NEW signer.");
+                try {
+                    const currentSigner = provider.getSigner();
+                    setSigner(currentSigner);
+                    initializeContract(currentSigner, loadedContractAddress); // Init contract with new signer
+                    // setConnectionStatus already handled by connectWallet or handleAccountsChanged
+                } catch (e) {
+                    console.error("MOB_DEBUG: Effect 3 (SignerContractSetup) - Error getting new signer:", e);
+                    setConnectionStatus({ type: 'error', message: `Could not get signer: ${e.message}` });
+                    setSigner(null);
+                    setContract(null); // Ensure contract is cleared if signer fails
                 }
+            } else if (signer && (!contract || contract.signer !== signer || contract.provider !== provider)) {
+                // Signer exists, but contract might be missing or mismatched
+                console.log("MOB_DEBUG: Effect 3 (SignerContractSetup) - Signer exists, re-initializing contract.");
+                initializeContract(signer, loadedContractAddress);
+            } else {
+                 console.log("MOB_DEBUG: Effect 3 (SignerContractSetup) - Signer exists and contract likely okay, or other conditions not met for new signer.");
+            }
+        } else if (provider && !walletAddress && loadedContractAddress) { // Read-only mode
+            console.log("MOB_DEBUG: Effect 3 (SignerContractSetup) - Read-only mode. Ensuring contract with provider:", provider.constructor.name);
+            setSigner(null); // Ensure no signer in read-only mode
+            if (!contract || contract.provider !== provider || contract.signer) {
+                initializeContract(provider, loadedContractAddress);
+            }
+        } else if (provider instanceof ethers.providers.Web3Provider && walletAddress && loadedContractAddress && chainId !== loadedTargetChainIdNum) {
+            console.log("MOB_DEBUG: Effect 3 (SignerContractSetup) - Connected but on WRONG network. Setting contract to read-only with current provider.");
+            setSigner(null);
+            if (!contract || contract.provider !== provider || contract.signer) {
+                initializeContract(provider, loadedContractAddress);
             }
         } else {
-            if (provider instanceof ethers.providers.Web3Provider && walletAddress && loadedContractAddress) {
-                let unmetConditions = [];
-                if (!(provider instanceof ethers.providers.Web3Provider)) unmetConditions.push("Provider not Web3Provider"); // Should not happen if outer if is true
-                if (!walletAddress) unmetConditions.push("WalletAddress not set"); // Should not happen
-                if (signer) unmetConditions.push("Signer already set");
-                if (!loadedContractAddress) unmetConditions.push("loadedContractAddress not set"); // Should not happen
-                if (unmetConditions.length > 0) {
-                    console.log("PiOracle WalletProvider: Effect 3 (SignerContractSetup) - Conditions for signer setup NOT MET because:", unmetConditions.join(" AND "));
-                }
-            }
+            console.log("MOB_DEBUG: Effect 3 (SignerContractSetup) - Conditions for active signer/contract NOT MET. Clearing signer if address lost.");
+            if (!walletAddress && signer) setSigner(null);
+            if (!provider && contract) setContract(null); // Clear contract if provider is lost
         }
-    }, [provider, walletAddress, loadedContractAddress, initializeContract, signer, contract, chainId]);
+    }, [provider, walletAddress, loadedContractAddress, initializeContract, signer, contract, chainId, loadedTargetChainIdNum]);
 
 
-    // useCallback for connectWallet
     const connectWallet = useCallback(async () => {
-        if (!loadedContractAddress || !loadedTargetChainIdHex) {
-             setConnectionStatus({ type: 'error', message: 'DApp configuration not ready.' }); return;
+        console.log("MOB_DEBUG: connectWallet - CALLED.");
+        if (web3ModalInitError) {
+            setConnectionStatus({ type: 'error', message: `Wallet connection service error: ${web3ModalInitError}. Please refresh.` });
+            console.error("MOB_DEBUG: connectWallet - Web3Modal init previously failed:", web3ModalInitError);
+            return;
         }
-        if (isConnecting) { console.log("PiOracle WalletProvider (connectWallet): Connection already in progress."); return; }
-        if (walletAddress && signer) { console.log("PiOracle WalletProvider (connectWallet): Already connected with signer."); return; }
-        if (typeof window.ethereum === 'undefined' || !window.ethereum.isMetaMask) {
-            setConnectionStatus({ type: 'error', message: 'MetaMask not detected.' }); return;
+        if (!web3ModalInstance) {
+            setConnectionStatus({ type: 'error', message: 'Wallet connection service not ready. Please wait or refresh.' });
+            console.error("MOB_DEBUG: connectWallet - Web3Modal not initialized. web3ModalInstance is null.");
+            return;
+        }
+        if (!loadedContractAddress || !loadedTargetChainIdNum) { // Simpler check
+            setConnectionStatus({ type: 'error', message: 'DApp configuration not ready. Please refresh.' });
+            console.error("MOB_DEBUG: connectWallet - DApp config not ready.");
+            return;
+        }
+        if (isConnecting) {
+            console.log("MOB_DEBUG: connectWallet - Connection already in progress."); return;
+        }
+        if (walletAddress && signer && chainId === loadedTargetChainIdNum) {
+            console.log("MOB_DEBUG: connectWallet - Already connected with signer on the correct chain.");
+            setConnectionStatus({ type: 'success', message: `Already connected: ${walletAddress.substring(0, 6)}...` });
+            return;
         }
 
         setIsConnecting(true);
-        setConnectionStatus({ type: 'info', message: 'Connecting...' });
-        try {
-            const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-            // Request accounts first to trigger MetaMask popup
-            const accounts = await web3Provider.send('eth_requestAccounts', []); 
-            
-            if (accounts.length > 0 && ethers.utils.isAddress(accounts[0])) {
-                // Once accounts are approved, MetaMask's 'accountsChanged' event often fires,
-                // which calls handleAccountsChanged, which then sets walletAddress.
-                // Effect 3 then picks up provider & walletAddress to set signer & contract.
-                // To ensure provider is set immediately for Effect 3:
-                setProvider(web3Provider); // Critical to update provider state
-                
-                // For more immediate feedback after eth_requestAccounts, we can also set address and chainId here
-                const currentAddress = ethers.utils.getAddress(accounts[0]);
-                setWalletAddress(currentAddress); // This will help trigger Effect 3
-                const network = await web3Provider.getNetwork();
-                setChainId(network.chainId);
-                // Effect 3 should now have all it needs: provider=web3Provider, walletAddress=currentAddress, !signer
+        setConnectionStatus({ type: 'info', message: 'Opening wallet modal...' });
 
-                setConnectionStatus({ type: 'success', message: 'Wallet connected! Finalizing setup...' });
-                console.log(`PiOracle WalletProvider (connectWallet): Connection request successful for ${currentAddress}`);
+        try {
+            await web3ModalInstance.openModal();
+            const rawEip1193Provider = web3ModalInstance.getWalletProvider();
+
+            if (rawEip1193Provider) {
+                console.log("MOB_DEBUG: connectWallet - Wallet provider obtained from modal.");
+                setEip1193ProviderState(rawEip1193Provider);
+
+                const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
+                setProvider(newWeb3Provider);
+
+                const accounts = await newWeb3Provider.listAccounts();
+                if (accounts.length > 0 && ethers.utils.isAddress(accounts[0])) {
+                    const currentAddress = ethers.utils.getAddress(accounts[0]);
+                    setWalletAddress(currentAddress);
+
+                    const network = await newWeb3Provider.getNetwork();
+                    setChainId(network.chainId);
+
+                    if (network.chainId === loadedTargetChainIdNum) {
+                        setConnectionStatus({ type: 'success', message: `Connected: ${currentAddress.substring(0, 6)}... on target network.` });
+                        // Effect 3 will set the signer
+                    } else {
+                        setConnectionStatus({ type: 'error', message: `Connected to ${currentAddress.substring(0, 6)}... but on wrong network (Chain ${network.chainId}). Target: ${loadedTargetChainIdNum}.` });
+                        setSigner(null);
+                    }
+                    console.log(`MOB_DEBUG: connectWallet - Connection successful for ${currentAddress} on chain ${network.chainId}`);
+                } else {
+                    console.warn("MOB_DEBUG: connectWallet - Provider obtained, but no accounts found or user rejected.");
+                    // Don't call full disconnectWalletF if user just closed modal.
+                    // Let current read-only state persist if it was there.
+                    // Only reset to read-only if a connection was partially made and then failed.
+                    // For now, just update status. If provider/walletAddress isn't set, Effect 3 will keep it read-only.
+                    setConnectionStatus({ type: 'info', message: 'Connection cancelled or no account authorized.' });
+                }
             } else {
-                 setConnectionStatus({ type: 'info', message: 'No account selected.' });
+                console.log("MOB_DEBUG: connectWallet - Modal closed without selecting a wallet provider.");
+                // If user simply closes modal, don't change existing state unless it was error.
+                // If `provider` is already JsonRpcProvider, this means we are in read-only and no action needed.
+                if (!(provider instanceof ethers.providers.JsonRpcProvider)) {
+                    // If provider was something else (e.g. from a previous failed Web3Provider attempt) or null, ensure clean disconnect.
+                     disconnectWalletF(); // This might be too aggressive if they just closed modal without action
+                } else {
+                    setConnectionStatus({ type: 'info', message: 'Wallet connection modal closed. Using read-only mode.' });
+                }
             }
         } catch (error) {
-            console.error("PiOracle WalletProvider (connectWallet): Error:", error);
+            console.error("MOB_DEBUG: connectWallet - Error during connection process:", error);
             let message = 'Failed to connect wallet.';
-            if (error.code === 4001) message = 'Connection request rejected.';
-            else if (error.code === -32002) message = 'Connection request pending.';
+            if (error.message?.includes('User closed modal') || error.message?.includes('User rejected')) {
+                message = 'Connection request rejected or modal closed.';
+            }
             setConnectionStatus({ type: 'error', message });
+            // disconnectWalletF(); // Revert to read-only on major error, but maybe not for user closing modal
+        } finally { // Always run this
+            setIsConnecting(false);
         }
-        setIsConnecting(false);
-    }, [isConnecting, walletAddress, signer, loadedContractAddress, loadedTargetChainIdHex, initializeContract]);
-
-    // Context value
-    const contextValue = useMemo(() => {
-        console.log("PiOracle WalletProvider DEBUG: useMemo for contextValue evaluating. Contract instance:", !!contract, "Wallet Address:", walletAddress, "Signer:", !!signer);
-        return {
-            walletAddress, provider, signer, contract, chainId,
-            loadedTargetChainIdHex, isConnecting, connectionStatus,
-            connectWallet, 
-            disconnectWallet: disconnectWalletF 
-        };
     }, [
-        walletAddress, provider, signer, contract, chainId, loadedTargetChainIdHex,
-        isConnecting, connectionStatus, connectWallet, disconnectWalletF
+        web3ModalInstance, web3ModalInitError, // Added web3ModalInitError
+        loadedContractAddress, loadedTargetChainIdNum, // Simplified config check
+        isConnecting, walletAddress, signer, chainId, provider, // provider added
+        // initializeContract, // connectWallet doesn't call initializeContract directly
+        disconnectWalletF
     ]);
 
-    console.log("PiOracle WalletProvider RENDERING. Current context walletAddress:", contextValue.walletAddress, "Current context contract:", !!contextValue.contract);
+
+    const contextValue = useMemo(() => {
+        return {
+            walletAddress, provider, signer, contract, chainId,
+            loadedTargetChainIdHex,
+            loadedTargetChainIdNum,
+            isConnecting, connectionStatus,
+            web3ModalInitError, // Expose this error for UI if needed
+            connectWallet,
+            disconnectWallet: disconnectWalletF
+        };
+    }, [
+        walletAddress, provider, signer, contract, chainId, loadedTargetChainIdHex, loadedTargetChainIdNum,
+        isConnecting, connectionStatus, web3ModalInitError, connectWallet, disconnectWalletF
+    ]);
+
+    console.log(
+        "MOB_DEBUG: WalletProvider END RENDER. WalletAddress:", contextValue.walletAddress,
+        "Signer:", !!contextValue.signer, "Contract:", !!contextValue.contract,
+        "ChainID:", contextValue.chainId, "TargetChainID:", contextValue.loadedTargetChainIdNum,
+        "web3ModalInstance exists:", !!web3ModalInstance,
+        "Provider type:", provider?.constructor.name
+    );
 
     return (
         <WalletContext.Provider value={contextValue}>
