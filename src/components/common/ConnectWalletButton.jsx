@@ -1,6 +1,6 @@
 // pioracle/src/components/common/ConnectWalletButton.jsx
 import React, { useContext } from 'react';
-import { WalletContext } from '../../context/WalletProvider'; // Adjust path as needed
+import { WalletContext } from '../../pages/WalletProvider';
 
 function ConnectWalletButton() {
     const { connectWallet, disconnectWallet, walletAddress, connectionStatus } = useContext(WalletContext) || {};
