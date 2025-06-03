@@ -1,6 +1,7 @@
 import React, { useContext, useEffect } from 'react';
 // In src/pages/ConnectTestPage.jsx
-import { WalletContext } from '../contexts/WalletProvider.jsx'; 
+// In src/pages/ConnectTestPage.jsx
+import { WalletContext } from './WalletProvider.jsx'; // Changed to direct import
 import { Link } from 'react-router-dom'; // Assuming you use React Router
 
  const ConnectTestPage = () => {
