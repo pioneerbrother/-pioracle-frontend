@@ -8,7 +8,11 @@ import React, {
     // useRef // Not currently used directly, can be removed if not needed later
 } from 'react';
 import { ethers } from 'ethers';
-import * as Web3ModalEthersModule from '@web3modal/ethers5'; // Rename to avoid confusion
+// src/pages/WalletProvider.jsx
+// ...
+// import * as Web3ModalEthersModule from '@web3modal/ethers5'; // REMOVE THIS
+import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5'; // TRY THIS NAMED IMPORT
+// ...
 
 import {
     getContractAddress,
@@ -103,49 +107,73 @@ export const WalletProvider = ({ children }) => {
 // ... inside WalletProvider component ...
 
 // Effect 1.5
+// Effect 1.5: Initialize Web3Modal Instance once config is loaded
 useEffect(() => {
-    // ... (conditions check as before) ...
-    if (loadedReadOnlyRpcUrl && loadedTargetChainIdNum && WALLETCONNECT_PROJECT_ID && !web3ModalInstance) {
-        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - ALL CONDITIONS MET. Initializing Web3Modal...");
-        setWeb3ModalInitError(null);
+    console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Evaluating conditions.");
+    const conditions = { /* ... as before ... */ };
+    console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Conditions:", conditions);
 
-        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Web3ModalEthersModule imported object:", Web3ModalEthersModule);
-        if (Web3ModalEthersModule && typeof Web3ModalEthersModule === 'object') {
-            console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Keys of Web3ModalEthersModule:", Object.keys(Web3ModalEthersModule));
-        }
-        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Type of Web3ModalEthersModule.default:", typeof Web3ModalEthersModule.default);
-        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Value of Web3ModalEthersModule.default:", Web3ModalEthersModule.default);
+    if (loadedReadOnlyRpcUrl && loadedTargetChainIdNum && WALLETCONNECT_PROJECT_ID && !web3ModalInstance) {
+        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - ALL CONDITIONS MET. Initializing Web3Modal using createWeb3Modal...");
+        setWeb3ModalInitError(null); 
+
+        // Log the imported functions to see if they are defined
+        console.log("MOB_DEBUG: typeof createWeb3Modal:", typeof createWeb3Modal);
+        console.log("MOB_DEBUG: typeof defaultConfig:", typeof defaultConfig);
 
         try {
-            const EthereumWeb3ModalConstructor = Web3ModalEthersModule.default; // <--- KEY CHANGE HERE
-
-            if (typeof EthereumWeb3ModalConstructor !== 'function') {
-                console.error("MOB_DEBUG: FATAL - EthereumWeb3ModalConstructor (from .default) is NOT a function! Value is:", EthereumWeb3ModalConstructor);
-                setWeb3ModalInitError("Modal Error: EthereumWeb3Modal class not found via default export. Library structure issue?");
-                return; 
+            if (typeof createWeb3Modal !== 'function' || typeof defaultConfig !== 'function') {
+                console.error("MOB_DEBUG: FATAL - createWeb3Modal or defaultConfig is not a function!");
+                setWeb3ModalInitError("Modal Error: Core Web3Modal functions not imported correctly.");
+                return;
             }
 
-            const targetChainConfig = { /* ... */ };
-            const ethersConfig = ethers.providers.getDefaultProvider(loadedReadOnlyRpcUrl);
+            const targetChainConfigForModal = { // Renamed to avoid conflict if targetChainConfig is used elsewhere
+                chainId: loadedTargetChainIdNum,
+                name: getChainName() || `Chain ${loadedTargetChainIdNum}`,
+                currency: getCurrencySymbol() || 'ETH',
+                explorerUrl: getExplorerUrl() || '',
+                rpcUrl: loadedReadOnlyRpcUrl, // This might be used by defaultConfig or displayed by modal
+            };
+            console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - targetChainConfigForModal:", JSON.stringify(targetChainConfigForModal));
+
+            // 1. Prepare arguments for createWeb3Modal
+            const chains = [targetChainConfigForModal];
+            const projectId = WALLETCONNECT_PROJECT_ID;
+
+            // 2. Create ethersConfig using defaultConfig
+            // The defaultConfig from @web3modal/ethers5 might simplify ethers setup.
+            // It might not need explicit ethers.providers.getDefaultProvider if it handles it.
+            // Let's see if it takes metadata directly.
+            const ethersSpecificModalConfig = defaultConfig({
+              metadata, // Your dApp metadata
+              // defaultChainId: loadedTargetChainIdNum, // Optional
+              // Other ethers-specific options might go here if needed by this defaultConfig
+            });
+            console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - ethersSpecificModalConfig from defaultConfig:", ethersSpecificModalConfig);
+
+
+            // 3. Create the modal instance by calling createWeb3Modal
+            const modalInstance = createWeb3Modal({
+                ethersConfig: ethersSpecificModalConfig, // Pass the config from defaultConfig
+                chains,
+                projectId,
+                enableAnalytics: false,
+                // themeMode: 'light', // Optional: 'light', 'dark', or 'system'
+                // themeVariables: { /* ... css variables ... */ } // Optional
+            });
             
-            console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Attempting to instantiate with derived constructor.");
-            const modal = new EthereumWeb3ModalConstructor( // <--- USE THE DERIVED CONSTRUCTOR
-                {
-                    ethersConfig: ethersConfig,
-                    chains: [targetChainConfig],
-                    projectId: WALLETCONNECT_PROJECT_ID,
-                    enableAnalytics: false,
-                },
-                metadata
-            );
-            setWeb3ModalInstance(modal);
-            console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Web3Modal initialized successfully. YAY_MODAL_INIT_SUCCESS");
+            // The 'modalInstance' returned by createWeb3Modal IS the modal controller.
+            // It has methods like .openModal(), .subscribeProvider(), .getWalletProvider() etc.
+            setWeb3ModalInstance(modalInstance);
+            console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Web3Modal initialized successfully via createWeb3Modal. YAY_MODAL_INIT_SUCCESS");
+
         } catch (error) {
-            console.error("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - FAILED to initialize Web3Modal:", error);
+            console.error("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - FAILED to initialize Web3Modal via createWeb3Modal:", error);
             setWeb3ModalInitError(`Modal Error: ${error.message || 'Unknown error during modal init'}`);
         }
     } else {
-        // ...
+        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - SKIPPED (conditions not met or already initialized).");
     }
 }, [loadedReadOnlyRpcUrl, loadedTargetChainIdNum, web3ModalInstance]);
 
