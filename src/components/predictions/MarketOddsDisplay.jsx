@@ -1,7 +1,7 @@
 // pioracle/src/components/predictions/MarketOddsDisplay.jsx
 import React, { useContext, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from '../../context/WalletProvider'; // Ensure this path is correct
+import { WalletContext } from '../../pages/WalletProvider';
 import './MarketOddsDisplay.css'; // Ensure this CSS file exists and is styled
 
 const DISPLAY_DECIMALS = 3; 
