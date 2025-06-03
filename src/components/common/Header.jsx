@@ -1,7 +1,7 @@
 // pioracle/src/components/common/Header.jsx
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { WalletContext } from '../../page/WalletProvider'; // Adjust path if WalletProvider is elsewhere relative to this
+import { WalletContext } from '../../pages/WalletProvider';
 import ConnectWalletButton from './ConnectWalletButton'; // Assuming it's also in common
 import './Header.css'; // Create a dedicated CSS file for the header
 
