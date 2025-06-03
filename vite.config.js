@@ -9,4 +9,10 @@ export default defineConfig({ // Removed async if not needed by other plugins
     react(),
     // Ensure the Sitemap({...}) block is completely GONE from here
   ],
+   resolve: {
+    alias: {
+      // If a library tries to import "ethers5", make it use the "ethers" package
+      'ethers5': 'ethers',
+    },
+  },
 });
