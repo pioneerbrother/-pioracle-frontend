@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from 'react';
 // In src/pages/ConnectTestPage.jsx
-import { WalletContext } from '../contexts/WalletProvider'; // Check casing of 'contexts' and 'WalletProvider'
+import { WalletContext } from '../contexts/WalletProvider.jsx'; 
 import { Link } from 'react-router-dom'; // Assuming you use React Router
 
  const ConnectTestPage = () => {
