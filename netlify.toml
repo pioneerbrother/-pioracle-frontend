@@ -1,20 +1,12 @@
 [[headers]]
   for = "/*"
   [headers.values]
+    # Keep your other directives (default-src, script-src, etc.)
     Content-Security-Policy = """default-src 'self'; \
-      script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; \
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
-      font-src 'self' https://fonts.gstatic.com; \
-      img-src 'self' data: blob: https://www.google-analytics.com https://api.web3modal.org https://*.walletconnect.com https://*.walletconnect.org; \
-      connect-src 'self' https://polygon-mainnet.g.alchemy.com https://www.google-analytics.com https://api.web3modal.org \
-        https://*.walletconnect.com https://*.walletconnect.org \
-        wss://*.walletconnect.com wss://*.walletconnect.org \
-        https://rpc.walletconnect.org; \
-      frame-src 'self' \
-        https://verify.walletconnect.com https://verify.walletconnect.org \
-        https://secure.walletconnect.com https://secure.walletconnect.org \
-        https://secure-mobile.walletconnect.com https://secure-mobile.walletconnect.org; \
-      frame-ancestors 'self' http://localhost:* \
-        https://*.pages.dev https://*.vercel.app https://*.ngrok-free.app \
-        https://secure.walletconnect.com https://secure.walletconnect.org \
-        https://secure-mobile.walletconnect.com https://secure-mobile.walletconnect.org;"""
+      script-src 'self' 'unsafe-inline' ... ; \
+      style-src 'self' 'unsafe-inline' ... ; \
+      img-src 'self' data: blob: ... ; \
+      connect-src 'self' ... ; \
+      frame-src 'self' https://verify.walletconnect.com https://secure.walletconnect.com https://secure-mobile.walletconnect.com https://*.walletconnect.org; \
+      frame-ancestors 'self' https://secure.walletconnect.org;""" 
+      # ^^^ TRY JUST THIS for frame-ancestors initially
