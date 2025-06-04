@@ -1,5 +1,5 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Netlify-Test-Header = "HelloFromToml"
-    Content-Security-Policy = "default-src 'self';" 
+    X-Netlify-Test-Header = "ThisIsMyTest" 
+    # Let's even remove the CSP for this absolute minimal test
