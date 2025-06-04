@@ -1,5 +1,5 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Netlify-Test-Header = "ThisIsMyTest" 
-    # Let's even remove the CSP for this absolute minimal test
+    X-Netlify-Test-Header = "ThisIsMyTest" # Keep this for now to confirm headers are still working
+    Content-Security-Policy = "default-src 'self'; frame-ancestors 'self' https://secure.walletconnect.org https://verify.walletconnect.com;"
