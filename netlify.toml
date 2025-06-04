@@ -1,0 +1,13 @@
+[[headers]]
+  for = "/*" # Apply to all pages
+  [headers.values]
+    # X-Frame-Options = "DENY" # If you have this, ensure it doesn't conflict or remove if CSP is preferred
+    # X-XSS-Protection = "1; mode=block"
+    # X-Content-Type-Options = "nosniff"
+    # Referrer-Policy = "strict-origin-when-cross-origin"
+    # Add other existing CSP directives you have.
+    # The key is to add/modify frame-src
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google-analytics.com; connect-src 'self' https://polygon-mainnet.g.alchemy.com https://www.google-analytics.com https://*.walletconnect.com wss://*.walletconnect.com; frame-src 'self' https://secure.walletconnect.org https://verify.walletconnect.com https://secure-mobile.walletconnect.com;"
+    # Note: The above is an EXAMPLE. You need to merge it with your existing CSP.
+    # The important part for this error is:
+    # frame-src 'self' https://secure.walletconnect.org https://verify.walletconnect.com https://secure-mobile.walletconnect.com;
