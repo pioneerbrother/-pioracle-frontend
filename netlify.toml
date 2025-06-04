@@ -8,5 +8,6 @@
       img-src 'self' data: https://www.google-analytics.com https://api.web3modal.org https://*.walletconnect.com; \
       connect-src 'self' https://polygon-mainnet.g.alchemy.com https://www.google-analytics.com https://*.walletconnect.com wss://*.walletconnect.com https://api.web3modal.org; \
       frame-src 'self' https://verify.walletconnect.com https://secure.walletconnect.com https://secure-mobile.walletconnect.com;"
-    # Note: 'unsafe-inline' for script-src and style-src is often needed for quick setup but is less secure.
-    # Consider moving inline styles/scripts to files or using hashes/nonces for better security long-term.
+    # Add any other headers you need on separate lines here
+    # Example:
+    # X-Frame-Options = "DENY"
