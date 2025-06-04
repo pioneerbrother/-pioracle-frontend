@@ -220,50 +220,76 @@ useEffect(() => {
         }
     }, []); // getContractAbi is from module scope, ethers.utils.isAddress and ethers.Contract are stable.
 
-    const disconnectWalletF = useCallback(async () => {
-        console.log('MOB_DEBUG: disconnectWalletF called.');
-        if (web3ModalInstance && eip1193ProviderState) { // Check eip1193ProviderState to ensure session was active
-            try {
-                console.log("MOB_DEBUG: disconnectWalletF - Attempting to disconnect Web3Modal session.");
-                await web3ModalInstance.disconnect();
-            } catch (e) {
-                console.error("MOB_DEBUG: disconnectWalletF - Error during Web3Modal disconnect:", e);
-            }
-        }
-        setWalletAddress(null);
-        setSigner(null);
-        setEip1193ProviderState(null);
-        setChainId(null); // Clear chainId on disconnect
+   // Inside your WalletProvider.jsx
 
-        // Revert to read-only provider and contract
-        if (loadedReadOnlyRpcUrl && loadedContractAddress) {
-            console.log("MOB_DEBUG: disconnectWalletF - Re-initializing read-only provider with RPC:", loadedReadOnlyRpcUrl);
-            try {
-                const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
-                setProvider(defaultProvider);
-                // initializeContract will be called by Effect 3 due to provider change and walletAddress being null
-                defaultProvider.getNetwork().then(net => {
-                    if (net?.chainId) {
-                        setChainId(net.chainId); // Set chainId for read-only provider
-                        setConnectionStatus({ type: 'info', message: `Wallet disconnected. Using read-only mode (Network: ${net.chainId}).` });
-                    } else {
-                        setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Using read-only mode.' });
-                    }
-                }).catch(err => {
-                    console.error("MOB_DEBUG: disconnectWalletF - Error getting network for new read-only provider:", err);
-                    setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Read-only network info unavailable.' });
-                });
-            } catch (e) {
-                console.error("MOB_DEBUG: disconnectWalletF - Error re-initializing read-only provider:", e);
-                setProvider(null); setContract(null); // Ensure contract is also nulled
-                setConnectionStatus({ type: 'error', message: 'Failed to restore read-only access.' });
-            }
-        } else {
-            console.warn("MOB_DEBUG: disconnectWalletF - Cannot re-init read-only, config (RPC/Address) not loaded.");
-            setProvider(null); setContract(null);
-            setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Read-only config missing.' });
+// ... (other useCallback hooks like initializeContract, handleAccountsChanged, handleChainChanged) ...
+
+const disconnectWalletF = useCallback(async () => {
+    console.log('MOB_DEBUG: disconnectWalletF called.');
+
+    // The eip1193ProviderState itself might have a disconnect method,
+    // especially if it's a WalletConnect provider.
+    // This is the EIP-1193 standard way for a provider to request disconnection if it supports it.
+    if (eip1193ProviderState && typeof eip1193ProviderState.disconnect === 'function') {
+       try {
+           await eip1193ProviderState.disconnect(); // Tell the provider to clean up its session
+           console.log("MOB_DEBUG: Called eip1193ProviderState.disconnect()");
+       } catch (e) {
+           console.error("MOB_DEBUG: Error calling eip1193ProviderState.disconnect()", e);
+           // Log the error, but proceed with local state cleanup anyway
+       }
+    }
+    // Else, if it's an injected provider like MetaMask, there's no explicit async disconnect method to call from our side.
+    // Clearing local state is the main action.
+
+    setWalletAddress(null);
+    setSigner(null);
+    setProvider(null); // Explicitly set provider to null BEFORE re-initializing read-only
+    setEip1193ProviderState(null); // Clear the EIP-1193 provider state
+    setChainId(null); // Clear chainId
+
+    // Revert to read-only provider and contract
+    if (loadedReadOnlyRpcUrl && loadedContractAddress) {
+        console.log("MOB_DEBUG: disconnectWalletF - Re-initializing read-only provider with RPC:", loadedReadOnlyRpcUrl);
+        try {
+            const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
+            setProvider(defaultProvider); // This will trigger Effect 3 to re-initialize the contract
+            
+            // Fetch network info for the new read-only provider
+            defaultProvider.getNetwork().then(net => {
+                if (net?.chainId) {
+                    setChainId(net.chainId); // Set chainId for read-only provider
+                    setConnectionStatus({ type: 'info', message: `Wallet disconnected. Using read-only mode (Network: ${net.chainId}).` });
+                } else {
+                    setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Using read-only mode.' });
+                }
+            }).catch(err => {
+                console.error("MOB_DEBUG: disconnectWalletF - Error getting network for new read-only provider:", err);
+                setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Read-only network info unavailable.' });
+            });
+        } catch (e) {
+            console.error("MOB_DEBUG: disconnectWalletF - Error re-initializing read-only provider:", e);
+            // Ensure provider and contract are nulled if re-init fails
+            setProvider(null); 
+            setContract(null); // Also clear contract if provider setup fails
+            setConnectionStatus({ type: 'error', message: 'Failed to restore read-only access.' });
         }
-    }, [initializeContract, loadedReadOnlyRpcUrl, loadedContractAddress, web3ModalInstance, eip1193ProviderState, loadedTargetChainIdNum]); // loadedTargetChainIdNum added to deps
+    } else {
+        console.warn("MOB_DEBUG: disconnectWalletF - Cannot re-init read-only, config (RPC/Address) not loaded.");
+        setProvider(null);
+        setContract(null);
+        setConnectionStatus({ type: 'info', message: 'Wallet disconnected. Read-only config missing.' });
+    }
+}, [
+    eip1193ProviderState, 
+    loadedReadOnlyRpcUrl, 
+    loadedContractAddress,
+    // initializeContract is NOT directly called by disconnectWalletF anymore.
+    // Effect 3 will call initializeContract when `provider` changes to JsonRpcProvider
+    // and walletAddress is null. So, initializeContract is not a direct dependency here.
+]); // Dependency array simplified
+
+// ... (your useEffect hooks, connectWallet useCallback, useMemo for contextValue) ...
 
     const handleAccountsChanged = useCallback(async (accounts) => {
         console.log('MOB_DEBUG: handleAccountsChanged (from EIP-1193). Accounts:', accounts);
