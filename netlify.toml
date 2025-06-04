@@ -6,6 +6,6 @@
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
       font-src 'self' https://fonts.gstatic.com; \
       img-src 'self' data: blob: https://www.google-analytics.com https://api.web3modal.org https://*.walletconnect.*; \
-      connect-src 'self' https://polygon-mainnet.g.alchemy.com https://www.google-analytics.com https://*.walletconnect.* wss://*.walletconnect.* https://api.web3modal.org; \
+      connect-src 'self' https://polygon-mainnet.g.alchemy.com https://www.google-analytics.com https://*.walletconnect.* wss://*.walletconnect.* https://api.web3modal.org https://rpc.walletconnect.org; \
       frame-src 'self' https://verify.walletconnect.* https://secure.walletconnect.* https://secure-mobile.walletconnect.*; \
       frame-ancestors 'self' http://localhost:* https://*.pages.dev https://*.vercel.app https://*.ngrok-free.app https://*.walletconnect.*;"""
