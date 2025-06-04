@@ -1,11 +1,13 @@
 [[headers]]
-  for = "/*" # Apply to all pages
+  for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; \
+    Content-Security-Policy = "default-src 'self'; \ 
       script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; \
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
       font-src 'self' https://fonts.gstatic.com; \
       img-src 'self' data: blob: https://www.google-analytics.com https://api.web3modal.org https://*.walletconnect.com; \
       connect-src 'self' https://polygon-mainnet.g.alchemy.com https://www.google-analytics.com https://*.walletconnect.com wss://*.walletconnect.com https://api.web3modal.org; \
       frame-src 'self' https://verify.walletconnect.com https://secure.walletconnect.com https://secure-mobile.walletconnect.com;"
-    # Add any other necessary headers like X-Frame-Options, etc., on separate lines if needed
+    # Add other headers below this line if needed, each on its own line
+    # Example:
+    # X-Frame-Options = "SAMEORIGIN" 
