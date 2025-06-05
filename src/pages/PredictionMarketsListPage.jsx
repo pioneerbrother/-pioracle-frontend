@@ -26,34 +26,33 @@ function PredictionMarketsListPage() {
 const processMarketDetails = useCallback((rawMarketData, id) => {
     console.log(`PMLP_DEBUG_PROCESS: Processing market ID ${id}. Raw data:`, JSON.stringify(rawMarketData));
     try {
-        // Basic validation: must have a question and an 'exists' flag or similar
+        // Check if rawMarketData has the named properties
         if (!rawMarketData || typeof rawMarketData.question === 'undefined' || rawMarketData.exists !== true) {
-            console.warn(`PMLP_DEBUG_PROCESS: Invalid or non-existent data for market ID ${id}. Skipping.`);
+            console.warn(`PMLP_DEBUG_PROCESS: Invalid or non-existent data for market ID ${id} using named properties. Skipping. RawMarketData.exists = ${rawMarketData?.exists}, typeof question = ${typeof rawMarketData?.question}`);
             return null; 
         }
-
-        // Convert BigNumbers and structure the data
+        // ... rest of your processing using rawMarketData.fieldName ...
         const processed = {
-            id: id.toString(),
-            assetSymbol: rawMarketData.assetSymbol || "N/A",
-            question: rawMarketData.question || "No question available",
-            targetPrice: rawMarketData.targetPrice ? rawMarketData.targetPrice.toString() : "0", // Example, adjust formatting
-            expiryTimestamp: rawMarketData.expiryTimestamp ? rawMarketData.expiryTimestamp.toNumber() : 0,
-            bettingEndTime: rawMarketData.bettingEndTime ? rawMarketData.bettingEndTime.toNumber() : 0,
-            isEventMarket: rawMarketData.isEventMarket || false,
-            state: typeof rawMarketData.state !== 'undefined' ? rawMarketData.state : -1, // Use actual enum value if it's BigNumber
-            marketCreator: rawMarketData.marketCreator || ethers.constants.AddressZero,
-            creatorFeeBasisPoints: rawMarketData.creatorFeeBasisPoints || 0,
-            // Add ALL fields your MarketCard expects
+            id: rawMarketData.id.toString(), // Assuming 'id' is a BigNumber field in the struct
+            assetSymbol: rawMarketData.assetSymbol,
+            question: rawMarketData.question,
+            targetPrice: rawMarketData.targetPrice.toString(), // Assuming BigNumber
+            expiryTimestamp: rawMarketData.expiryTimestamp.toNumber(), // Assuming BigNumber
+            bettingEndTime: rawMarketData.bettingEndTime.toNumber(), // Assuming BigNumber
+            isEventMarket: rawMarketData.isEventMarket,
+            state: rawMarketData.state, // Assuming it's a number already or needs .toNumber()
+            marketCreator: rawMarketData.marketCreator,
+            creatorFeeBasisPoints: rawMarketData.creatorFeeBasisPoints, // Assuming number or needs .toNumber()
+            // ... and so on for all fields your MarketCard needs
         };
-        console.log(`PMLP_DEBUG_PROCESS: Processed market ID ${id}:`, processed);
+        console.log(`PMLP_DEBUG_PROCESS: Processed market ID ${id} using named props:`, processed);
         return processed;
 
     } catch (e) {
         console.error(`PMLP_DEBUG_PROCESS: Error processing details for market ID ${id}:`, e, "Raw Data:", JSON.stringify(rawMarketData));
-        return null; // Return null if processing fails so it can be filtered out
+        return null;
     }
-}, []); // Add dependencies if it uses props/state from PMLP
+}, []);
 const fetchAllMarkets = useCallback(async () => {
     if (!predictionContractInstance) {
         console.log("PMLP_DEBUG: fetchAllMarkets - No contract instance.");
