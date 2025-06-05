@@ -119,27 +119,19 @@ function CreateMarketPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setSubmitError(''); setSuccessMessage(''); setIsSubmitting(true);
+        setSubmitError(''); 
+        setSuccessMessage(''); 
+        setIsSubmitting(true);
 
         if (!walletAddress || !signer || !predictionContractInstance || !listingFeeWei) {
-            setSubmitError("Wallet not connected, or contract/listing fee not ready."); setIsLoading(false); return;
+            setSubmitError("Wallet not connected, or contract/listing fee not ready.");
+            setIsSubmitting(false); // Changed from setIsLoading to setIsSubmitting
+            return;
         }
-        const feePercentage = parseFloat(creatorFeePercent);
-        if (isNaN(feePercentage) || feePercentage < 0 || feePercentage > 3) {
-            setSubmitError("Creator fee must be a number between 0.00 and 3.00%."); setIsSubmitting(false); return;
-        }
-        if (!assetSymbolInput.trim()) {
-            setSubmitError("Contract Asset Symbol is required."); setIsSubmitting(false); return;
-        }
-        if (marketType === 'event' && !resolutionDetails.trim()) {
-            setSubmitError("Resolution details are required for event markets."); setIsSubmitting(false); return;
-        }
-        if (marketType === 'priceFeed' && (!selectedFeedInfo?.address || !priceFeedTargetPrice.trim())) {
-            setSubmitError("Price feed and target price are required for price feed markets."); setIsSubmitting(false); return;
-        }
-        if (!expiryDate || !expiryTime) {
-            setSubmitError("Betting close date and time are required."); setIsSubmitting(false); return;
-        }
+        // ... (your existing form validation checks) ...
+        // if (isNaN(feePercentage) || ...) { ... setIsSubmitting(false); return; }
+        // if (!assetSymbolInput.trim()) { ... setIsSubmitting(false); return; }
+        // ... etc. ...
 
         try {
             const _assetSymbol = assetSymbolInput.trim();
@@ -156,11 +148,12 @@ function CreateMarketPage() {
             const fullExpiryString = `${expiryDate}T${expiryTime}:00Z`;
             const _expiryTimestamp = Math.floor(new Date(fullExpiryString).getTime() / 1000);
             
-            const nowPlusMinContractBuffer = Math.floor(Date.now() / 1000) + (15 * 60 + 60); // Add buffer
+            const nowPlusMinContractBuffer = Math.floor(Date.now() / 1000) + (15 * 60 + 60);
             if (isNaN(_expiryTimestamp) || _expiryTimestamp <= nowPlusMinContractBuffer) {
                  throw new Error(`Betting close time (${new Date(_expiryTimestamp*1000).toISOString()}) must be a valid future date/time (at least ~16 minutes from now). Current time + buffer: ${new Date(nowPlusMinContractBuffer*1000).toISOString()}`);
             }
 
+            const feePercentage = parseFloat(creatorFeePercent); // Ensure this is correctly parsed
             const _creatorFeeBP = Math.round(feePercentage * 100);
 
             console.log("Calling createUserMarket with on-chain params:", {
@@ -176,34 +169,46 @@ function CreateMarketPage() {
                 { value: listingFeeWei }
             );
 
+            // Show initial success message while waiting for confirmation
             setSuccessMessage(`Market creation transaction sent: ${tx.hash}. Waiting for confirmation...`);
-            await tx.wait(1);
-            const newMarketIdBN = await predictionContractInstance.nextMarketId();
-            const newMarketId = newMarketIdBN.sub(1).toString(); // ID of the market just created
-
-            setSuccessMessage(`Market "${_assetSymbol}" (ID: ${newMarketId}) created successfully! Tx: ${tx.hash}. It will appear on the markets list soon.`);
             
-            // Log important details again for admin tracking after success
+            await tx.wait(1); // Wait for 1 confirmation
+
+            // ---- START OF NEW CODE BLOCK TO ADD ----
+            const newMarketIdBN = await predictionContractInstance.nextMarketId(); 
+            // nextMarketId is the ID for the *next* market. The one just created is nextMarketId - 1.
+            const newMarketId = newMarketIdBN.sub(1).toString(); 
+
+            setSuccessMessage(`Market "${_assetSymbol}" (ID: ${newMarketId}) created successfully! Tx: ${tx.hash}. Redirecting...`);
+            
             console.log("PiOracle Admin - User Market Created Successfully:");
             console.log("  Market ID:", newMarketId);
             console.log("  Symbol:", _assetSymbol);
             console.log("  Creator Wallet:", walletAddress);
             console.log("  Creator Email (if provided):", creatorEmail);
-            console.log("  Resolution Details (for event markets):", resolutionDetails);
+            // For event markets, you might want to store/send resolutionDetails to your backend here
+            if (_isEventMarket) {
+                console.log("  Resolution Details (for event markets):", resolutionDetails);
+            }
             console.log("  Creator Fee BP:", _creatorFeeBP);
 
-            // Reset form fields
+            // Reset form fields (optional here if navigating immediately, but good practice)
             setQuestionCore(''); setTargetConditionValue(''); setAssetSymbolInput(''); setIsSymbolManuallyEdited(false);
-            setPriceFeedTargetPrice(''); setSelectedFeedInfo(SUPPORTED_PRICE_FEEDS[0]);
+            setPriceFeedTargetPrice(''); setSelectedFeedInfo(SUPPORTED_PRICE_FEEDS[0]); // Assuming selectedFeedAddress also resets or is handled
             setExpiryDate(''); setExpiryTime('23:00'); setResolutionDetails(''); setCreatorFeePercent("0.5"); setCreatorEmail('');
             
-            // navigate('/predictions'); // Optional: navigate after success
+            // Navigate back to the predictions list after a short delay
+            setTimeout(() => {
+                navigate('/predictions'); // Or your main market list route
+            }, 3000); // 3-second delay
+            // ---- END OF NEW CODE BLOCK TO ADD ----
+            
         } catch (err) {
             console.error("Error creating market:", err);
             const reason = err.reason || err.data?.message || err.message || "Failed to create market.";
             setSubmitError(`Error: ${reason}`);
         }
-        setIsSubmitting(false);
+        setIsSubmitting(false); // Make sure this is called in all paths (success/error)
     };
     
 
