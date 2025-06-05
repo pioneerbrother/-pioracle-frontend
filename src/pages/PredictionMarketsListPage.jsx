@@ -1,137 +1,168 @@
 // pioracle/src/pages/PredictionMarketsListPage.jsx
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { WalletContext } from './WalletProvider';
+import { WalletContext } from './WalletProvider'; // Assuming it's in the same /pages folder
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { 
     getMarketDisplayProperties, 
     MarketState as MarketStateEnumFromUtil 
-} from '../utils/marketutils.js'; // Ensure correct path and lowercase 'marketutils.js'
+} from '../utils/marketutils.js';
 import './PredictionMarketsListPage.css';
 
-const MarketState = MarketStateEnumFromUtil;
+const MarketState = MarketStateEnumFromUtil; // Should be 0 for Open, 1 for Resolved_YES, etc.
 
 function PredictionMarketsListPage() {
-    const { contract: predictionContractInstance, connectionStatus } = useContext(WalletContext);
+    const { contract: predictionContractInstance, connectionStatus, walletAddress } = useContext(WalletContext); // Added walletAddress
     const [rawMarkets, setRawMarkets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [nextMarketIdDebug, setNextMarketIdDebug] = useState(''); // Added for debugging if you want it
 
-    console.log("PMLP RENDER: predictionContractInstance:", predictionContractInstance, "ConnectionStatus:", connectionStatus);
+    console.log("PMLP_DEBUG: RENDER - predictionContractInstance:", !!predictionContractInstance, "ConnectionStatus:", connectionStatus?.type, "WalletAddress:", walletAddress);
 
-      const fetchAllMarkets = useCallback(async () => {
+    // Define processMarketDetails (wrap in useCallback)
+    const processMarketDetails = useCallback((rawMarketData, id) => {
+        console.log(`PMLP_DEBUG: processMarketDetails for ID ${id}, Data:`, rawMarketData);
+        if (!rawMarketData || typeof rawMarketData.question === 'undefined') { // Basic check for valid data
+            console.warn(`PMLP_DEBUG: Invalid or incomplete rawMarketData for ID ${id}`);
+            return null; // Or return a market object with an error flag
+        }
+        try {
+            // Example processing, adjust to your Market struct from Solidity
+            return {
+                id: id.toString(),
+                assetSymbol: rawMarketData.assetSymbol || "N/A",
+                question: rawMarketData.question || "No question",
+                // Assuming your struct returns these directly or you have getters
+                // Ensure BigNumbers are converted to JS numbers or strings where appropriate for display
+                targetPrice: rawMarketData.targetPrice ? ethers.utils.formatUnits(rawMarketData.targetPrice, 8) : "N/A", // Example for 8 decimals
+                expiryTimestamp: rawMarketData.expiryTimestamp ? rawMarketData.expiryTimestamp.toNumber() : 0,
+                bettingEndTime: rawMarketData.bettingEndTime ? rawMarketData.bettingEndTime.toNumber() : 0,
+                isEventMarket: rawMarketData.isEventMarket || false,
+                state: typeof rawMarketData.state !== 'undefined' ? rawMarketData.state : -1, // Default to an invalid state if undefined
+                creator: rawMarketData.marketCreator || ethers.constants.AddressZero,
+                feePercentage: rawMarketData.creatorFeeBasisPoints ? rawMarketData.creatorFeeBasisPoints / 100 : 0, // Convert BP to percent
+                // Add any other fields your MarketCard needs
+            };
+        } catch (e) {
+            console.error(`PMLP_DEBUG: Error processing market ID ${id}:`, e, "Raw Data:", rawMarketData);
+            return null;
+        }
+    }, []);
+
+
+    const fetchAllMarkets = useCallback(async () => {
         if (!predictionContractInstance) {
-            // ... (existing initial checks and error setting) ...
-            if (connectionStatus?.type === 'error' && connectionStatus.message) {
+            console.log("PMLP_DEBUG: fetchAllMarkets - No contract instance yet.");
+             if (connectionStatus?.type === 'error' && connectionStatus.message) {
                 setError(`Cannot load markets: WalletProvider error - ${connectionStatus.message}`);
-            }
-            if (connectionStatus?.type !== 'info' && connectionStatus?.type !== 'success' && connectionStatus?.type !== null) {
                 setIsLoading(false);
             }
             return;
         }
-         console.log("PMLP fetchAllMarkets: Set loading true, cleared errors/markets.");
+        console.log("PMLP_DEBUG: fetchAllMarkets - STARTING. Setting loading true, clearing error.");
         setIsLoading(true);
         setError(null);
-        setRawMarkets([]); 
-        
+        // setRawMarkets([]); // Clear only if absolutely necessary, or build into new array first
 
-      try {
-        console.log("PMLP fetchAllMarkets: Calling nextMarketId() for debug check...");
-        const _nextMarketId = await predictionContractInstance.nextMarketId();
-        setNextMarketIdDebug(_nextMarketId.toString()); // Update debug state
-        console.log("PMLP fetchAllMarkets: Actual nextMarketId from contract =", _nextMarketId.toString());
+        try {
+            console.log("PMLP_DEBUG: fetchAllMarkets - Calling nextMarketId()...");
+            const nextMarketIdBN = await predictionContractInstance.nextMarketId();
+            const nextMarketIdNum = nextMarketIdBN.toNumber();
+            setNextMarketIdDebug(nextMarketIdNum.toString());
+            console.log("PMLP_DEBUG: fetchAllMarkets - Actual nextMarketId from contract =", nextMarketIdNum);
 
-           const marketsDetailsArray = [];
-        // Loop from market ID 0 up to _nextMarketId - 1
-        for (let i = 0; i < _nextMarketId.toNumber(); i++) { // Use .toNumber() for BigNumber iteration limit
-            console.log(`PMLP fetchAllMarkets: DEBUG - Attempting to fetch details for market ID ${i}`);
-            try {
-                const marketDetails = await predictionContractInstance.getMarketStaticDetails(i);
-                console.log(`PMLP fetchAllMarkets: DEBUG - Raw details for market ID ${i}:`, marketDetails);
-                
-                // Additional check: Does marketDetails indicate the market exists?
-                // Your struct has `bool exists;`. If your `getMarketStaticDetails` returns this, check it.
-                // For now, let's assume all IDs up to nextMarketId - 1 are valid markets if getMarketStaticDetails doesn't revert.
-                
-                marketsDetailsArray.push(marketDetails);
+            const fetchedMarketsData = [];
+            if (nextMarketIdNum > 0) { // Only loop if there are markets
+                for (let idToFetch = 0; idToFetch < nextMarketIdNum; idToFetch++) {
+                    console.log(`PMLP_DEBUG: fetchAllMarkets - Loop: Attempting to fetch details for market ID ${idToFetch}`);
+                    try {
+                        // Ensure 'getMarketStaticDetails' is the correct function name and returns all necessary fields
+                        // including 'state', 'question', 'assetSymbol', 'expiryTimestamp', etc.
+                        const rawDetails = await predictionContractInstance.getMarketStaticDetails(idToFetch);
+                        console.log(`PMLP_DEBUG: fetchAllMarkets - Raw details for market ID ${idToFetch}:`, rawDetails);
 
-            } catch (loopError) {
-                console.error(`PMLP fetchAllMarkets: Error fetching details for market ID ${i}:`, loopError);
-                // Optionally, you could push a placeholder or skip this market
-                // For now, let's let it continue to fetch others.
+                        if (rawDetails && typeof rawDetails.question !== 'undefined' && rawDetails.exists) { // Check if market 'exists'
+                            const processedDetail = processMarketDetails(rawDetails, idToFetch);
+                            if (processedDetail) {
+                                fetchedMarketsData.push(processedDetail);
+                            } else {
+                                console.warn(`PMLP_DEBUG: fetchAllMarkets - processMarketDetails returned null for market ID ${idToFetch}`);
+                            }
+                        } else {
+                            console.warn(`PMLP_DEBUG: fetchAllMarkets - Invalid or non-existent market details for ID ${idToFetch}. Raw:`, rawDetails);
+                        }
+                    } catch (loopError) {
+                        console.error(`PMLP_DEBUG: fetchAllMarkets - Error fetching/processing market ID ${idToFetch}:`, loopError);
+                    }
+                }
             }
+            
+            console.log("PMLP_DEBUG: fetchAllMarkets - All fetched & processed markets (before setRawMarkets):", fetchedMarketsData);
+            setRawMarkets(fetchedMarketsData);
+
+        } catch (error) {
+            console.error("PMLP_DEBUG: fetchAllMarkets - General error fetching markets:", error);
+            setError(error.message || "Failed to load markets.");
+            setRawMarkets([]); 
+        } finally {
+            console.log("PMLP_DEBUG: fetchAllMarkets - FINISHED. Set loading false.");
+            setIsLoading(false);
         }
-        console.log("PMLP fetchAllMarkets: marketsDetailsArray (after loop, before processing):", marketsDetailsArray);
-
-        // Process the raw details
-        const processedMarkets = marketsDetailsArray.map((details, index) => processMarketDetails(details, index)).filter(Boolean);
-        console.log("PMLP fetchAllMarkets: Final processedMarkets (before setRawMarkets):", processedMarkets);
-        
-        setRawMarkets(processedMarkets);
-
-    } catch (error) {
-        console.error("PMLP fetchAllMarkets: Error fetching markets:", error);
-        setFetchError(error.message || "Failed to load markets.");
-    } finally {
-        console.log("PMLP fetchAllMarkets: Set loading false in finally block.");
-        setIsLoading(false);
-    }
-}, [predictionContractInstance, processMarketDetails]); // processMarketDetails should be a useCallback too
-         
+    }, [predictionContractInstance, processMarketDetails, connectionStatus?.type]); // Added connectionStatus.type as it was in original deps for the outer useEffect
 
     useEffect(() => {
-        console.log("PMLP useEffect: Firing. predictionContractInstance:", !!predictionContractInstance, "connectionStatus:", connectionStatus?.type);
+        console.log("PMLP_DEBUG: useEffect - Firing. predictionContractInstance:", !!predictionContractInstance, "connectionStatus:", connectionStatus?.type);
         if (predictionContractInstance) {
             fetchAllMarkets();
         } else {
-             if (connectionStatus?.type === 'error' || (connectionStatus?.type !== 'info' && connectionStatus?.type !== 'success' && connectionStatus?.type !== null)) {
+            // This block handles the state when contract is not yet available
+            if (connectionStatus?.type === 'error' && connectionStatus.message) {
+                setError(`WalletProvider Error: ${connectionStatus.message}`);
                 setIsLoading(false);
-                if(connectionStatus?.type === 'error' && connectionStatus.message) {
-                    setError(`WalletProvider Error: ${connectionStatus.message}`);
-                } else if (!predictionContractInstance && (connectionStatus?.type !== 'info' && connectionStatus?.type !== null)) {
-                     // setError("Connect wallet or wait for contract initialization."); // Can be noisy
-                     console.log("PMLP useEffect: No contract instance, not an error/disconnected state yet.");
-                }
-             } else {
-                setIsLoading(true); 
-                console.log("PMLP useEffect: No contract instance, setting isLoading true.");
-             }
+            } else if (connectionStatus?.type === 'info' && connectionStatus.message === 'Initializing...') {
+                setIsLoading(true); // Still initializing, show loading
+            } else {
+                // Could be disconnected or modal init failed, or other info states
+                // Only set loading false if we're reasonably sure it's not just initial setup
+                if(connectionStatus?.type !== 'info') setIsLoading(false);
+                console.log("PMLP_DEBUG: useEffect - No contract instance, or in a non-loading info state.");
+            }
         }
-    }, [predictionContractInstance, fetchAllMarkets, connectionStatus?.type]);
+    }, [predictionContractInstance, fetchAllMarkets, connectionStatus?.type, walletAddress]); // Added walletAddress as a trigger to re-fetch if user connects/disconnects
 
     const openMarketsToDisplay = useMemo(() => {
-        console.log("PMLP useMemo openMarketsToDisplay: rawMarkets:", rawMarkets);
+        console.log("PMLP_DEBUG: useMemo openMarketsToDisplay - rawMarkets:", rawMarkets);
         if (!rawMarkets || rawMarkets.length === 0) return [];
         
         const filtered = rawMarkets.filter(market => {
-            console.log(`PMLP useMemo: Filtering market ID ${market.id}, state: ${market.state}, MarketState.Open: ${MarketState.Open}`);
-            return market.state === MarketState.Open; // MarketState.Open should be 0
+            // Assuming MarketState.Open is 0 from your enum
+            const isOpen = market.state === MarketState.Open; 
+            console.log(`PMLP_DEBUG: useMemo - Filtering market ID ${market.id}, state: ${market.state}, IsOpen: ${isOpen}`);
+            return isOpen;
         });
-        console.log("PMLP useMemo: Markets after filtering for Open state:", filtered);
+        console.log("PMLP_DEBUG: useMemo - Markets after filtering for Open state:", filtered);
 
-        const mapped = filtered.map(market => {
+        const mappedAndSorted = filtered.map(market => {
             try {
                 return { ...market, ...getMarketDisplayProperties(market) };
             } catch (e) {
-                console.error("PMLP useMemo: Error in getMarketDisplayProperties for market:", market, e);
+                console.error("PMLP_DEBUG: useMemo - Error in getMarketDisplayProperties for market:", market, e);
                 return null; 
             }
-        });
-        const final = mapped.filter(market => market !== null)
-                            .sort((a, b) => (a.expiryTimestamp || 0) - (b.expiryTimestamp || 0));
-        console.log("PMLP useMemo: Final openMarketsToDisplay:", final);
-        return final;
+        }).filter(Boolean).sort((a, b) => (a.expiryTimestamp || 0) - (b.expiryTimestamp || 0));
+        
+        console.log("PMLP_DEBUG: useMemo - Final openMarketsToDisplay:", mappedAndSorted);
+        return mappedAndSorted;
     }, [rawMarkets]);
 
-    // ... (Rest of the component: welcome banner, link to resolved, title, loading/error/empty states, market list mapping, how to participate) ...
-    // This return part should be the same as the last full version I provided.
+    // ... (Your JSX return remains the same) ...
     return (
         <div className="page-container prediction-markets-list-page">
-            {/* ... (Welcome Banner, Link to Resolved Markets, H2 title "Open Prediction Markets") ... */}
-             <div className="welcome-banner" style={{ textAlign: 'center', margin: '20px 0', padding: '0 15px' }}>
+            {/* ... Welcome Banner, Link to Resolved Markets, H2 title ... */}
+            <div className="welcome-banner" style={{ textAlign: 'center', margin: '20px 0', padding: '0 15px' }}>
                 <h2>Welcome to PiOracle!</h2>
                 <p>Make your predictions on exciting cryptocurrency markets, including Bitcoin and Pi Coin! Where do you see their prices heading?</p>
             </div>
@@ -144,7 +175,11 @@ function PredictionMarketsListPage() {
             {error && <ErrorMessage title="Error Loading Markets" message={error} onRetry={fetchAllMarkets} />}
             
             {!isLoading && !error && openMarketsToDisplay.length === 0 && (
-                <p style={{ textAlign: 'center' }}>No open markets available right now. Check the "Recently Resolved" section or come back soon!</p>
+                <div style={{ textAlign: 'center', padding: '20px', border: '1px dashed #ccc', margin: '20px' }}>
+                    <p>No open markets available right now.</p>
+                    <p>Why not <Link to="/create-market">create a new one</Link>?</p>
+                    <p>Or check the "Recently Resolved" section.</p>
+                </div>
             )}
 
             <div className="market-list">
@@ -153,6 +188,7 @@ function PredictionMarketsListPage() {
                 ))}
             </div>
 
+            {/* ... How to Participate section ... */}
             <section className="how-to-participate" style={{marginTop: '40px', padding: '0 20px', marginBottom: '30px'}}>
                  <h2>How to Participate (on Polygon Mainnet)</h2>
                 <ol>
