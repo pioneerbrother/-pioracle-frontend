@@ -78,28 +78,28 @@ const fetchAllMarkets = useCallback(async () => {
         }
 
         const tempMarketsArray = [];
-        for (let idToFetch = 0; idToFetch < nextMarketIdNum; idToFetch++) {
-            console.log(`PMLP_DEBUG: fetchAllMarkets - LOOP START for market ID ${idToFetch}`);
-            try {
-                const rawDetails = await predictionContractInstance.getMarketStaticDetails(idToFetch);
-                console.log(`PMLP_DEBUG: fetchAllMarkets - Raw details for market ID ${idToFetch}:`, JSON.stringify(rawDetails)); // Stringify for better logging of complex objects
+       // Inside fetchAllMarkets, inside the for loop
 
-                if (rawDetails && rawDetails.exists === true) { // Assuming 'exists' field from struct
-                    const processed = processMarketDetails(rawDetails, idToFetch);
-                    if (processed) {
-                        tempMarketsArray.push(processed);
-                        console.log(`PMLP_DEBUG: fetchAllMarkets - Successfully processed and pushed market ID ${idToFetch}`);
-                    } else {
-                        console.warn(`PMLP_DEBUG: fetchAllMarkets - processMarketDetails returned null for market ID ${idToFetch}`);
-                    }
-                } else {
-                    console.warn(`PMLP_DEBUG: fetchAllMarkets - Market ID ${idToFetch} does not exist or details are invalid. Raw:`, JSON.stringify(rawDetails));
-                }
-            } catch (loopError) {
-                console.error(`PMLP_DEBUG: fetchAllMarkets - Error in loop for market ID ${idToFetch}:`, loopError);
-            }
-            console.log(`PMLP_DEBUG: fetchAllMarkets - LOOP END for market ID ${idToFetch}`);
-        } // End of for loop
+for (let idToFetch = 0; idToFetch < nextMarketIdNum; idToFetch++) {
+    console.log(`PMLP_DEBUG: fetchAllMarkets - TOP OF LOOP for market ID ${idToFetch}. Next ID to fetch.`); // <-- ADD THIS
+    try {
+        // ... your existing try block ...
+        const rawDetails = await predictionContractInstance.getMarketStaticDetails(idToFetch);
+        console.log(`PMLP_DEBUG: fetchAllMarkets - AFTER getMarketStaticDetails for ID ${idToFetch}. Raw data:`, JSON.stringify(rawDetails)); // <-- ADD THIS
+
+        if (rawDetails && rawDetails.exists === true) { 
+            const processed = processMarketDetails(rawDetails, idToFetch);
+            if (processed) {
+                fetchedMarketsData.push(processed);
+                console.log(`PMLP_DEBUG: fetchAllMarkets - Successfully processed and pushed market ID ${idToFetch}`);
+            } else { /* ... */ }
+        } else { /* ... */ }
+    } catch (loopError) {
+        console.error(`PMLP_DEBUG: fetchAllMarkets - Error in loop for market ID ${idToFetch}:`, loopError);
+    }
+    console.log(`PMLP_DEBUG: fetchAllMarkets - BOTTOM OF LOOP for market ID ${idToFetch}.`); // <-- ADD THIS
+} // End of for loop
+     
         
         console.log("PMLP_DEBUG: fetchAllMarkets - Loop finished. Total items in tempMarketsArray:", tempMarketsArray.length);
         console.log("PMLP_DEBUG: fetchAllMarkets - Setting rawMarkets with:", tempMarketsArray);
