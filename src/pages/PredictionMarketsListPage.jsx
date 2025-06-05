@@ -23,68 +23,64 @@ function PredictionMarketsListPage() {
     console.log("PMLP_DEBUG: RENDER - predictionContractInstance:", !!predictionContractInstance, "ConnectionStatus:", connectionStatus?.type, "WalletAddress:", walletAddress);
 
     // Define processMarketDetails (wrap in useCallback)
-const processMarketDetails = useCallback((rawMarketData, id) => {
-    // rawMarketData here is the object returned by ethers.js for one Market struct
-    console.log(`PMLP_DEBUG_PROCESS: Processing market ID ${id}. Raw data received:`, rawMarketData);
-    
-    // You can also log the rawMarketData directly to see its structure in the console
-    // console.log(rawMarketData); 
+// Inside PredictionMarketListPage.jsx
 
+// processMarketDetails: Takes raw data from contract and the market's ID
+const processMarketDetails = useCallback((rawContractData, marketId) => {
+    console.log(`PMLP_DEBUG_PROCESS: Processing market ID ${marketId}. Raw data:`, rawContractData);
     try {
-        // Validate essential fields based on your struct definition
-        // Access fields using their names as defined in the Solidity struct
-        if (!rawMarketData || 
-            typeof rawMarketData.assetSymbol === 'undefined' || // Use assetSymbol instead of question
-            rawMarketData.exists !== true) {                     // Check the exists flag
-
-            console.warn(
-                `PMLP_DEBUG_PROCESS: Invalid or non-existent data for market ID ${id}. Skipping. ` +
-                `Exists: ${rawMarketData?.exists}, Type of assetSymbol: ${typeof rawMarketData?.assetSymbol}, AssetSymbol: ${rawMarketData?.assetSymbol}`
-            );
+        if (!rawContractData || rawContractData.exists !== true) {
+            console.warn(`PMLP_DEBUG_PROCESS: Market ID ${marketId} 'exists' flag is not true or data missing. Skipping.`);
             return null; 
         }
 
-        // Convert BigNumbers and structure the data
-        // Ensure all fields needed by your MarketCard component are mapped here
-        const processed = {
-            id: rawMarketData.id.toString(), // Solidity's id field
-            assetSymbol: rawMarketData.assetSymbol,
-            // If you need a "question" field for the MarketCard, derive it or use assetSymbol
-            question: rawMarketData.assetSymbol, // Or a more descriptive field if you add one to the struct later
-
-            // For price feed related data, handle if it's an event market
-            priceFeedAddress: rawMarketData.priceFeed, // This is an address object from ethers
-            targetPrice: rawMarketData.targetPrice ? rawMarketData.targetPrice.toString() : "0", // Assuming BigNumber
-
-            expiryTimestamp: rawMarketData.expiryTimestamp ? rawMarketData.expiryTimestamp.toNumber() : 0,
-            resolutionTimestamp: rawMarketData.resolutionTimestamp ? rawMarketData.resolutionTimestamp.toNumber() : 0,
-            creationTimestamp: rawMarketData.creationTimestamp ? rawMarketData.creationTimestamp.toNumber() : 0,
+        // Directly map fields from the contract's return struct
+        // Ethers.js returns struct values as an array with named properties
+        const intermediateMarket = {
+            id: rawContractData.id.toString(), // Use the ID from the struct
+            assetSymbol: rawContractData.assetSymbol,
+            // 'question' for MarketCard will be derived by getMarketDisplayProperties from assetSymbol or a dedicated field
             
-            isEventMarket: rawMarketData.isEventMarket,
-            isUserCreated: rawMarketData.isUserCreated,
+            // For targetPrice, we need to format it based on whether it's an event or priceFeed market.
+            // This logic is better placed in getMarketDisplayProperties if it needs decimals info.
+            // For now, pass the raw BigNumber or a placeholder.
+            targetPrice: rawContractData.targetPrice, // Pass BigNumber, let getMarketDisplayProperties format
+            
+            expiryTimestamp: rawContractData.expiryTimestamp.toNumber(), // Convert BigNumber to JS number
+            resolutionTimestamp: rawContractData.resolutionTimestamp.toNumber(),
+            creationTimestamp: rawContractData.creationTimestamp.toNumber(),
+            isEventMarket: rawContractData.isEventMarket,
+            state: ethers.BigNumber.isBigNumber(rawContractData.state) 
+                   ? rawContractData.state.toNumber() 
+                   : parseInt(rawContractData.state), // MarketState enum (0-6)
+            exists: rawContractData.exists,
 
-            marketCreator: rawMarketData.marketCreator,
-            creatorFeeBasisPoints: rawMarketData.creatorFeeBasisPoints, // This is already uint16, .toNumber() might be needed if it becomes BigNumber via ethers
+            // These might be useful for getMarketDisplayProperties or directly in MarketCard if needed
+            totalStakedYes: rawContractData.totalStakedYes.toString(), // Pass as string for large numbers
+            totalStakedNo: rawMarketData.totalStakedNo.toString(),
+            actualOutcomeValue: rawMarketData.actualOutcomeValue.toString(),
+            priceFeedAddress: rawMarketData.priceFeedAddress, // For getMarketDisplayProperties to use if it needs to fetch decimals
 
-            state: typeof rawMarketData.state !== 'undefined' ? rawMarketData.state : -1, // Assuming state is an enum (number)
-            // If state is a BigNumber from the contract, use rawMarketData.state.toNumber()
-
-            // These might not be directly in getMarketStaticDetails if it's a summary view.
-            // If they are, map them. If not, MarketCard needs to know they might be missing or fetched separately.
-            totalStakedYes: rawMarketData.totalStakedYes ? rawMarketData.totalStakedYes.toString() : "0",
-            totalStakedNo: rawMarketData.totalStakedNo ? rawMarketData.totalStakedNo.toString() : "0",
-            actualOutcomeValue: rawMarketData.actualOutcomeValue ? rawMarketData.actualOutcomeValue.toString() : "", // int256
-            isResolved: rawMarketData.isResolved,
+            // Fields from the full Market struct NOT directly returned by getMarketStaticDetails:
+            // marketCreator, creatorFeeBasisPoints, isUserCreated
+            // If MarketCard needs these, you'll have to modify getMarketStaticDetails in Solidity
+            // or make additional contract calls (less efficient).
+            // For now, we'll assume getMarketDisplayProperties or MarketCard can handle their absence.
         };
+
+        console.log(`PMLP_DEBUG_PROCESS: Intermediate market data for ID ${marketId}:`, intermediateMarket);
         
-        console.log(`PMLP_DEBUG_PROCESS: Successfully processed market ID ${id}:`, processed);
-        return processed;
+        // Now, let getMarketDisplayProperties add the display-specific fields
+        const displayReadyMarket = getMarketDisplayProperties(intermediateMarket);
+        console.log(`PMLP_DEBUG_PROCESS: Display-ready market data for ID ${marketId}:`, displayReadyMarket);
+        
+        return displayReadyMarket; // This object should now have title, targetDisplay, expiryString etc.
 
     } catch (e) {
-        console.error(`PMLP_DEBUG_PROCESS: Error processing details for market ID ${id}:`, e, "Raw Data:", rawMarketData);
-        return null; // Return null if processing fails so it can be filtered out
+        console.error(`PMLP_DEBUG_PROCESS: Error processing details for market ID ${marketId}:`, e, "Raw Data:", rawContractData);
+        return null; 
     }
-}, []); // No dependencies from component state/props in this version
+}, []); // Assuming getMarketDisplayProperties is a pure function imported from utils
 const fetchAllMarkets = useCallback(async () => {
     if (!predictionContractInstance) {
         console.log("PMLP_DEBUG: fetchAllMarkets - No contract instance.");
@@ -118,13 +114,19 @@ for (let idToFetch = 0; idToFetch < nextMarketIdNum; idToFetch++) {
         const rawDetails = await predictionContractInstance.getMarketStaticDetails(idToFetch);
         console.log(`PMLP_DEBUG: fetchAllMarkets - AFTER getMarketStaticDetails for ID ${idToFetch}. Raw data:`, JSON.stringify(rawDetails)); // <-- ADD THIS
 
-        if (rawDetails && rawDetails.exists === true) { 
-            const processed = processMarketDetails(rawDetails, idToFetch);
-            if (processed) {
-                fetchedMarketsData.push(processed);
-                console.log(`PMLP_DEBUG: fetchAllMarkets - Successfully processed and pushed market ID ${idToFetch}`);
-            } else { /* ... */ }
-        } else { /* ... */ }
+     // ... inside the loop ...
+if (rawDetails && rawDetails.exists === true) {
+    const processedMarket = processMarketDetails(rawDetails, idToFetch); // Call our detailed processor
+    if (processedMarket) { // Check if processing was successful
+        fetchedMarketsData.push(processedMarket);
+        console.log(`PMLP_DEBUG: fetchAllMarkets - Successfully processed and pushed market ID ${idToFetch}`);
+    } else {
+        console.warn(`PMLP_DEBUG: fetchAllMarkets - processMarketDetails returned null for market ID ${idToFetch}, skipping.`);
+    }
+} else {
+    console.warn(`PMLP_DEBUG: fetchAllMarkets - Market ID ${idToFetch} does not exist or details invalid. Raw:`, JSON.stringify(rawDetails));
+}
+// ...
     } catch (loopError) {
         console.error(`PMLP_DEBUG: fetchAllMarkets - Error in loop for market ID ${idToFetch}:`, loopError);
     }
