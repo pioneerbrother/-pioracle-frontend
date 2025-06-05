@@ -24,35 +24,67 @@ function PredictionMarketsListPage() {
 
     // Define processMarketDetails (wrap in useCallback)
 const processMarketDetails = useCallback((rawMarketData, id) => {
-    console.log(`PMLP_DEBUG_PROCESS: Processing market ID ${id}. Raw data:`, JSON.stringify(rawMarketData));
+    // rawMarketData here is the object returned by ethers.js for one Market struct
+    console.log(`PMLP_DEBUG_PROCESS: Processing market ID ${id}. Raw data received:`, rawMarketData);
+    
+    // You can also log the rawMarketData directly to see its structure in the console
+    // console.log(rawMarketData); 
+
     try {
-        // Check if rawMarketData has the named properties
-        if (!rawMarketData || typeof rawMarketData.question === 'undefined' || rawMarketData.exists !== true) {
-            console.warn(`PMLP_DEBUG_PROCESS: Invalid or non-existent data for market ID ${id} using named properties. Skipping. RawMarketData.exists = ${rawMarketData?.exists}, typeof question = ${typeof rawMarketData?.question}`);
+        // Validate essential fields based on your struct definition
+        // Access fields using their names as defined in the Solidity struct
+        if (!rawMarketData || 
+            typeof rawMarketData.assetSymbol === 'undefined' || // Use assetSymbol instead of question
+            rawMarketData.exists !== true) {                     // Check the exists flag
+
+            console.warn(
+                `PMLP_DEBUG_PROCESS: Invalid or non-existent data for market ID ${id}. Skipping. ` +
+                `Exists: ${rawMarketData?.exists}, Type of assetSymbol: ${typeof rawMarketData?.assetSymbol}, AssetSymbol: ${rawMarketData?.assetSymbol}`
+            );
             return null; 
         }
-        // ... rest of your processing using rawMarketData.fieldName ...
+
+        // Convert BigNumbers and structure the data
+        // Ensure all fields needed by your MarketCard component are mapped here
         const processed = {
-            id: rawMarketData.id.toString(), // Assuming 'id' is a BigNumber field in the struct
+            id: rawMarketData.id.toString(), // Solidity's id field
             assetSymbol: rawMarketData.assetSymbol,
-            question: rawMarketData.question,
-            targetPrice: rawMarketData.targetPrice.toString(), // Assuming BigNumber
-            expiryTimestamp: rawMarketData.expiryTimestamp.toNumber(), // Assuming BigNumber
-            bettingEndTime: rawMarketData.bettingEndTime.toNumber(), // Assuming BigNumber
+            // If you need a "question" field for the MarketCard, derive it or use assetSymbol
+            question: rawMarketData.assetSymbol, // Or a more descriptive field if you add one to the struct later
+
+            // For price feed related data, handle if it's an event market
+            priceFeedAddress: rawMarketData.priceFeed, // This is an address object from ethers
+            targetPrice: rawMarketData.targetPrice ? rawMarketData.targetPrice.toString() : "0", // Assuming BigNumber
+
+            expiryTimestamp: rawMarketData.expiryTimestamp ? rawMarketData.expiryTimestamp.toNumber() : 0,
+            resolutionTimestamp: rawMarketData.resolutionTimestamp ? rawMarketData.resolutionTimestamp.toNumber() : 0,
+            creationTimestamp: rawMarketData.creationTimestamp ? rawMarketData.creationTimestamp.toNumber() : 0,
+            
             isEventMarket: rawMarketData.isEventMarket,
-            state: rawMarketData.state, // Assuming it's a number already or needs .toNumber()
+            isUserCreated: rawMarketData.isUserCreated,
+
             marketCreator: rawMarketData.marketCreator,
-            creatorFeeBasisPoints: rawMarketData.creatorFeeBasisPoints, // Assuming number or needs .toNumber()
-            // ... and so on for all fields your MarketCard needs
+            creatorFeeBasisPoints: rawMarketData.creatorFeeBasisPoints, // This is already uint16, .toNumber() might be needed if it becomes BigNumber via ethers
+
+            state: typeof rawMarketData.state !== 'undefined' ? rawMarketData.state : -1, // Assuming state is an enum (number)
+            // If state is a BigNumber from the contract, use rawMarketData.state.toNumber()
+
+            // These might not be directly in getMarketStaticDetails if it's a summary view.
+            // If they are, map them. If not, MarketCard needs to know they might be missing or fetched separately.
+            totalStakedYes: rawMarketData.totalStakedYes ? rawMarketData.totalStakedYes.toString() : "0",
+            totalStakedNo: rawMarketData.totalStakedNo ? rawMarketData.totalStakedNo.toString() : "0",
+            actualOutcomeValue: rawMarketData.actualOutcomeValue ? rawMarketData.actualOutcomeValue.toString() : "", // int256
+            isResolved: rawMarketData.isResolved,
         };
-        console.log(`PMLP_DEBUG_PROCESS: Processed market ID ${id} using named props:`, processed);
+        
+        console.log(`PMLP_DEBUG_PROCESS: Successfully processed market ID ${id}:`, processed);
         return processed;
 
     } catch (e) {
-        console.error(`PMLP_DEBUG_PROCESS: Error processing details for market ID ${id}:`, e, "Raw Data:", JSON.stringify(rawMarketData));
-        return null;
+        console.error(`PMLP_DEBUG_PROCESS: Error processing details for market ID ${id}:`, e, "Raw Data:", rawMarketData);
+        return null; // Return null if processing fails so it can be filtered out
     }
-}, []);
+}, []); // No dependencies from component state/props in this version
 const fetchAllMarkets = useCallback(async () => {
     if (!predictionContractInstance) {
         console.log("PMLP_DEBUG: fetchAllMarkets - No contract instance.");
