@@ -23,95 +23,97 @@ function PredictionMarketsListPage() {
     console.log("PMLP_DEBUG: RENDER - predictionContractInstance:", !!predictionContractInstance, "ConnectionStatus:", connectionStatus?.type, "WalletAddress:", walletAddress);
 
     // Define processMarketDetails (wrap in useCallback)
-    const processMarketDetails = useCallback((rawMarketData, id) => {
-        console.log(`PMLP_DEBUG: processMarketDetails for ID ${id}, Data:`, rawMarketData);
-        if (!rawMarketData || typeof rawMarketData.question === 'undefined') { // Basic check for valid data
-            console.warn(`PMLP_DEBUG: Invalid or incomplete rawMarketData for ID ${id}`);
-            return null; // Or return a market object with an error flag
+const processMarketDetails = useCallback((rawMarketData, id) => {
+    console.log(`PMLP_DEBUG_PROCESS: Processing market ID ${id}. Raw data:`, JSON.stringify(rawMarketData));
+    try {
+        // Basic validation: must have a question and an 'exists' flag or similar
+        if (!rawMarketData || typeof rawMarketData.question === 'undefined' || rawMarketData.exists !== true) {
+            console.warn(`PMLP_DEBUG_PROCESS: Invalid or non-existent data for market ID ${id}. Skipping.`);
+            return null; 
         }
-        try {
-            // Example processing, adjust to your Market struct from Solidity
-            return {
-                id: id.toString(),
-                assetSymbol: rawMarketData.assetSymbol || "N/A",
-                question: rawMarketData.question || "No question",
-                // Assuming your struct returns these directly or you have getters
-                // Ensure BigNumbers are converted to JS numbers or strings where appropriate for display
-                targetPrice: rawMarketData.targetPrice ? ethers.utils.formatUnits(rawMarketData.targetPrice, 8) : "N/A", // Example for 8 decimals
-                expiryTimestamp: rawMarketData.expiryTimestamp ? rawMarketData.expiryTimestamp.toNumber() : 0,
-                bettingEndTime: rawMarketData.bettingEndTime ? rawMarketData.bettingEndTime.toNumber() : 0,
-                isEventMarket: rawMarketData.isEventMarket || false,
-                state: typeof rawMarketData.state !== 'undefined' ? rawMarketData.state : -1, // Default to an invalid state if undefined
-                creator: rawMarketData.marketCreator || ethers.constants.AddressZero,
-                feePercentage: rawMarketData.creatorFeeBasisPoints ? rawMarketData.creatorFeeBasisPoints / 100 : 0, // Convert BP to percent
-                // Add any other fields your MarketCard needs
-            };
-        } catch (e) {
-            console.error(`PMLP_DEBUG: Error processing market ID ${id}:`, e, "Raw Data:", rawMarketData);
-            return null;
-        }
-    }, []);
 
+        // Convert BigNumbers and structure the data
+        const processed = {
+            id: id.toString(),
+            assetSymbol: rawMarketData.assetSymbol || "N/A",
+            question: rawMarketData.question || "No question available",
+            targetPrice: rawMarketData.targetPrice ? rawMarketData.targetPrice.toString() : "0", // Example, adjust formatting
+            expiryTimestamp: rawMarketData.expiryTimestamp ? rawMarketData.expiryTimestamp.toNumber() : 0,
+            bettingEndTime: rawMarketData.bettingEndTime ? rawMarketData.bettingEndTime.toNumber() : 0,
+            isEventMarket: rawMarketData.isEventMarket || false,
+            state: typeof rawMarketData.state !== 'undefined' ? rawMarketData.state : -1, // Use actual enum value if it's BigNumber
+            marketCreator: rawMarketData.marketCreator || ethers.constants.AddressZero,
+            creatorFeeBasisPoints: rawMarketData.creatorFeeBasisPoints || 0,
+            // Add ALL fields your MarketCard expects
+        };
+        console.log(`PMLP_DEBUG_PROCESS: Processed market ID ${id}:`, processed);
+        return processed;
 
-    const fetchAllMarkets = useCallback(async () => {
-        if (!predictionContractInstance) {
-            console.log("PMLP_DEBUG: fetchAllMarkets - No contract instance yet.");
-             if (connectionStatus?.type === 'error' && connectionStatus.message) {
-                setError(`Cannot load markets: WalletProvider error - ${connectionStatus.message}`);
-                setIsLoading(false);
-            }
+    } catch (e) {
+        console.error(`PMLP_DEBUG_PROCESS: Error processing details for market ID ${id}:`, e, "Raw Data:", JSON.stringify(rawMarketData));
+        return null; // Return null if processing fails so it can be filtered out
+    }
+}, []); // Add dependencies if it uses props/state from PMLP
+const fetchAllMarkets = useCallback(async () => {
+    if (!predictionContractInstance) {
+        console.log("PMLP_DEBUG: fetchAllMarkets - No contract instance.");
+        setIsLoading(false); // Ensure loading is false if we bail early
+        return;
+    }
+    console.log("PMLP_DEBUG: fetchAllMarkets - STARTING.");
+    setIsLoading(true);
+    setError(null);
+    // setRawMarkets([]); // Let's build a new array and set at the end
+
+    try {
+        const nextMarketIdBN = await predictionContractInstance.nextMarketId();
+        const nextMarketIdNum = nextMarketIdBN.toNumber();
+        console.log(`PMLP_DEBUG: fetchAllMarkets - nextMarketIdNum from contract = ${nextMarketIdNum}`);
+
+        if (nextMarketIdNum === 0) {
+            console.log("PMLP_DEBUG: fetchAllMarkets - No markets to fetch (nextMarketId is 0).");
+            setRawMarkets([]);
+            setIsLoading(false);
             return;
         }
-        console.log("PMLP_DEBUG: fetchAllMarkets - STARTING. Setting loading true, clearing error.");
-        setIsLoading(true);
-        setError(null);
-        // setRawMarkets([]); // Clear only if absolutely necessary, or build into new array first
 
-        try {
-            console.log("PMLP_DEBUG: fetchAllMarkets - Calling nextMarketId()...");
-            const nextMarketIdBN = await predictionContractInstance.nextMarketId();
-            const nextMarketIdNum = nextMarketIdBN.toNumber();
-            setNextMarketIdDebug(nextMarketIdNum.toString());
-            console.log("PMLP_DEBUG: fetchAllMarkets - Actual nextMarketId from contract =", nextMarketIdNum);
+        const tempMarketsArray = [];
+        for (let idToFetch = 0; idToFetch < nextMarketIdNum; idToFetch++) {
+            console.log(`PMLP_DEBUG: fetchAllMarkets - LOOP START for market ID ${idToFetch}`);
+            try {
+                const rawDetails = await predictionContractInstance.getMarketStaticDetails(idToFetch);
+                console.log(`PMLP_DEBUG: fetchAllMarkets - Raw details for market ID ${idToFetch}:`, JSON.stringify(rawDetails)); // Stringify for better logging of complex objects
 
-            const fetchedMarketsData = [];
-            if (nextMarketIdNum > 0) { // Only loop if there are markets
-                for (let idToFetch = 0; idToFetch < nextMarketIdNum; idToFetch++) {
-                    console.log(`PMLP_DEBUG: fetchAllMarkets - Loop: Attempting to fetch details for market ID ${idToFetch}`);
-                    try {
-                        // Ensure 'getMarketStaticDetails' is the correct function name and returns all necessary fields
-                        // including 'state', 'question', 'assetSymbol', 'expiryTimestamp', etc.
-                        const rawDetails = await predictionContractInstance.getMarketStaticDetails(idToFetch);
-                        console.log(`PMLP_DEBUG: fetchAllMarkets - Raw details for market ID ${idToFetch}:`, rawDetails);
-
-                        if (rawDetails && typeof rawDetails.question !== 'undefined' && rawDetails.exists) { // Check if market 'exists'
-                            const processedDetail = processMarketDetails(rawDetails, idToFetch);
-                            if (processedDetail) {
-                                fetchedMarketsData.push(processedDetail);
-                            } else {
-                                console.warn(`PMLP_DEBUG: fetchAllMarkets - processMarketDetails returned null for market ID ${idToFetch}`);
-                            }
-                        } else {
-                            console.warn(`PMLP_DEBUG: fetchAllMarkets - Invalid or non-existent market details for ID ${idToFetch}. Raw:`, rawDetails);
-                        }
-                    } catch (loopError) {
-                        console.error(`PMLP_DEBUG: fetchAllMarkets - Error fetching/processing market ID ${idToFetch}:`, loopError);
+                if (rawDetails && rawDetails.exists === true) { // Assuming 'exists' field from struct
+                    const processed = processMarketDetails(rawDetails, idToFetch);
+                    if (processed) {
+                        tempMarketsArray.push(processed);
+                        console.log(`PMLP_DEBUG: fetchAllMarkets - Successfully processed and pushed market ID ${idToFetch}`);
+                    } else {
+                        console.warn(`PMLP_DEBUG: fetchAllMarkets - processMarketDetails returned null for market ID ${idToFetch}`);
                     }
+                } else {
+                    console.warn(`PMLP_DEBUG: fetchAllMarkets - Market ID ${idToFetch} does not exist or details are invalid. Raw:`, JSON.stringify(rawDetails));
                 }
+            } catch (loopError) {
+                console.error(`PMLP_DEBUG: fetchAllMarkets - Error in loop for market ID ${idToFetch}:`, loopError);
             }
-            
-            console.log("PMLP_DEBUG: fetchAllMarkets - All fetched & processed markets (before setRawMarkets):", fetchedMarketsData);
-            setRawMarkets(fetchedMarketsData);
+            console.log(`PMLP_DEBUG: fetchAllMarkets - LOOP END for market ID ${idToFetch}`);
+        } // End of for loop
+        
+        console.log("PMLP_DEBUG: fetchAllMarkets - Loop finished. Total items in tempMarketsArray:", tempMarketsArray.length);
+        console.log("PMLP_DEBUG: fetchAllMarkets - Setting rawMarkets with:", tempMarketsArray);
+        setRawMarkets(tempMarketsArray);
 
-        } catch (error) {
-            console.error("PMLP_DEBUG: fetchAllMarkets - General error fetching markets:", error);
-            setError(error.message || "Failed to load markets.");
-            setRawMarkets([]); 
-        } finally {
-            console.log("PMLP_DEBUG: fetchAllMarkets - FINISHED. Set loading false.");
-            setIsLoading(false);
-        }
-    }, [predictionContractInstance, processMarketDetails, connectionStatus?.type]); // Added connectionStatus.type as it was in original deps for the outer useEffect
+    } catch (error) {
+        console.error("PMLP_DEBUG: fetchAllMarkets - General error in try block:", error);
+        setError(error.message || "Failed to load markets.");
+        setRawMarkets([]);
+    } finally {
+        setIsLoading(false);
+        console.log("PMLP_DEBUG: fetchAllMarkets - FINALLY block. Loading set to false.");
+    }
+}, [predictionContractInstance, processMarketDetails]); // processMarketDetails MUST be stable (useCallback)// Added connectionStatus.type as it was in original deps for the outer useEffect
 
     useEffect(() => {
         console.log("PMLP_DEBUG: useEffect - Firing. predictionContractInstance:", !!predictionContractInstance, "connectionStatus:", connectionStatus?.type);
