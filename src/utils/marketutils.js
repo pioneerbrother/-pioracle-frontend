@@ -46,72 +46,46 @@ export const formatToUTC = (timestamp) => {
 };
 
 // NOW define getMarketDisplayProperties, which uses the functions above
-export const getMarketDisplayProperties = (market) => {
-    if (!market || typeof market.id === 'undefined') { // Basic check for a valid market object
-        console.warn("getMarketDisplayProperties received invalid market object:", market);
-        return {
-            displayId: "Market N/A", title: "Invalid Market Data", question: "Could not load market question.",
-            targetDisplay: "N/A", currencySymbol: "", expiryString: "N/A",
-            statusString: "Error", statusClassName: "status-error"
+// In marketutils.js -> getMarketDisplayProperties
+export const getMarketDisplayProperties = (intermediateMarket) => {
+    // First, ensure intermediateMarket is valid and has necessary base properties
+    if (!intermediateMarket || typeof intermediateMarket.id === 'undefined' || intermediateMarket.exists !== true) {
+        console.warn("PMLP_DEBUG_UTIL: getMarketDisplayProperties received invalid intermediateMarket or market does not exist:", intermediateMarket);
+        // Return an object that MarketCard can handle as an error or skip,
+        // but ensure it has an 'id' for keying if it's not filtered out earlier.
+        return { 
+            id: intermediateMarket?.id || `invalid-${Date.now()}`, // Provide an ID for key
+            exists: false, 
+            title: "Invalid Market Data", 
+            statusString: "Error", 
+            statusClassName: "status-error",
+            // ... other minimal fields MarketCard might try to access
         };
     }
 
-    let title = `Market #${market.id}`;
-    let question = `Predict outcome for ${market.assetSymbol ? market.assetSymbol.replace(/_/g, " ") : 'N/A'}`;
+    // Your logic to derive title, question, targetDisplay, expiryString, statusString, statusClassName
+    // based on intermediateMarket.assetSymbol, intermediateMarket.state, intermediateMarket.isEventMarket, etc.
+    // For example:
+    let title = intermediateMarket.assetSymbol.replace(/_/g, " "); // Default title
+    let question = `Predict: ${intermediateMarket.assetSymbol.replace(/_/g, " ")}`; // Default question
     let targetDisplay = "N/A";
-    let currencySymbol = "";
+    
+    // ... (Your detailed parsing logic for title, question, targetDisplay based on assetSymbol and market type) ...
+    // This is where you'd put the complex if/else for event vs price feed from your previous getMarketDisplayProperties
 
-    const symbol = market.assetSymbol || "";
-    const parts = symbol.split('_');
-
-    // --- Make sure this parsing logic correctly handles ALL your symbol formats ---
-    if (market.isEventMarket) {
-        currencySymbol = parts[0] || "";
-        if (parts.length >= 5 && parts[1]?.toUpperCase() === "PRICE" && parts[2]?.toUpperCase() === "ABOVE") {
-            let priceStringRaw = "";
-            if (parts[3] && parts[4] && !isNaN(Number(parts[3])) && (parts[4] === "0" || !isNaN(Number(parts[4])) ) ) { // Handle "0_7050" or "0_81"
-                priceStringRaw = parts[3] + "." + parts[4];
-                const priceValue = parseFloat(priceStringRaw);
-                if (!isNaN(priceValue)) {
-                    let decimalsToDisplay = parts[4].length === 1 && parts[4] === "0" ? 0 : (parts[4].length > 2 ? parts[4].length : 2) ; // e.g. for "0_7050" or "0_7"
-                    if (parts[3] === "0" && parts[4] === "0") decimalsToDisplay = 0; // for "0_0" which means $0
-                    targetDisplay = `$${priceValue.toLocaleString(undefined, { minimumFractionDigits: decimalsToDisplay, maximumFractionDigits: decimalsToDisplay })}`;
-                    const datePartInSymbol = parts.slice(5).join('_').replace(/_EOB$/, '');
-                    question = `Will ${currencySymbol} be ≥ ${targetDisplay} by ${datePartInSymbol}?`;
-                    title = `${currencySymbol} ≥ ${targetDisplay}`;
-                } else { targetDisplay = "Price Target"; }
-            } else { title = symbol.replace(/_/g, " "); targetDisplay = "Outcome: YES"; }
-        } else { title = symbol.replace(/_/g, " "); targetDisplay = "Outcome: YES"; }
-    } else { // Price Feed Market
-        currencySymbol = parts[0] || "";
-        if (parts.length >= 4 && parts[1]?.toUpperCase() === "PRICE" && parts[2]?.toUpperCase() === "ABOVE") {
-            const oracleDecimals = market.oracleDecimals || 8;
-            try {
-                // Ensure market.targetPrice is a string representing a number
-                const priceBigNumber = ethers.BigNumber.from(market.targetPrice.toString());
-                const formattedPrice = ethers.utils.formatUnits(priceBigNumber, oracleDecimals);
-                targetDisplay = `$${parseFloat(formattedPrice).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: (oracleDecimals > 0 ? 2 : 0) })}`;
-                const datePartInSymbol = parts.slice(4).join('_').replace(/_EOB$/, '');
-                question = `Will ${currencySymbol} be ≥ ${targetDisplay} by ${datePartInSymbol}?`;
-                title = `${currencySymbol} ≥ ${targetDisplay}`;
-            } catch (e) {
-                console.error("Error formatting price feed target:", e, "Raw targetPrice:", market.targetPrice);
-                targetDisplay = `Target (Raw): ${market.targetPrice}`;
-                title = `${currencySymbol} Prediction`;
-            }
-        } else { title = symbol.replace(/_/g, " "); targetDisplay = `Target: ${market.targetPrice}`; }
-    }
-
-    const currentStatusString = getStatusString(market.state); // Uses the function defined above
+    const currentStatusString = getStatusString(intermediateMarket.state); // Assuming getStatusString is defined
+    const statusClassNameBase = currentStatusString.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const expiryString = formatToUTC(intermediateMarket.expiryTimestamp); // Assuming formatToUTC is defined
 
     return {
-        displayId: `Market #${market.id}`,
-        title: title,
+        ...intermediateMarket, // <<< SPREAD ALL properties from intermediateMarket FIRST
+                               // This ensures id, state, exists, assetSymbol, expiryTimestamp etc. are carried over.
+        title: title,          // Then override or add new display-specific ones
         question: question,
         targetDisplay: targetDisplay,
-        currencySymbol: currencySymbol,
-        expiryString: formatToUTC(market.expiryTimestamp), // Uses the function defined above
+        expiryString: expiryString,
         statusString: currentStatusString,
-        statusClassName: `status-${currentStatusString.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+        statusClassName: `status-${statusClassNameBase}`,
+        displayId: `Market #${intermediateMarket.id}` // A distinct property for display if needed
     };
 };
