@@ -145,29 +145,27 @@ function PredictionMarketsListPage() {
         }
     }, [predictionContractInstance, fetchAllMarkets, connectionStatus?.type, walletAddress]);
 
-    const openMarketsToDisplay = useMemo(() => {
-        console.log("PMLP_DEBUG: useMemo openMarketsToDisplay - rawMarkets:", rawMarkets);
-        if (!rawMarkets || rawMarkets.length === 0) return [];
-        
-        const filtered = rawMarkets.filter(market => {
-            const isOpen = market.state === MarketState.Open; 
-            console.log(`PMLP_DEBUG: useMemo - Filtering market ID ${market.id}, state: ${market.state}, IsOpen: ${isOpen}`);
-            return isOpen;
-        });
-        console.log("PMLP_DEBUG: useMemo - Markets after filtering for Open state:", filtered);
+ const openMarketsToDisplay = useMemo(() => {
+    console.log("PMLP_DEBUG: useMemo openMarketsToDisplay - ENTERED. rawMarkets IS:", rawMarkets); // Log the whole array
+    if (!rawMarkets || rawMarkets.length === 0) {
+        console.log("PMLP_DEBUG: useMemo - rawMarkets empty or null, returning [].");
+        return [];
+    }
+    
+    const filtered = rawMarkets.filter((market, index) => { // Add index for logging
+        console.log(`PMLP_DEBUG: useMemo - Filtering item index ${index}:`, market); // Log the individual market object
+        console.log(`PMLP_DEBUG: useMemo - Market ID: ${market.id}, Market State: ${market.state}, MarketState.Open CONST: ${MarketState.Open}`);
+        const isOpen = market.state === MarketState.Open; 
+        console.log(`PMLP_DEBUG: useMemo - IsOpen for market ID ${market.id}: ${isOpen}`);
+        return isOpen;
+    });
+    console.log("PMLP_DEBUG: useMemo - Markets after filtering for Open state:", filtered);
 
-        const mappedAndSorted = filtered.map(market => {
-            try {
-                return { ...market, ...getMarketDisplayProperties(market) };
-            } catch (e) {
-                console.error("PMLP_DEBUG: useMemo - Error in getMarketDisplayProperties for market:", market, e);
-                return null; 
-            }
-        }).filter(Boolean).sort((a, b) => (a.expiryTimestamp || 0) - (b.expiryTimestamp || 0));
-        
-        console.log("PMLP_DEBUG: useMemo - Final openMarketsToDisplay:", mappedAndSorted);
-        return mappedAndSorted;
-    }, [rawMarkets]);
+    // ... rest of your map and sort ...
+    const mappedAndSorted = filtered.map(market => { /* ... */ }).filter(Boolean).sort((a, b) => (a.expiryTimestamp || 0) - (b.expiryTimestamp || 0));
+    console.log("PMLP_DEBUG: useMemo - Final openMarketsToDisplay:", mappedAndSorted);
+    return mappedAndSorted;
+}, [rawMarkets]); // Dependency is correct
 
     return (
         <div className="page-container prediction-markets-list-page">
