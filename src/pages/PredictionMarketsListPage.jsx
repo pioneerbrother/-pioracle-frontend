@@ -41,29 +41,26 @@ function PredictionMarketsListPage() {
 
             // Create an intermediate object with JS-friendly types from BigNumbers
             // This intermediate object is what getMarketDisplayProperties will work with.
-            const intermediateMarket = {
-                id: rawContractData.id.toString(),
-                assetSymbol: rawContractData.assetSymbol,
-                priceFeedAddress: rawContractData.priceFeedAddress,
-                targetPrice: rawContractData.targetPrice, // Pass as BigNumber if getMarketDisplayProperties handles it
-                expiryTimestamp: rawContractData.expiryTimestamp.toNumber(),
-                resolutionTimestamp: rawContractData.resolutionTimestamp.toNumber(),
-                creationTimestamp: rawContractData.creationTimestamp.toNumber(),
-                isEventMarket: rawMarketData.isEventMarket,
-                state: ethers.BigNumber.isBigNumber(rawContractData.state) // Convert enum/uint8 to number
-                    ? rawContractData.state.toNumber() 
-                    : parseInt(rawContractData.state),
-                exists: rawContractData.exists,
-                totalStakedYes: rawContractData.totalStakedYes.toString(),
-                totalStakedNo: rawContractData.totalStakedNo.toString(),
-                actualOutcomeValue: rawContractData.actualOutcomeValue.toString(),
-                // Fields from the full Market struct that are NOT in getMarketStaticDetails:
-                // marketCreator, creatorFeeBasisPoints, isUserCreated
-                // If MarketCard needs these, they must be added to getMarketStaticDetails in Solidity
-                // and then mapped here. For now, they will be undefined.
-                marketCreator: rawContractData.marketCreator, // If getMarketStaticDetails returns it
-                creatorFeeBasisPoints: rawContractData.creatorFeeBasisPoints, // If getMarketStaticDetails returns it
-            };
+         const intermediateMarket = {
+    id: rawContractData.id.toString(),
+    assetSymbol: rawContractData.assetSymbol,
+    priceFeedAddress: rawContractData.priceFeedAddress,
+    targetPrice: rawContractData.targetPrice,
+    expiryTimestamp: rawContractData.expiryTimestamp.toNumber(),
+    resolutionTimestamp: rawContractData.resolutionTimestamp.toNumber(),
+    creationTimestamp: rawContractData.creationTimestamp.toNumber(),
+    isEventMarket: rawContractData.isEventMarket,  // ← fixed here
+    state: ethers.BigNumber.isBigNumber(rawContractData.state)
+        ? rawContractData.state.toNumber() 
+        : parseInt(rawContractData.state),
+    exists: rawContractData.exists,
+    totalStakedYes: rawContractData.totalStakedYes.toString(),
+    totalStakedNo: rawContractData.totalStakedNo.toString(),
+    actualOutcomeValue: rawContractData.actualOutcomeValue.toString(),
+    marketCreator: rawContractData.marketCreator,
+    creatorFeeBasisPoints: rawContractData.creatorFeeBasisPoints,
+};
+
             console.log(`PMLP_DEBUG_PROCESS: Intermediate market data for ID ${marketId}:`, intermediateMarket);
             
             // getMarketDisplayProperties adds UI-specific fields like title, formatted dates, status strings
