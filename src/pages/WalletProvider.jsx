@@ -63,6 +63,8 @@ export const WalletProvider = ({ children }) => {
     const [eip1193ProviderState, setEip1193ProviderState] = useState(null);
     const [web3ModalInitError, setWeb3ModalInitError] = useState(null); // New state for specific error
 
+        const [debugWalletProviderMessage, setDebugWalletProviderMessage] = useState("Provider Init..."); // New debug state
+
     // Effect 1: Load dynamic configuration ONCE on mount
     useEffect(() => {
         console.log("MOB_DEBUG: Effect 1 (ConfigLoad) - Loading dynamic configuration...");
