@@ -1,30 +1,62 @@
-// pioracle/src/components/common/ConnectWalletButton.jsx
+// src/components/common/ConnectWalletButton.jsx
 import React, { useContext } from 'react';
-import { WalletContext } from '../../pages/WalletProvider';
+import { WalletContext } from '../../pages/WalletProvider'; // Adjust path if WalletProvider is elsewhere
+import './ConnectWalletButton.css'; // We'll create this for styling
 
 function ConnectWalletButton() {
-    const { connectWallet, disconnectWallet, walletAddress, connectionStatus } = useContext(WalletContext) || {};
+    const walletContextValues = useContext(WalletContext);
+
+    if (!walletContextValues) {
+        // This can happen if the component is rendered outside WalletProvider,
+        // or if context is not yet available during an initial render pass.
+        // You might want a more robust loading or error state here.
+        return <button className="connect-wallet-button" disabled>Loading Context...</button>;
+    }
+
+    const {
+        walletAddress,
+        connectWallet,
+        disconnectWallet, // Make sure this is named disconnectWalletF in WalletProvider context value
+        isConnecting,
+        connectionStatus,
+        web3ModalInstance, // To check if modal is ready
+        web3ModalInitError
+    } = walletContextValues;
 
     if (walletAddress) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '0.9em' }}>
+            <div className="wallet-info-container">
+                <span className="wallet-address-display">
                     Connected: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
                 </span>
-                <button onClick={disconnectWallet} className="button secondary"> {/* Assuming you have button classes */}
+                <button onClick={disconnectWallet} className="connect-wallet-button disconnect-button">
                     Disconnect
                 </button>
             </div>
         );
     }
 
+    let buttonText = "Connect Wallet";
+    if (isConnecting) {
+        buttonText = "Connecting...";
+    } else if (web3ModalInitError) {
+        buttonText = "Connection Error";
+    } else if (!web3ModalInstance && !web3ModalInitError) { 
+        // Only show "Modal Loading..." if no error and instance not yet set
+        // This usually resolves very quickly.
+        buttonText = "Loading..."; 
+    }
+
+
+    const isDisabled = isConnecting || !web3ModalInstance || !!web3ModalInitError;
+
     return (
-        <button 
-            onClick={connectWallet} 
-            disabled={connectionStatus?.type === 'error' || (connectionStatus?.message && connectionStatus.message.includes('MetaMask not detected'))}
-            className="button primary" // Assuming you have button classes
+        <button
+            onClick={connectWallet}
+            className="connect-wallet-button"
+            disabled={isDisabled}
         >
-            Connect Wallet
+            {buttonText}
         </button>
     );
 }

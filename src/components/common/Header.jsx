@@ -1,8 +1,9 @@
 // src/components/common/Header/Header.jsx
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { WalletContext } from '../../../pages/WalletProvider'; // Assuming WalletProvider is in src/pages/
-import ConnectWalletButton from '../ConnectWalletButton/ConnectWalletButton';
+import { WalletContext } from '../../pages/WalletProvider'; // Assuming WalletProvider is in src/pages/
+import ConnectWalletButton from './ConnectWalletButton'; // <<< ADD THIS LINE BACK (or ensure it's there)
+
 import './Header.css';
 // import { FaBars, FaTimes } from 'react-icons/fa'; // Optional: for icons
 

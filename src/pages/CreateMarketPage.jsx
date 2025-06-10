@@ -6,13 +6,9 @@ import { ethers } from 'ethers';
 import { WalletContext } from './WalletProvider'; // Assuming WalletProvider.jsx is in the same ./pages/ directory
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
+import { SUPPORTED_PRICE_FEEDS } from '../config/appConfig';
 import './CreateMarketPage.css';
 
-const SUPPORTED_PRICE_FEEDS = [
-    { name: "Bitcoin (BTC/USD)", symbolPrefix: "BTCUSD", address: "0xc907E116054Ad103354f2D350FD2514433D57F6f", decimals: 8 },
-    { name: "Ethereum (ETH/USD)", symbolPrefix: "ETHUSD", address: "0xF9680D99D6C9589e2a93a78A04A279e509205945", decimals: 8 },
-    { name: "MATIC (MATIC/USD)", symbolPrefix: "MATICUSD", address: "0xAB594600376Ec9fD91F8e885dADF0CE0228dda62", decimals: 8 },
-];
 
 function CreateMarketPage() {
     const { walletAddress, contract: predictionContractInstance, signer, connectionStatus } = useContext(WalletContext);
