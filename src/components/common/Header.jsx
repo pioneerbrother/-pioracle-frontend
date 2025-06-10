@@ -1,41 +1,90 @@
-// pioracle/src/components/common/Header.jsx
-import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
-import { WalletContext } from '../../pages/WalletProvider';
-import ConnectWalletButton from './ConnectWalletButton'; // Assuming it's also in common
-import './Header.css'; // Create a dedicated CSS file for the header
+// src/components/common/Header/Header.jsx
+import React, { useState, useContext, useEffect, useRef } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { WalletContext } from '../../../pages/WalletProvider'; // Assuming WalletProvider is in src/pages/
+import ConnectWalletButton from '../ConnectWalletButton/ConnectWalletButton';
+import './Header.css';
+// import { FaBars, FaTimes } from 'react-icons/fa'; // Optional: for icons
 
 function Header() {
-    const { walletAddress } = useContext(WalletContext); // Get walletAddress if needed for conditional links
+    const { walletAddress } = useContext(WalletContext) || {};
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const location = useLocation();
+    const headerRef = useRef(null);
+
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (headerRef.current && !headerRef.current.contains(event.target)) {
+                closeMobileMenu();
+            }
+        };
+        if (isMobileMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isMobileMenuOpen]);
+
+    useEffect(() => {
+        closeMobileMenu();
+    }, [location]);
+
+    // Define which links require a wallet to be shown
+    const navLinks = (
+        <>
+            <NavLink to="/predictions" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>
+                Open Markets
+            </NavLink>
+            <NavLink to="/resolved-markets" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>
+                Recently Resolved
+            </NavLink>
+            {walletAddress && (
+                <NavLink to="/my-predictions" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>
+                    My Predictions
+                </NavLink>
+            )}
+            {/* Make "Create Market" always visible, page itself will prompt for wallet if needed */}
+            <NavLink to="/create-market" className={({ isActive }) => isActive ? "nav-item active special-action" : "nav-item special-action"} onClick={closeMobileMenu}>
+                Create Market
+            </NavLink>
+            <NavLink to="/guide" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>
+                Guide / How It Works
+            </NavLink>
+        </>
+    );
 
     return (
-        <header className="app-header">
-            <div className="logo-container">
-                <Link to="/predictions" className="logo-link">
-                    {/* You can place your actual logo image here if you have one */}
-                    {/* <img src="/pioracle-logo.png" alt="PiOracle Logo" className="logo-image" /> */}
-                    <h1>PiOracle</h1>
+        <header className="app-header" ref={headerRef}>
+            <div className="header-content">
+                <Link to="/predictions" className="logo-link" onClick={closeMobileMenu}> {/* Changed to /predictions if that's home */}
+                    {/* Option 1: Image Logo (ensure path is correct from public folder) */}
+                    {/* <img src="/pioracle_logo_text_dark.png" alt="PiOracle Logo" className="logo-image" /> */}
+                    {/* Option 2: Text Logo (as per your original) */}
+                    <h1 className="logo-text">PiOracle</h1>
                 </Link>
-            </div>
-            <nav className="navigation-links">
-                <Link to="/predictions">Open Markets</Link>
-                <Link to="/resolved-markets">Recently Resolved</Link>
 
-                {walletAddress && (
-                    <Link to="/my-predictions">My Predictions</Link>
-                  
-    )}
+                <nav className="desktop-nav">
+                    {navLinks}
+                </nav>
 
-                      
-                  {walletAddress && ( 
-        <Link to="/create-market">Create Market</Link>
-    )}
-              
-           <Link to="/guide">Guide / How It Works</Link>
-            </nav>
-            <div className="wallet-section">
-                <ConnectWalletButton />
+                <div className="header-actions">
+                    <ConnectWalletButton />
+                    <button className="hamburger-button" onClick={toggleMobileMenu} aria-label="Toggle menu" aria-expanded={isMobileMenuOpen}>
+                        {isMobileMenuOpen ? '✕' : '☰'}
+                        {/* {isMobileMenuOpen ? <FaTimes /> : <FaBars />} */}
+                    </button>
+                </div>
             </div>
+
+            {isMobileMenuOpen && (
+                <nav className="mobile-nav-menu">
+                    {navLinks}
+                </nav>
+            )}
         </header>
     );
 }

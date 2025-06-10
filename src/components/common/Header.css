@@ -1,43 +1,62 @@
-/* pioracle/src/components/common/Header.css */
-.app-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 2rem; /* Adjust padding as needed */
-    background-color: #333; /* Example background */
-    color: white;
-    border-bottom: 1px solid #444;
+/* src/App.css */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f4f6f8; /* Light background for the page body */
+  color: #333;
 }
 
-.logo-container .logo-link {
-    text-decoration: none;
-    color: white;
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-.logo-container h1 {
-    margin: 0;
-    font-size: 1.8rem; /* Adjust size */
+.main-content {
+  flex-grow: 1;
+  padding-top: 60px; /* Height of the sticky header */
+  /* Add more padding if needed, e.g., for overall page layout */
+  /* max-width: 1200px; /* Optional: if you want to constrain main content width */
+  /* margin: 0 auto; */
 }
 
-.logo-image {
-    height: 40px; /* Adjust size */
-    margin-right: 10px;
-    vertical-align: middle;
+/* Basic button styling (can be in a global button.css or here) */
+.button {
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.navigation-links a {
-    color: #f0f0f0;
-    text-decoration: none;
-    margin-left: 20px; /* Spacing between links */
-    font-size: 1rem;
-    transition: color 0.2s ease-in-out;
+.button.primary {
+  background-color: #3498db; /* Blue */
+  color: white;
+}
+.button.primary:hover {
+  background-color: #2980b9;
+}
+.button.primary:active {
+    transform: translateY(1px);
 }
 
-.navigation-links a:hover,
-.navigation-links a.active { /* You might need NavLink for active class styling */
-    color: #00bfff; /* Example hover/active color */
-}
 
-.wallet-section {
-    /* Styles for the wallet connect button area */
+.button.secondary {
+  background-color: #ecf0f1; /* Light grey */
+  color: #2c3e50; /* Dark text */
+  border: 1px solid #bdc3c7;
+}
+.button.secondary:hover {
+  background-color: #bdc3c7;
+}
+.button.secondary:active {
+    transform: translateY(1px);
 }
