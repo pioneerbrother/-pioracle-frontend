@@ -1,0 +1,15 @@
+Sitemap({
+  hostname: 'https://pioracle.online',
+  dynamicRoutes: [ /* ... */ ],
+  exclude: ['/google3ea9863098b060a5'],
+  robots: [ // This is a common way to configure it
+    {
+      userAgent: '*',
+      allow: '/',
+      // The plugin will add the Sitemap directive itself
+    },
+  ],
+  // OR, there might be a simpler boolean:
+  // generateRobotsTxt: true, // or false if you have your own
+  //
+}),
