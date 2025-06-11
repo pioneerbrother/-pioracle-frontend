@@ -1,4 +1,4 @@
-// In netlify.toml
+# In netlify.toml
 [[headers]]
   for = "/*"
   [headers.values]
