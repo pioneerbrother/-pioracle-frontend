@@ -123,6 +123,74 @@ export const WalletProvider = ({ children }) => {
             addUiDebug("Effect 1.5: SKIPPED (Prerequisites not met).");
         }
     }, [loadedReadOnlyRpcUrl, loadedTargetChainIdNum, web3ModalInstance, web3ModalInitError]); // WALLETCONNECT_PROJECT_ID is module scope
+      
+       // Inside WalletProvider.jsx
+
+// Effect for Eager Connection (runs once after initial config and modal setup)
+useEffect(() => {
+    if (!WALLETCONNECT_PROJECT_ID || !web3ModalInstance || walletAddress) {
+        // Don't run if modal isn't ready, or if already connected, or no project ID
+        addUiDebug(`EagerConnect: Skipped (Modal: ${!!web3ModalInstance}, Wallet: ${!!walletAddress}, WC_ID: ${!!WALLETCONNECT_PROJECT_ID})`);
+        return;
+    }
+
+    const checkForExistingConnection = async () => {
+        addUiDebug("EagerConnect: Checking for existing connection...");
+        // Check for injected provider (MetaMask)
+        if (window.ethereum && typeof window.ethereum.request === 'function') {
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts && accounts.length > 0) {
+                    addUiDebug(`EagerConnect: Found accounts via eth_accounts: ${accounts[0]}. Attempting to fully connect.`);
+                    // We have accounts, meaning user previously connected and approved this site.
+                    // Now, use the same connection logic as connectWallet, but without opening the modal.
+                    
+                    const rawEip1193Provider = window.ethereum; // Use the injected provider
+                    setEip1193ProviderState(rawEip1193Provider);
+
+                    const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
+                    setProvider(newWeb3Provider);
+
+                    const currentAddress = ethers.utils.getAddress(accounts[0]);
+                    setWalletAddress(currentAddress);
+
+                    const network = await newWeb3Provider.getNetwork();
+                    setChainId(network.chainId);
+
+                    if (network.chainId === loadedTargetChainIdNum) {
+                        setConnectionStatus({ type: 'success', message: `Reconnected: ${currentAddress.substring(0,6)}...` });
+                        addUiDebug(`EagerConnect: RECONNECTED to ${currentAddress.substring(0,6)} on chain ${network.chainId}`);
+                        // Effect 3 will set the signer
+                    } else {
+                        setConnectionStatus({ type: 'error', message: `Reconnected to ${currentAddress.substring(0,6)}, but WRONG NET (Chain ${network.chainId}). Target: ${loadedTargetChainIdNum}.` });
+                        addUiDebug(`EagerConnect: Reconnected but WRONG NET: ${network.chainId}`);
+                        setSigner(null);
+                    }
+                } else {
+                    addUiDebug("EagerConnect: No accounts found via eth_accounts. Not previously connected or disconnected.");
+                    // If no accounts, ensure read-only provider is set up if not already
+                    if (!provider && loadedReadOnlyRpcUrl && loadedContractAddress && !isConnecting) {
+                        // This logic is similar to Effect 2.5, might need to ensure it doesn't conflict
+                        // For now, let Effect 2.5 handle this.
+                        addUiDebug("EagerConnect: Letting Effect 2.5 handle read-only setup.");
+                    }
+                }
+            } catch (err) {
+                console.error("MOB_DEBUG: EagerConnect - Error checking for existing connection:", err);
+                addUiDebug(`EagerConnect: Error - ${err.message}`);
+            }
+        } else {
+            addUiDebug("EagerConnect: No window.ethereum. Not an injected provider environment (or it's not ready).");
+        }
+    };
+
+    // Only attempt eager connect once Web3Modal itself is ready
+    // and we have the necessary config for target chain comparison.
+    if (web3ModalInstance && loadedTargetChainIdNum) {
+        checkForExistingConnection();
+    }
+
+}, [web3ModalInstance, loadedTargetChainIdNum, walletAddress, provider, isConnecting, loadedReadOnlyRpcUrl, loadedContractAddress, addUiDebug]); // Careful with deps to avoid loops
 
     const initializeContract = useCallback((currentSignerOrProvider, addressToUse) => {
         // ... (keep your existing initializeContract, ensure MOB_DEBUG prefixes in logs)
