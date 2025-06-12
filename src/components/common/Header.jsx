@@ -1,70 +1,58 @@
-// src/components/common/Header/Header.jsx
+// src/components/common/Header.jsx
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { WalletContext } from '../../pages/WalletProvider'; // Assuming WalletProvider is in src/pages/
-import ConnectWalletButton from './ConnectWalletButton'; // <<< ADD THIS LINE BACK (or ensure it's there)
+import { WalletContext } from '../../pages/WalletProvider';
+import ConnectWalletButton from './ConnectWalletButton'; // ENSURE THIS PATH IS CORRECT
 
 import './Header.css';
-// import { FaBars, FaTimes } from 'react-icons/fa'; // Optional: for icons
 
 function Header() {
     const { walletAddress } = useContext(WalletContext) || {};
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
-    const headerRef = useRef(null);
+    
+    const mobileMenuRef = useRef(null); // Ref for the mobile menu itself
+    const hamburgerButtonRef = useRef(null); // Ref for the hamburger button
 
-    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
     const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (headerRef.current && !headerRef.current.contains(event.target)) {
+            // If menu is open, and the click was not on the menu, and not on the hamburger button
+            if (isMobileMenuOpen && 
+                mobileMenuRef.current && !mobileMenuRef.current.contains(event.target) &&
+                hamburgerButtonRef.current && !hamburgerButtonRef.current.contains(event.target)
+            ) {
                 closeMobileMenu();
             }
         };
-        if (isMobileMenuOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        } else {
-            document.removeEventListener('mousedown', handleClickOutside);
-        }
+        
+        document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isMobileMenuOpen]);
+    }, [isMobileMenuOpen]); // Re-run if isMobileMenuOpen changes
 
     useEffect(() => {
+        // Close mobile menu on route change
         closeMobileMenu();
     }, [location]);
 
-    // Define which links require a wallet to be shown
     const navLinks = (
         <>
-            <NavLink to="/predictions" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>
-                Open Markets
-            </NavLink>
-            <NavLink to="/resolved-markets" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>
-                Recently Resolved
-            </NavLink>
+            <NavLink to="/predictions" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>Open Markets</NavLink>
+            <NavLink to="/resolved-markets" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>Recently Resolved</NavLink>
             {walletAddress && (
-                <NavLink to="/my-predictions" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>
-                    My Predictions
-                </NavLink>
+                <NavLink to="/my-predictions" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>My Predictions</NavLink>
             )}
-            {/* Make "Create Market" always visible, page itself will prompt for wallet if needed */}
-            <NavLink to="/create-market" className={({ isActive }) => isActive ? "nav-item active special-action" : "nav-item special-action"} onClick={closeMobileMenu}>
-                Create Market
-            </NavLink>
-            <NavLink to="/guide" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>
-                Guide / How It Works
-            </NavLink>
+            <NavLink to="/create-market" className={({ isActive }) => isActive ? "nav-item active special-action" : "nav-item special-action"} onClick={closeMobileMenu}>Create Market</NavLink>
+            <NavLink to="/guide" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} onClick={closeMobileMenu}>Guide / How It Works</NavLink>
         </>
     );
 
     return (
-        <header className="app-header" ref={headerRef}>
+        <header className="app-header"> {/* Removed headerRef if not needed for entire header */}
             <div className="header-content">
-                <Link to="/predictions" className="logo-link" onClick={closeMobileMenu}> {/* Changed to /predictions if that's home */}
-                    {/* Option 1: Image Logo (ensure path is correct from public folder) */}
-                    {/* <img src="/pioracle_logo_text_dark.png" alt="PiOracle Logo" className="logo-image" /> */}
-                    {/* Option 2: Text Logo (as per your original) */}
+                <Link to="/predictions" className="logo-link" onClick={closeMobileMenu}>
                     <h1 className="logo-text">PiOracle</h1>
                 </Link>
 
@@ -74,15 +62,23 @@ function Header() {
 
                 <div className="header-actions">
                     <ConnectWalletButton />
-                    <button className="hamburger-button" onClick={toggleMobileMenu} aria-label="Toggle menu" aria-expanded={isMobileMenuOpen}>
-                        {isMobileMenuOpen ? '✕' : '☰'}
-                        {/* {isMobileMenuOpen ? <FaTimes /> : <FaBars />} */}
+                    <button 
+                        ref={hamburgerButtonRef} // Assign ref to hamburger
+                        className={`hamburger-button ${isMobileMenuOpen ? 'open' : ''}`} 
+                        onClick={toggleMobileMenu} 
+                        aria-label="Toggle menu" 
+                        aria-expanded={isMobileMenuOpen}
+                    >
+                        {/* Using CSS to create the X from the ☰ for smoother animation often */}
+                        <span className="hamburger-line"></span>
+                        <span className="hamburger-line"></span>
+                        <span className="hamburger-line"></span>
                     </button>
                 </div>
             </div>
 
             {isMobileMenuOpen && (
-                <nav className="mobile-nav-menu">
+                <nav className="mobile-nav-menu" ref={mobileMenuRef}> {/* Assign ref to mobile menu */}
                     {navLinks}
                 </nav>
             )}
