@@ -5,6 +5,10 @@ import './ConnectWalletButton.css'; // We'll create this for styling
 
 function ConnectWalletButton() {
     const walletContextValues = useContext(WalletContext);
+       console.log("CWB_DEBUG: Rendering. Context available:", !!walletContextValues);
+    if (walletContextValues) {
+        console.log("CWB_DEBUG: Context values - web3ModalInstance exists:", !!walletContextValues.web3ModalInstance, "InitError:", walletContextValues.web3ModalInitError, "isConnecting:", walletContextValues.isConnecting);
+    } 
 
     if (!walletContextValues) {
         // This can happen if the component is rendered outside WalletProvider,
