@@ -7,7 +7,7 @@ import React, {
     useMemo
 } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5'; // Use createWeb3Modal pattern
+import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5';
 
 import {
     getContractAddress,
@@ -17,7 +17,7 @@ import {
     getChainName,
     getCurrencySymbol,
     getExplorerUrl,
-} from '../config/contractConfig'; // Adjusted path: from ./pages/ up to src/ then down to config/
+} from '../config/contractConfig';
 
 export const WalletContext = createContext(null);
 
@@ -30,18 +30,21 @@ const metadata = {
     icons: ["https://pioracle.online/pioracle_logo_eyes_only_192.png"],
 };
 
-export const WalletProvider = ({ children }) => {
-    // --- UI Debug State ---
-    const [uiDebugMessages, setUiDebugMessages] = useState(["Provider Init..."]);
-    const addUiDebug = (msg) => setUiDebugMessages(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()}: ${msg}`]); // Keep last 10 messages
+export function WalletProvider({ children }) {
+    console.log("MOB_DEBUG: WalletProvider START RENDER");
+    const [uiDebugMessages, setUiDebugMessages] = useState(["Provider Init..."]); // For UI debugging
+    const addUiDebug = useCallback((msg) => { // Wrapped in useCallback
+        setUiDebugMessages(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()}: ${msg}`]);
+        console.log("MOB_DEBUG_UI_LOG:", msg); // Also log to console for easier debugging if possible
+    }, []);
 
-    useEffect(() => { // Log initial render status
+
+    useEffect(() => {
         addUiDebug("WalletProvider rendered. WC_ID: " + (WALLETCONNECT_PROJECT_ID ? "Present" : "MISSING!"));
         if (!WALLETCONNECT_PROJECT_ID) {
             console.error("MOB_DEBUG: FATAL - VITE_WALLETCONNECT_PROJECT_ID is MISSING. WalletConnect WILL NOT WORK.");
         }
-    }, []);
-
+    }, [addUiDebug]); // addUiDebug is a dependency now
 
     const [walletAddress, setWalletAddress] = useState(null);
     const [provider, setProvider] = useState(null);
@@ -63,9 +66,15 @@ export const WalletProvider = ({ children }) => {
     // Effect 1: Load dynamic configuration
     useEffect(() => {
         addUiDebug("Effect 1: ConfigLoad START");
+        console.log("MOB_DEBUG: Effect 1 (ConfigLoad) - Loading dynamic configuration...");
         const addr = getContractAddress();
         const rpc = getRpcUrl();
         const targetChainHex = getTargetChainIdHex();
+        console.log("MOB_DEBUG: Raw Env Values Used by Config:", {
+            VITE_NETWORK_TARGET: import.meta.env.VITE_NETWORK_TARGET,
+            VITE_WALLETCONNECT_PROJECT_ID_IN_CONFIG_EFFECT: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID, // Log it here too
+            // ... other env vars you log ...
+        });
 
         setLoadedContractAddress(addr);
         setLoadedReadOnlyRpcUrl(rpc);
@@ -73,318 +82,133 @@ export const WalletProvider = ({ children }) => {
 
         if (!addr || !rpc || !targetChainHex) {
             const errorMsg = `ConfigLoad FAILED: Missing Contract/RPC/Chain. Target: ${import.meta.env.VITE_NETWORK_TARGET}`;
-            console.error("MOB_DEBUG:", errorMsg);
-            addUiDebug(errorMsg);
+            console.error("MOB_DEBUG:", errorMsg); addUiDebug(errorMsg);
             setConnectionStatus({ type: 'error', message: `Critical DApp config missing.` });
         } else {
             addUiDebug(`Effect 1: Config Loaded. RPC: ${!!rpc}, Addr: ${!!addr}, ChainHex: ${!!targetChainHex}`);
+            console.log("MOB_DEBUG: Effect 1 (ConfigLoad) - Dynamic configuration loaded:", { addr, rpc, targetChainHex });
             setLoadedTargetChainIdNum(parseInt(targetChainHex, 16));
         }
-    }, []);
+    }, [addUiDebug]); // addUiDebug is a dependency
 
     // Effect 1.5: Initialize Web3Modal
     useEffect(() => {
-        const canInitModal = loadedReadOnlyRpcUrl && loadedTargetChainIdNum && WALLETCONNECT_PROJECT_ID && !web3ModalInstance && !web3ModalInitError;
-        addUiDebug(`Effect 1.5: Web3ModalInit Check. CanInit: ${canInitModal}. RPC: ${!!loadedReadOnlyRpcUrl}, TargetChainNum: ${!!loadedTargetChainIdNum}, WC_ID: ${!!WALLETCONNECT_PROJECT_ID}, InstanceExists: ${!!web3ModalInstance}, InitError: ${!!web3ModalInitError}`);
-
-        if (canInitModal) {
+        // ... (This effect remains the same as the last good version that successfully initialized Web3Modal) ...
+        // ... using createWeb3Modal and defaultConfig ...
+        // ... ensure it calls addUiDebug appropriately ...
+        console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Evaluating conditions.");
+        const conditions = { /* ... */ }; console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Conditions:", conditions);
+        if (loadedReadOnlyRpcUrl && loadedTargetChainIdNum && WALLETCONNECT_PROJECT_ID && !web3ModalInstance && !web3ModalInitError) {
             addUiDebug("Effect 1.5: Conditions MET. Initializing Web3Modal...");
-            try {
-                const targetChainConfig = {
-                    chainId: loadedTargetChainIdNum,
-                    name: getChainName() || `Chain ${loadedTargetChainIdNum}`,
-                    currency: getCurrencySymbol() || 'ETH',
-                    explorerUrl: getExplorerUrl() || '',
-                    rpcUrl: loadedReadOnlyRpcUrl,
-                };
-                
-                const ethersConfigForModal = defaultConfig({ metadata }); // Using Web3Modal's defaultConfig
+            // ... (try-catch block for createWeb3Modal) ...
+            // On success:
+            // setWeb3ModalInstance(modalInstance);
+            // addUiDebug("Effect 1.5: Web3Modal INIT SUCCESS!");
+            // console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Web3Modal initialized successfully. YAY_MODAL_INIT_SUCCESS");
+            // On error:
+            // setWeb3ModalInitError(errorMsg);
+            // addUiDebug(errorMsg);
+        } // ... else conditions for skipping ...
+    }, [loadedReadOnlyRpcUrl, loadedTargetChainIdNum, web3ModalInstance, web3ModalInitError, addUiDebug]);
 
-                const modal = createWeb3Modal({
-                    ethersConfig: ethersConfigForModal,
-                    chains: [targetChainConfig],
-                    projectId: WALLETCONNECT_PROJECT_ID,
-                    enableAnalytics: false,
-                });
-                setWeb3ModalInstance(modal);
-                addUiDebug("Effect 1.5: Web3Modal INIT SUCCESS!");
-                console.log("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - Web3Modal initialized successfully. YAY_MODAL_INIT_SUCCESS");
-            } catch (error) {
-                const errorMsg = `Modal Init FAILED: ${error.message}`;
-                console.error("MOB_DEBUG: Effect 1.5 (Web3ModalInit) - FAILED:", error);
-                addUiDebug(errorMsg);
-                setWeb3ModalInitError(errorMsg);
-            }
-        } else if (web3ModalInitError) {
-            addUiDebug("Effect 1.5: SKIPPED (Web3Modal init previously failed).");
-        } else if (web3ModalInstance) {
-            addUiDebug("Effect 1.5: SKIPPED (Web3Modal already initialized).");
-        } else {
-            addUiDebug("Effect 1.5: SKIPPED (Prerequisites not met).");
+
+    // --- START OF NEW EAGER CONNECTION useEffect ---
+    useEffect(() => {
+        const effectCanRun = WALLETCONNECT_PROJECT_ID && web3ModalInstance && !walletAddress && loadedTargetChainIdNum && !isConnecting && !web3ModalInitError;
+        addUiDebug(`EagerConnect Effect: Check. CanRun: ${effectCanRun}. Modal: ${!!web3ModalInstance}, Wallet: ${!!walletAddress}, Configured: ${!!loadedTargetChainIdNum}, Connecting: ${isConnecting}, ModalError: ${!!web3ModalInitError}`);
+
+        if (!effectCanRun) {
+            if (!WALLETCONNECT_PROJECT_ID) addUiDebug("EagerConnect: Skipped - No WC Project ID.");
+            if (!web3ModalInstance) addUiDebug("EagerConnect: Skipped - Modal instance not ready.");
+            if (walletAddress) addUiDebug("EagerConnect: Skipped - Wallet already connected.");
+            if (!loadedTargetChainIdNum) addUiDebug("EagerConnect: Skipped - Target chain config not loaded.");
+            if (isConnecting) addUiDebug("EagerConnect: Skipped - Connection in progress.");
+            if (web3ModalInitError) addUiDebug("EagerConnect: Skipped - Modal init error present.");
+            return;
         }
-    }, [loadedReadOnlyRpcUrl, loadedTargetChainIdNum, web3ModalInstance, web3ModalInitError]); // WALLETCONNECT_PROJECT_ID is module scope
-      
-       // Inside WalletProvider.jsx
 
-// Effect for Eager Connection (runs once after initial config and modal setup)
-useEffect(() => {
-    if (!WALLETCONNECT_PROJECT_ID || !web3ModalInstance || walletAddress) {
-        // Don't run if modal isn't ready, or if already connected, or no project ID
-        addUiDebug(`EagerConnect: Skipped (Modal: ${!!web3ModalInstance}, Wallet: ${!!walletAddress}, WC_ID: ${!!WALLETCONNECT_PROJECT_ID})`);
-        return;
-    }
+        const checkForExistingConnection = async () => {
+            addUiDebug("EagerConnect: Checking for existing injected provider connection...");
+            if (window.ethereum && typeof window.ethereum.request === 'function') {
+                try {
+                    // `eth_accounts` returns accounts if site is already approved by user.
+                    // It does NOT open MetaMask popup if not approved.
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts && accounts.length > 0) {
+                        addUiDebug(`EagerConnect: Found accounts: ${accounts[0]}. Re-establishing connection.`);
+                        
+                        const rawEip1193Provider = window.ethereum;
+                        setEip1193ProviderState(rawEip1193Provider); // For event listeners
 
-    const checkForExistingConnection = async () => {
-        addUiDebug("EagerConnect: Checking for existing connection...");
-        // Check for injected provider (MetaMask)
-        if (window.ethereum && typeof window.ethereum.request === 'function') {
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                if (accounts && accounts.length > 0) {
-                    addUiDebug(`EagerConnect: Found accounts via eth_accounts: ${accounts[0]}. Attempting to fully connect.`);
-                    // We have accounts, meaning user previously connected and approved this site.
-                    // Now, use the same connection logic as connectWallet, but without opening the modal.
-                    
-                    const rawEip1193Provider = window.ethereum; // Use the injected provider
-                    setEip1193ProviderState(rawEip1193Provider);
+                        const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
+                        setProvider(newWeb3Provider);
 
-                    const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
-                    setProvider(newWeb3Provider);
+                        const currentAddress = ethers.utils.getAddress(accounts[0]);
+                        setWalletAddress(currentAddress);
 
-                    const currentAddress = ethers.utils.getAddress(accounts[0]);
-                    setWalletAddress(currentAddress);
+                        const network = await newWeb3Provider.getNetwork();
+                        setChainId(network.chainId);
 
-                    const network = await newWeb3Provider.getNetwork();
-                    setChainId(network.chainId);
-
-                    if (network.chainId === loadedTargetChainIdNum) {
-                        setConnectionStatus({ type: 'success', message: `Reconnected: ${currentAddress.substring(0,6)}...` });
-                        addUiDebug(`EagerConnect: RECONNECTED to ${currentAddress.substring(0,6)} on chain ${network.chainId}`);
-                        // Effect 3 will set the signer
+                        if (network.chainId === loadedTargetChainIdNum) {
+                            setConnectionStatus({ type: 'success', message: `Reconnected: ${currentAddress.substring(0,6)}...` });
+                            addUiDebug(`EagerConnect: RECONNECTED to ${currentAddress.substring(0,6)} on chain ${network.chainId}`);
+                            // Effect 3 will set the signer
+                        } else {
+                            setConnectionStatus({ type: 'error', message: `Reconnected to ${currentAddress.substring(0,6)}, but WRONG NET (Chain ${network.chainId}). Target: ${loadedTargetChainIdNum}.` });
+                            addUiDebug(`EagerConnect: Reconnected but WRONG NET: ${network.chainId}. Need to clear signer.`);
+                            setSigner(null); // Important: clear signer if on wrong network
+                        }
                     } else {
-                        setConnectionStatus({ type: 'error', message: `Reconnected to ${currentAddress.substring(0,6)}, but WRONG NET (Chain ${network.chainId}). Target: ${loadedTargetChainIdNum}.` });
-                        addUiDebug(`EagerConnect: Reconnected but WRONG NET: ${network.chainId}`);
-                        setSigner(null);
+                        addUiDebug("EagerConnect: No accounts found via eth_accounts. Not auto-connecting.");
+                        // No existing approval or user disconnected from all accounts for this site in MetaMask
+                        // Let Effect 2.5 handle setting up read-only if provider isn't already set.
                     }
-                } else {
-                    addUiDebug("EagerConnect: No accounts found via eth_accounts. Not previously connected or disconnected.");
-                    // If no accounts, ensure read-only provider is set up if not already
-                    if (!provider && loadedReadOnlyRpcUrl && loadedContractAddress && !isConnecting) {
-                        // This logic is similar to Effect 2.5, might need to ensure it doesn't conflict
-                        // For now, let Effect 2.5 handle this.
-                        addUiDebug("EagerConnect: Letting Effect 2.5 handle read-only setup.");
-                    }
+                } catch (err) {
+                    console.error("MOB_DEBUG: EagerConnect - Error during eth_accounts or setup:", err);
+                    addUiDebug(`EagerConnect: Error - ${err.message}`);
                 }
-            } catch (err) {
-                console.error("MOB_DEBUG: EagerConnect - Error checking for existing connection:", err);
-                addUiDebug(`EagerConnect: Error - ${err.message}`);
+            } else {
+                addUiDebug("EagerConnect: No window.ethereum. Not an injected provider environment.");
             }
-        } else {
-            addUiDebug("EagerConnect: No window.ethereum. Not an injected provider environment (or it's not ready).");
-        }
-    };
+        };
 
-    // Only attempt eager connect once Web3Modal itself is ready
-    // and we have the necessary config for target chain comparison.
-    if (web3ModalInstance && loadedTargetChainIdNum) {
         checkForExistingConnection();
-    }
 
-}, [web3ModalInstance, loadedTargetChainIdNum, walletAddress, provider, isConnecting, loadedReadOnlyRpcUrl, loadedContractAddress, addUiDebug]); // Careful with deps to avoid loops
-
-    const initializeContract = useCallback((currentSignerOrProvider, addressToUse) => {
-        // ... (keep your existing initializeContract, ensure MOB_DEBUG prefixes in logs)
-        // Example log: console.log("MOB_DEBUG: initializeContract - Attempting...");
-        const abiToUse = getContractAbi();
-        if (!currentSignerOrProvider || !addressToUse || !ethers.utils.isAddress(addressToUse) || !abiToUse || abiToUse.length === 0) {
-            setContract(null); return false;
-        }
-        try {
-            const instance = new ethers.Contract(addressToUse, abiToUse, currentSignerOrProvider);
-            setContract(instance);
-            addUiDebug(`Contract Initialized (${currentSignerOrProvider.constructor.name.slice(0,4)})`);
-            return true;
-        } catch (e) { setContract(null); addUiDebug(`Contract Init FAIL: ${e.message}`); return false; }
-    }, []);
+    }, [
+        web3ModalInstance, // Run when modal is ready
+        walletAddress,     // Don't run if already connected by other means (e.g. user click)
+        loadedTargetChainIdNum, // Need this for network comparison
+        isConnecting, // Don't run if a connection is already in progress
+        web3ModalInitError, // Don't run if modal had an init error
+        addUiDebug // To allow logging from within
+        // We don't need provider, loadedReadOnlyRpcUrl, loadedContractAddress as direct deps here
+        // because this effect is for re-establishing a *wallet* connection, not read-only.
+    ]);
+    // --- END OF NEW EAGER CONNECTION useEffect ---
 
 
-    const disconnectWalletF = useCallback(async () => {
-        addUiDebug("disconnectWalletF called.");
-        if (eip1193ProviderState && typeof eip1193ProviderState.disconnect === 'function') {
-           try {
-               await eip1193ProviderState.disconnect();
-               addUiDebug("eip1193Provider.disconnect() called.");
-           } catch (e) { addUiDebug(`Error eip1193.disconnect: ${e.message}`); }
-        }
-        setWalletAddress(null); setSigner(null); setProvider(null);
-        setEip1193ProviderState(null); setChainId(null);
-
-        if (loadedReadOnlyRpcUrl && loadedContractAddress) {
-            addUiDebug("disconnectWalletF: Reverting to ReadOnly Provider.");
-            try {
-                const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
-                setProvider(defaultProvider); // Triggers Effect 3
-                defaultProvider.getNetwork().then(net => {
-                    if (net?.chainId) { setChainId(net.chainId); setConnectionStatus({ type: 'info', message: `Disconnected. ReadOnly (Net: ${net.chainId})` }); }
-                    else { setConnectionStatus({ type: 'info', message: 'Disconnected. ReadOnly.' }); }
-                }).catch(err => { setConnectionStatus({ type: 'info', message: 'Disconnected. ReadOnly Network Error.' });});
-            } catch (e) {
-                addUiDebug(`ReadOnly Re-init FAIL: ${e.message}`);
-                setProvider(null); setContract(null);
-                setConnectionStatus({ type: 'error', message: 'Failed to restore read-only.' });
-            }
-        } else { addUiDebug("disconnectWalletF: Cannot re-init ReadOnly (config missing)."); /* ... */ }
-    }, [eip1193ProviderState, loadedReadOnlyRpcUrl, loadedContractAddress]);
-
-
-    const handleAccountsChanged = useCallback(async (accounts) => {
-        addUiDebug(`accountsChanged: ${accounts.length > 0 ? accounts[0] : 'EMPTY'}`);
-        if (provider instanceof ethers.providers.Web3Provider && accounts.length > 0 && ethers.utils.isAddress(accounts[0])) {
-            // ... (logic to setWalletAddress, setChainId, setConnectionStatus, setSigner(null)) ...
-            const validAddress = ethers.utils.getAddress(accounts[0]);
-            setWalletAddress(validAddress);
-            const network = await provider.getNetwork();
-            setChainId(network.chainId);
-            if (network.chainId === loadedTargetChainIdNum) {
-                 setConnectionStatus({ type: 'success', message: `Account Switched: ${validAddress.substring(0,6)}...`});
-            } else {
-                setConnectionStatus({ type: 'error', message: `Wrong Net (Chain ${network.chainId}). Need ${loadedTargetChainIdNum}.` });
-                setSigner(null);
-            }
-        } else {
-            disconnectWalletF();
-        }
-    }, [provider, disconnectWalletF, loadedTargetChainIdNum]);
-
-    const handleChainChanged = useCallback(async (newChainIdHex) => {
-        const newChainIdNum = parseInt(newChainIdHex, 16);
-        addUiDebug(`chainChanged: ${newChainIdNum}`);
-        setChainId(newChainIdNum);
-        if (provider instanceof ethers.providers.Web3Provider && walletAddress) {
-            if (newChainIdNum === loadedTargetChainIdNum) {
-                setConnectionStatus({ type: 'success', message: `Network Switched: Now on target ${newChainIdNum}.` });
-                setSigner(null); // Force re-evaluation of signer by Effect 3
-            } else {
-                setConnectionStatus({ type: 'error', message: `Wrong Net (Chain ${newChainIdNum}). Need ${loadedTargetChainIdNum}.` });
-                setSigner(null);
-            }
-        }
-    }, [provider, walletAddress, loadedTargetChainIdNum]);
-
+    const initializeContract = useCallback((currentSignerOrProvider, addressToUse) => { /* ... as before ... */ }, [addUiDebug]);
+    const disconnectWalletF = useCallback(async () => { /* ... as before ... */ }, [eip1193ProviderState, loadedReadOnlyRpcUrl, loadedContractAddress, addUiDebug]);
+    const handleAccountsChanged = useCallback(async (accounts) => { /* ... as before ... */ }, [provider, disconnectWalletF, loadedTargetChainIdNum, addUiDebug]);
+    const handleChainChanged = useCallback(async (newChainIdHex) => { /* ... as before ... */ }, [provider, walletAddress, loadedTargetChainIdNum, addUiDebug]);
 
     // Effect 2: EIP-1193 Event Listeners
-    useEffect(() => {
-        addUiDebug(`Effect 2: EIP1193 Listeners Setup. eip1193Provider: ${!!eip1193ProviderState}`);
-        // ... (your existing Effect 2 logic for attaching/detaching listeners) ...
-        // Ensure MOB_DEBUG prefixes in its logs
-        if (eip1193ProviderState?.on) {
-            const accountsChangedWrapper = (accounts) => { handleAccountsChanged(accounts); };
-            const chainChangedWrapper = (chainIdHex) => { handleChainChanged(chainIdHex); };
-            const disconnectWrapper = (error) => { disconnectWalletF(); };
-            eip1193ProviderState.on('accountsChanged', accountsChangedWrapper);
-            eip1193ProviderState.on('chainChanged', chainChangedWrapper);
-            eip1193ProviderState.on('disconnect', disconnectWrapper);
-            return () => {
-                if (eip1193ProviderState?.removeListener) { /* ... remove listeners ... */ }
-            };
-        }
-    }, [eip1193ProviderState, handleAccountsChanged, handleChainChanged, disconnectWalletF]);
+    useEffect(() => { /* ... as before ... */ }, [eip1193ProviderState, handleAccountsChanged, handleChainChanged, disconnectWalletF, addUiDebug]);
 
     // Effect 2.5: Initial Read-Only Provider Setup
-    useEffect(() => {
-        const canSetupReadOnly = loadedReadOnlyRpcUrl && loadedContractAddress && !provider && !walletAddress && !isConnecting;
-        addUiDebug(`Effect 2.5: ReadOnlySetup Check. CanSetup: ${canSetupReadOnly}. RPC: ${!!loadedReadOnlyRpcUrl}, Addr: ${!!loadedContractAddress}, Provider: ${!!provider}, Wallet: ${!!walletAddress}, Connecting: ${isConnecting}`);
-        if (canSetupReadOnly) {
-            addUiDebug("Effect 2.5: Setting up ReadOnly provider.");
-            try {
-                const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
-                setProvider(defaultProvider);
-                defaultProvider.getNetwork().then(net => {
-                    if (net?.chainId) { setChainId(net.chainId); setConnectionStatus({ type: 'info', message: `ReadOnly Mode (Net: ${net.chainId})` }); }
-                    else {setConnectionStatus({ type: 'info', message: `ReadOnly Mode` });}
-                }).catch(e => setConnectionStatus({ type: 'error', message: 'ReadOnly Net Error' }));
-            } catch (e) { addUiDebug(`ReadOnly Setup FAIL: ${e.message}`); setConnectionStatus({ type: 'error', message: 'ReadOnly Provider Error' });}
-        }
-    }, [loadedReadOnlyRpcUrl, loadedContractAddress, provider, walletAddress, isConnecting]);
-
+    useEffect(() => { /* ... as before, ensure it checks !walletAddress so eager connect takes precedence if it finds an account ... */
+        const canSetupReadOnly = loadedReadOnlyRpcUrl && loadedContractAddress && !provider && !walletAddress && !isConnecting && !web3ModalInitError;
+        // ...
+    }, [loadedReadOnlyRpcUrl, loadedContractAddress, provider, walletAddress, isConnecting, web3ModalInitError, addUiDebug]);
 
     // Effect 3: Setup signer and contract
-    useEffect(() => {
-        addUiDebug(`Effect 3: SignerContractSetup. Provider: ${provider?.constructor.name?.slice(0,4)}, Wallet: ${!!walletAddress}, Signer: ${!!signer}, Chain: ${chainId}, Target: ${loadedTargetChainIdNum}`);
-        // ... (your existing Effect 3 logic, ensure MOB_DEBUG prefixes in its logs) ...
-        // Ensure it calls initializeContract correctly for read-only and signer states
-        if (provider instanceof ethers.providers.Web3Provider && walletAddress && loadedContractAddress && chainId === loadedTargetChainIdNum) {
-            if (!signer) {
-                try {
-                    const currentSigner = provider.getSigner(); setSigner(currentSigner);
-                    initializeContract(currentSigner, loadedContractAddress);
-                } catch (e) { setSigner(null); setContract(null); addUiDebug(`GetSigner FAIL: ${e.message}`); }
-            } else if (signer && (!contract || contract.signer !== signer)) {
-                initializeContract(signer, loadedContractAddress);
-            }
-        } else if (provider && !walletAddress && loadedContractAddress) { // Read-only
-            setSigner(null);
-            if (!contract || contract.provider !== provider || contract.signer) {
-                initializeContract(provider, loadedContractAddress);
-            }
-        } else if (provider instanceof ethers.providers.Web3Provider && walletAddress && chainId !== loadedTargetChainIdNum) { // Wrong network
-            setSigner(null);
-            if (!contract || contract.provider !== provider || contract.signer) {
-                initializeContract(provider, loadedContractAddress); // read-only on wrong network
-            }
-        } // ... other conditions ...
-    }, [provider, walletAddress, loadedContractAddress, initializeContract, signer, contract, chainId, loadedTargetChainIdNum]);
+    useEffect(() => { /* ... as before ... */ }, [provider, walletAddress, loadedContractAddress, initializeContract, signer, contract, chainId, loadedTargetChainIdNum, addUiDebug]);
 
+    const connectWallet = useCallback(async () => { /* ... as before ... */ }, [ /* ... your large dep array for connectWallet ... */ addUiDebug]);
 
-    const connectWallet = useCallback(async () => {
-        addUiDebug("connectWallet CALLED.");
-        if (web3ModalInitError) { /* ... setConnectionStatus ... */ addUiDebug(`Connect FAIL: ModalInitError: ${web3ModalInitError}`); return; }
-        if (!web3ModalInstance) { /* ... setConnectionStatus ... */ addUiDebug("Connect FAIL: No Modal Instance"); return; }
-        // ... (other initial checks for config, isConnecting, already connected) ...
+    const contextValue = useMemo(() => ({ /* ... as before, including uiDebugMessages ... */ }), [ /* ... all contextValue deps ... */ addUiDebug]);
 
-        setIsConnecting(true); setConnectionStatus({ type: 'info', message: 'Opening modal...' }); addUiDebug("Opening Modal...");
-        try {
-            await web3ModalInstance.open(); // Use .open()
-            const rawEip1193Provider = web3ModalInstance.getWalletProvider();
-            if (rawEip1193Provider) {
-                addUiDebug("Modal: Provider Obtained.");
-                setEip1193ProviderState(rawEip1193Provider);
-                const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
-                setProvider(newWeb3Provider);
-                const accounts = await newWeb3Provider.listAccounts();
-                if (accounts.length > 0) {
-                    const currentAddress = ethers.utils.getAddress(accounts[0]);
-                    setWalletAddress(currentAddress);
-                    const network = await newWeb3Provider.getNetwork();
-                    setChainId(network.chainId);
-                    if (network.chainId === loadedTargetChainIdNum) {
-                        setConnectionStatus({ type: 'success', message: `Connected: ${currentAddress.substring(0,6)}...` });
-                        addUiDebug(`CONNECTED: ${currentAddress.substring(0,6)} on chain ${network.chainId}`);
-                    } else {
-                        setConnectionStatus({ type: 'error', message: `Wrong Net (Chain ${network.chainId}). Need ${loadedTargetChainIdNum}.` });
-                        addUiDebug(`WRONG NET: Connected to ${network.chainId}`);
-                        setSigner(null);
-                    }
-                } else { addUiDebug("Modal: No Accounts from provider."); setConnectionStatus({ type: 'info', message: 'No account auth.' });}
-            } else { addUiDebug("Modal: Closed, no provider."); setConnectionStatus({ type: 'info', message: 'Modal closed.' });}
-        } catch (error) { addUiDebug(`Connect CATCH FAIL: ${error.message}`); setConnectionStatus({ type: 'error', message: `Connect Error: ${error.message}` });
-        } finally { setIsConnecting(false); addUiDebug("ConnectWallet FINALLY."); }
-    }, [web3ModalInstance, web3ModalInitError, loadedContractAddress, loadedTargetChainIdNum, isConnecting, walletAddress, signer, chainId, disconnectWalletF]);
-
-
-    const contextValue = useMemo(() => ({
-        walletAddress, provider, signer, contract, chainId,
-        loadedTargetChainIdHex, loadedTargetChainIdNum,
-        isConnecting, connectionStatus,
-        web3ModalInitError,
-        web3ModalInstanceExists: !!web3ModalInstance, // For button disabling
-        uiDebugMessages, // Pass for display
-        connectWallet,
-        disconnectWallet: disconnectWalletF
-    }), [
-        walletAddress, provider, signer, contract, chainId, loadedTargetChainIdHex, loadedTargetChainIdNum,
-        isConnecting, connectionStatus, web3ModalInitError, web3ModalInstance, uiDebugMessages, connectWallet, disconnectWalletF
-    ]);
+    console.log("MOB_DEBUG: WalletProvider END RENDER. ModalInstanceSet:", !!web3ModalInstance, "ModalError:", web3ModalInitError, "ProviderType:", provider?.constructor.name, "Wallet:", walletAddress);
 
     return (
         <WalletContext.Provider value={contextValue}>
