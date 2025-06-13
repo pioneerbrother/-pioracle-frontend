@@ -8,14 +8,12 @@ import React, {
 } from 'react';
 import { ethers } from 'ethers';
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5';
-
-import {
-    getContractAddress, getContractAbi, getRpcUrl, getTargetChainIdHex,
-    getChainName, getCurrencySymbol, getExplorerUrl
-} from '../config/contractConfig';
+import { getContractAddress, getContractAbi, getRpcUrl, getTargetChainIdHex, getChainName, getCurrencySymbol, getExplorerUrl } from '../config/contractConfig';
 
 export const WalletContext = createContext(null);
+
 const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+
 const metadata = {
     name: "Pioracle.online",
     description: "Decentralized Prediction Markets",
@@ -24,146 +22,147 @@ const metadata = {
 };
 
 export function WalletProvider({ children }) {
-    const [isProviderInitialized, setIsProviderInitialized] = useState(false);
-    const [uiDebugMessages, setUiDebugMessages] = useState([]);
-    const addUiDebug = useCallback((msg) => {
-        setUiDebugMessages(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()}: ${msg}`]);
-    }, []);
-
+    const [isInitialized, setIsInitialized] = useState(false);
     const [walletAddress, setWalletAddress] = useState(null);
     const [provider, setProvider] = useState(null);
     const [signer, setSigner] = useState(null);
     const [contract, setContract] = useState(null);
-    const [isConnecting, setIsConnecting] = useState(false);
     const [chainId, setChainId] = useState(null);
-    const [loadedContractAddress, setLoadedContractAddress] = useState(null);
-    const [loadedReadOnlyRpcUrl, setLoadedReadOnlyRpcUrl] = useState(null);
-    const [loadedTargetChainIdNum, setLoadedTargetChainIdNum] = useState(null);
-    const [web3ModalInstance, setWeb3ModalInstance] = useState(null);
-    const [eip1193ProviderState, setEip1193ProviderState] = useState(null);
-    const [web3ModalInitError, setWeb3ModalInitError] = useState(null);
+    const [web3Modal, setWeb3Modal] = useState(null);
 
-    useEffect(() => {
-        const addr = getContractAddress();
-        const rpc = getRpcUrl();
-        const targetChainHex = getTargetChainIdHex();
-        setLoadedContractAddress(addr);
-        setLoadedReadOnlyRpcUrl(rpc);
-        if (targetChainHex) setLoadedTargetChainIdNum(parseInt(targetChainHex, 16));
+    const loadedTargetChainIdNum = useMemo(() => {
+        const hex = getTargetChainIdHex();
+        return hex ? parseInt(hex, 16) : null;
     }, []);
 
+    // Effect 1: Initialize Web3Modal instance
     useEffect(() => {
-        if (loadedReadOnlyRpcUrl && loadedTargetChainIdNum && WALLETCONNECT_PROJECT_ID && !web3ModalInstance && !web3ModalInitError) {
-            try {
-                const modal = createWeb3Modal({
-                    ethersConfig: defaultConfig({ metadata }),
-                    chains: [{ chainId: loadedTargetChainIdNum, name: getChainName(), currency: getCurrencySymbol(), explorerUrl: getExplorerUrl(), rpcUrl: loadedReadOnlyRpcUrl }],
-                    projectId: WALLETCONNECT_PROJECT_ID,
-                    enableAnalytics: false,
-                });
-                setWeb3ModalInstance(modal);
-            } catch (error) { setWeb3ModalInitError(error.message); }
+        if (WALLETCONNECT_PROJECT_ID && loadedTargetChainIdNum) {
+            const modal = createWeb3Modal({
+                ethersConfig: defaultConfig({ metadata }),
+                chains: [{
+                    chainId: loadedTargetChainIdNum,
+                    name: getChainName(),
+                    currency: getCurrencySymbol(),
+                    explorerUrl: getExplorerUrl(),
+                    rpcUrl: getRpcUrl()
+                }],
+                projectId: WALLETCONNECT_PROJECT_ID,
+                enableAnalytics: false,
+            });
+            setWeb3Modal(modal);
         }
-    }, [loadedReadOnlyRpcUrl, loadedTargetChainIdNum, web3ModalInstance, web3ModalInitError]);
+    }, [loadedTargetChainIdNum]);
 
-    useEffect(() => {
-        if (!isProviderInitialized && loadedReadOnlyRpcUrl && web3ModalInstance) {
-            const initialSetup = async () => {
-                try {
-                    if (window.ethereum) {
-                        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                        if (accounts && accounts.length > 0) {
-                            const newWeb3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-                            const network = await newWeb3Provider.getNetwork();
-                            setEip1193ProviderState(window.ethereum);
-                            setProvider(newWeb3Provider);
-                            setWalletAddress(ethers.utils.getAddress(accounts[0]));
-                            setChainId(network.chainId);
-                            return;
-                        }
-                    }
-                    const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
-                    const network = await defaultProvider.getNetwork();
-                    setProvider(defaultProvider);
-                    setChainId(network?.chainId || null);
-                } catch (err) { console.error("Initial setup failed:", err); }
-                finally { setIsProviderInitialized(true); }
-            };
-            initialSetup();
+    const initializeContract = useCallback((signerOrProvider) => {
+        const address = getContractAddress();
+        if (signerOrProvider && address) {
+            setContract(new ethers.Contract(address, getContractAbi(), signerOrProvider));
+        } else {
+            setContract(null);
         }
-    }, [isProviderInitialized, loadedReadOnlyRpcUrl, web3ModalInstance]);
-
-    const initializeContract = useCallback((currentSignerOrProvider, addressToUse) => {
-        try {
-            const instance = new ethers.Contract(addressToUse, getContractAbi(), currentSignerOrProvider);
-            setContract(instance);
-        } catch (e) { setContract(null); }
     }, []);
 
-    const disconnectWalletF = useCallback(() => {
-        setWalletAddress(null); setSigner(null); setChainId(null);
-        setIsProviderInitialized(false);
-        const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
-        setProvider(defaultProvider);
-        defaultProvider.getNetwork().then(net => setChainId(net?.chainId || null));
-    }, [loadedReadOnlyRpcUrl]);
-    
-    const handleAccountsChanged = useCallback((accounts) => {
-        if (accounts.length === 0) { disconnectWalletF(); }
-        else { setWalletAddress(ethers.utils.getAddress(accounts[0])); }
-    }, [disconnectWalletF]);
+    const setProviderState = useCallback(async (eip1193Provider) => {
+        const web3Provider = new ethers.providers.Web3Provider(eip1193Provider, 'any');
+        const accounts = await web3Provider.listAccounts();
+        const network = await web3Provider.getNetwork();
 
-    const handleChainChanged = useCallback((newChainIdHex) => {
-        setChainId(parseInt(newChainIdHex, 16));
-    }, []);
+        setProvider(web3Provider);
+        setChainId(network.chainId);
 
-    useEffect(() => {
-        if (eip1193ProviderState?.on) {
-            eip1193ProviderState.on('accountsChanged', handleAccountsChanged);
-            eip1193ProviderState.on('chainChanged', handleChainChanged);
-            eip1193ProviderState.on('disconnect', disconnectWalletF);
-            return () => {
-                eip1193ProviderState.removeListener('accountsChanged', handleAccountsChanged);
-                eip1193ProviderState.removeListener('chainChanged', handleChainChanged);
-                eip1193ProviderState.removeListener('disconnect', disconnectWalletF);
-            };
-        }
-    }, [eip1193ProviderState, handleAccountsChanged, handleChainChanged, disconnectWalletF]);
-    
-    // --- THIS IS THE NEW, SUPERIOR PATTERN ---
-    const connectionStatus = useMemo(() => {
-        if (!isProviderInitialized) return { type: 'info', message: 'Initializing...' };
-        if (walletAddress) {
-            if (chainId === loadedTargetChainIdNum) return { type: 'success', message: `Connected: ${walletAddress.substring(0, 6)}...` };
-            if (chainId) return { type: 'error', message: `Wrong Net (Chain ${chainId})` };
-            return { type: 'info', message: 'Verifying network...' };
-        }
-        return { type: 'info', message: 'ReadOnly Mode' };
-    }, [isProviderInitialized, walletAddress, chainId, loadedTargetChainIdNum]);
-
-    useEffect(() => {
-        if (provider && walletAddress && chainId === loadedTargetChainIdNum) {
-            const currentSigner = provider.getSigner();
-            setSigner(currentSigner);
-            initializeContract(currentSigner, loadedContractAddress);
-        } else if (provider) {
+        if (accounts.length > 0) {
+            const currentAddress = ethers.utils.getAddress(accounts[0]);
+            setWalletAddress(currentAddress);
+            if (network.chainId === loadedTargetChainIdNum) {
+                const currentSigner = web3Provider.getSigner();
+                setSigner(currentSigner);
+                initializeContract(currentSigner);
+            } else {
+                setSigner(null);
+                initializeContract(web3Provider);
+            }
+        } else {
+            setWalletAddress(null);
             setSigner(null);
-            initializeContract(provider, loadedContractAddress);
+            initializeContract(web3Provider);
         }
-    }, [provider, walletAddress, chainId, loadedTargetChainIdNum, loadedContractAddress, initializeContract]);
+    }, [loadedTargetChainIdNum, initializeContract]);
+
+    const disconnect = useCallback(() => {
+        const rpcUrl = getRpcUrl();
+        const defaultProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
+        setWalletAddress(null);
+        setSigner(null);
+        setProvider(defaultProvider);
+        defaultProvider.getNetwork().then(net => setChainId(net.chainId));
+        initializeContract(defaultProvider);
+    }, [initializeContract]);
+
+    // Effect 2: Setup initial provider (Eager Connect or Read-Only Fallback)
+    useEffect(() => {
+        const setup = async () => {
+            try {
+                if (window.ethereum) {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        await setProviderState(window.ethereum);
+                    } else {
+                        disconnect(); // Set up read-only provider
+                    }
+                } else {
+                    disconnect(); // Set up read-only provider
+                }
+            } catch (e) {
+                console.error("Error in initial setup:", e);
+                disconnect(); // Fallback to read-only on error
+            } finally {
+                setIsInitialized(true);
+            }
+        };
+        setup();
+    }, [setProviderState, disconnect]);
+    
+    // Effect 3: EIP-1193 Event Listeners
+    useEffect(() => {
+        const handleAccountsChanged = (accounts) => {
+            if (accounts.length === 0) disconnect();
+            else setProviderState(window.ethereum);
+        };
+        const handleChainChanged = () => setProviderState(window.ethereum);
+        const handleDisconnect = () => disconnect();
+
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', handleAccountsChanged);
+            window.ethereum.on('chainChanged', handleChainChanged);
+            window.ethereum.on('disconnect', handleDisconnect);
+        }
+        return () => {
+            if (window.ethereum) {
+                window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+                window.ethereum.removeListener('chainChanged', handleChainChanged);
+                window.ethereum.removeListener('disconnect', handleDisconnect);
+            }
+        };
+    }, [setProviderState, disconnect]);
     
     const connectWallet = useCallback(async () => {
-       // ... (connectWallet function remains unchanged from the previous version)
-    }, [web3ModalInstance, web3ModalInitError, isConnecting, walletAddress, addUiDebug]);
-    
-    const contextValue = useMemo(() => ({
-        // ... (contextValue remains unchanged)
-    }), [/* ... */]);
+        if (!web3Modal) return;
+        await web3Modal.open();
+        // After modal interaction, event listeners will handle the state update.
+    }, [web3Modal]);
 
+    const contextValue = useMemo(() => ({
+        walletAddress, signer, contract, chainId, provider,
+        isInitialized, loadedTargetChainIdNum,
+        web3ModalInstanceExists: !!web3Modal,
+        connectWallet, disconnectWallet: disconnect,
+    }), [walletAddress, signer, contract, chainId, provider, isInitialized, loadedTargetChainIdNum, web3Modal, connectWallet, disconnect]);
+    
     return (
         <WalletContext.Provider value={contextValue}>
-            {isProviderInitialized ? children : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            {isInitialized ? children : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#282c34', color: 'white', fontSize: '1.5rem' }}>
                     Initializing PiOracle...
                 </div>
             )}

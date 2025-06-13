@@ -1,77 +1,51 @@
+// src/components/common/ConnectWalletButton.jsx
 import React, { useContext } from 'react';
-// IMPORTANT: Adjust this import path if your WalletProvider.jsx is located elsewhere!
+// Make sure this path is correct for your project structure
 import { WalletContext } from '../../pages/WalletProvider'; 
-import './ConnectWalletButton.css'; // Optional: for styling
 
 function ConnectWalletButton() {
-    // 1. Get all necessary states from the WalletContext
     const context = useContext(WalletContext);
 
-    // 2. Guard Clause: If the button is rendered outside the provider, show an error state.
-    if (!context) {
-        console.error("ConnectWalletButton must be used within a WalletProvider.");
-        return <button className="connect-wallet-button" disabled>Context Error</button>;
+    // If the context hasn't loaded yet, it's safer to show a disabled loading state.
+    if (!context || !context.isInitialized) {
+        return <button disabled>Loading...</button>;
     }
 
     const {
         walletAddress,
-        isConnecting,
-        connectionStatus,
-        connectWallet,
-        disconnectWallet,
-        web3ModalInstanceExists, // This is key to solving the "stuck on loading" issue
         chainId,
         loadedTargetChainIdNum,
+        connectWallet,
+        disconnectWallet,
     } = context;
 
-    // --- RENDER LOGIC ---
 
-    // CASE 1: Wallet is connected
+    // Case 1: A wallet is connected.
     if (walletAddress) {
-        const truncatedAddress = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
-
-        // Sub-Case: Connected, but to the WRONG network
-        if (chainId && loadedTargetChainIdNum && chainId !== loadedTargetChainIdNum) {
+        // Sub-case: The connected wallet is on the WRONG network.
+        if (chainId !== loadedTargetChainIdNum) {
             return (
-                <div className="wallet-widget-container error-state">
-                    <span className="wallet-status-text">Wrong Network</span>
-                    <button onClick={disconnectWallet} className="button secondary disconnect-button">
-                        Disconnect
-                    </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px', border: '1px solid orange', borderRadius: '5px' }}>
+                    <span style={{ color: 'orange', fontWeight: 'bold' }}>Wrong Network</span>
+                    <button onClick={disconnectWallet}>Disconnect</button>
                 </div>
             );
         }
 
-        // Sub-Case: Connected correctly
+        // Sub-case: The wallet is connected correctly.
+        const truncatedAddress = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
         return (
-            <div className="wallet-widget-container">
-                <span className="wallet-status-text address">{truncatedAddress}</span>
-                <button onClick={disconnectWallet} className="button secondary disconnect-button">
-                    Disconnect
-                </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span>{truncatedAddress}</span>
+                <button onClick={disconnectWallet}>Disconnect</button>
             </div>
         );
     }
-    
-    // CASE 2: Wallet is NOT connected
-    // Sub-Case: The core wallet library (Web3Modal) is still initializing.
-    // This prevents the "Connect" button from appearing before it's functional.
-    if (!web3ModalInstanceExists) {
-        return (
-            <button className="connect-wallet-button" disabled>
-                Loading...
-            </button>
-        );
-    }
-    
-    // Sub-Case: Ready to connect. Show the main "Connect Wallet" button.
+
+    // Case 2: No wallet is connected. Show the main connect button.
     return (
-        <button
-            className="connect-wallet-button"
-            onClick={connectWallet}
-            disabled={isConnecting}
-        >
-            {isConnecting ? 'Connecting...' : (connectionStatus.type === 'error' ? 'Try Again' : 'Connect Wallet')}
+        <button onClick={connectWallet}>
+            Connect Wallet
         </button>
     );
 }
