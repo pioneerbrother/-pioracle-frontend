@@ -1,66 +1,77 @@
-// src/components/common/ConnectWalletButton.jsx
 import React, { useContext } from 'react';
-import { WalletContext } from '../../pages/WalletProvider'; // Adjust path if WalletProvider is elsewhere
-import './ConnectWalletButton.css'; // We'll create this for styling
+// IMPORTANT: Adjust this import path if your WalletProvider.jsx is located elsewhere!
+import { WalletContext } from '../../pages/WalletProvider'; 
+import './ConnectWalletButton.css'; // Optional: for styling
 
 function ConnectWalletButton() {
-    const walletContextValues = useContext(WalletContext);
-       console.log("CWB_DEBUG: Rendering. Context available:", !!walletContextValues);
-    if (walletContextValues) {
-        console.log("CWB_DEBUG: Context values - web3ModalInstance exists:", !!walletContextValues.web3ModalInstance, "InitError:", walletContextValues.web3ModalInitError, "isConnecting:", walletContextValues.isConnecting);
-    } 
+    // 1. Get all necessary states from the WalletContext
+    const context = useContext(WalletContext);
 
-    if (!walletContextValues) {
-        // This can happen if the component is rendered outside WalletProvider,
-        // or if context is not yet available during an initial render pass.
-        // You might want a more robust loading or error state here.
-        return <button className="connect-wallet-button" disabled>Loading Context...</button>;
+    // 2. Guard Clause: If the button is rendered outside the provider, show an error state.
+    if (!context) {
+        console.error("ConnectWalletButton must be used within a WalletProvider.");
+        return <button className="connect-wallet-button" disabled>Context Error</button>;
     }
 
     const {
         walletAddress,
-        connectWallet,
-        disconnectWallet, // Make sure this is named disconnectWalletF in WalletProvider context value
         isConnecting,
         connectionStatus,
-        web3ModalInstance, // To check if modal is ready
-        web3ModalInitError
-    } = walletContextValues;
+        connectWallet,
+        disconnectWallet,
+        web3ModalInstanceExists, // This is key to solving the "stuck on loading" issue
+        chainId,
+        loadedTargetChainIdNum,
+    } = context;
 
+    // --- RENDER LOGIC ---
+
+    // CASE 1: Wallet is connected
     if (walletAddress) {
+        const truncatedAddress = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
+
+        // Sub-Case: Connected, but to the WRONG network
+        if (chainId && loadedTargetChainIdNum && chainId !== loadedTargetChainIdNum) {
+            return (
+                <div className="wallet-widget-container error-state">
+                    <span className="wallet-status-text">Wrong Network</span>
+                    <button onClick={disconnectWallet} className="button secondary disconnect-button">
+                        Disconnect
+                    </button>
+                </div>
+            );
+        }
+
+        // Sub-Case: Connected correctly
         return (
-            <div className="wallet-info-container">
-                <span className="wallet-address-display">
-                    Connected: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
-                </span>
-                <button onClick={disconnectWallet} className="connect-wallet-button disconnect-button">
+            <div className="wallet-widget-container">
+                <span className="wallet-status-text address">{truncatedAddress}</span>
+                <button onClick={disconnectWallet} className="button secondary disconnect-button">
                     Disconnect
                 </button>
             </div>
         );
     }
-
-    let buttonText = "Connect Wallet";
-    if (isConnecting) {
-        buttonText = "Connecting...";
-    } else if (web3ModalInitError) {
-        buttonText = "Connection Error";
-    } else if (!web3ModalInstance && !web3ModalInitError) { 
-        // Only show "Modal Loading..." if no error and instance not yet set
-        // This usually resolves very quickly.
-        buttonText = "Loading..."; 
+    
+    // CASE 2: Wallet is NOT connected
+    // Sub-Case: The core wallet library (Web3Modal) is still initializing.
+    // This prevents the "Connect" button from appearing before it's functional.
+    if (!web3ModalInstanceExists) {
+        return (
+            <button className="connect-wallet-button" disabled>
+                Loading...
+            </button>
+        );
     }
-
-
-    const isDisabled = isConnecting || !web3ModalInstance || !!web3ModalInitError;
-
+    
+    // Sub-Case: Ready to connect. Show the main "Connect Wallet" button.
     return (
         <button
-            onClick={connectWallet}
             className="connect-wallet-button"
-            disabled={isDisabled}
+            onClick={connectWallet}
+            disabled={isConnecting}
         >
-            {buttonText}
+            {isConnecting ? 'Connecting...' : (connectionStatus.type === 'error' ? 'Try Again' : 'Connect Wallet')}
         </button>
     );
 }
