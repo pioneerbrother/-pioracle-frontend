@@ -130,7 +130,10 @@ function MarketDetailPage() {
     // --- A MORE RELIABLE WAY TO DETECT WRONG NETWORK ---
     // If a wallet is connected but we DON'T have a signer, it means the network is wrong.
     // WalletProvider only provides a signer when the network is correct.
-    const isWrongNetwork = walletAddress && !signer;
+// In MarketDetailPage.jsx, find and replace the isWrongNetwork definition
+
+// --- The NEW, more reliable check ---
+const isWrongNetwork = (walletAddress && !signer); 
 
     if (isLoading) return <LoadingSpinner message={`Loading Market Details for ID: ${marketId}...`} />;
     if (error) return <ErrorMessage title="Market Data Error" message={error} />;
