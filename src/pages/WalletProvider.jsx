@@ -212,26 +212,39 @@ const initialSetup = async () => {
         }
     }, [eip1193ProviderState, handleAccountsChanged, handleChainChanged, disconnectWalletF]);
 
-    useEffect(() => {
-        if (provider instanceof ethers.providers.Web3Provider && walletAddress) {
-            if (chainId === loadedTargetChainIdNum) {
-                const currentSigner = provider.getSigner();
-                setSigner(currentSigner);
-                initializeContract(currentSigner, loadedContractAddress);
-                setConnectionStatus({ type: 'success', message: `Connected: ${walletAddress.substring(0,6)}...` });
-            } else {
-                setSigner(null);
-                initializeContract(provider, loadedContractAddress);
-                setConnectionStatus({ type: 'error', message: `Wrong Net (Chain ${chainId}).` });
-            }
-        } else if (provider) {
-            setSigner(null);
-            initializeContract(provider, loadedContractAddress);
-            setConnectionStatus({ type: 'info', message: `ReadOnly Mode` });
+// In src/pages/WalletProvider.jsx
+
+// Replace the last useEffect in the file with this one
+useEffect(() => {
+    // This effect sets the final signer, contract, and user-facing status message
+    if (provider instanceof ethers.providers.Web3Provider && walletAddress) {
+        // Case 1: A wallet is fully connected
+        if (chainId === null) {
+            // If chainId is not known yet, wait. Don't show an error.
+            setConnectionStatus({ type: 'info', message: 'Verifying network...' });
+        } else if (chainId === loadedTargetChainIdNum) {
+            // Correct network
+            const currentSigner = provider.getSigner();
+            setSigner(currentSigner);
+            initializeContract(currentSigner, loadedContractAddress);
+            setConnectionStatus({ type: 'success', message: `Connected: ${walletAddress.substring(0,6)}...` });
         } else {
-            setSigner(null); setContract(null);
+            // Wrong network
+            setSigner(null); // Invalidate the signer
+            initializeContract(provider, loadedContractAddress); // Keep contract as read-only
+            setConnectionStatus({ type: 'error', message: `Wrong Net (Chain ${chainId}).` });
         }
-    }, [provider, walletAddress, loadedContractAddress, initializeContract, chainId, loadedTargetChainIdNum]);
+    } else if (provider) {
+        // Case 2: In read-only mode (no wallet connected)
+        setSigner(null);
+        initializeContract(provider, loadedContractAddress);
+        setConnectionStatus({ type: 'info', message: `ReadOnly Mode` });
+    } else {
+        // Case 3: No provider at all
+        setSigner(null);
+        setContract(null);
+    }
+}, [provider, walletAddress, loadedContractAddress, initializeContract, chainId, loadedTargetChainIdNum]);
 
 // In src/pages/WalletProvider.jsx
 
