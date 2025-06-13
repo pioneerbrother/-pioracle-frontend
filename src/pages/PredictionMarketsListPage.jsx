@@ -190,6 +190,20 @@ function PredictionMarketsListPage() {
         return sorted;
     }, [rawMarkets]);
 
+    // In src/pages/PredictionMarketListPage.jsx, inside the component function
+
+
+
+// ... after your existing useState and useMemo hooks ...
+
+const featuredMarket = useMemo(() => {
+    // We search through the list of open markets to find our specific featured one.
+    // .find() will return the first match, or undefined if not found.
+    return openMarketsToDisplay.find(market => 
+        market.title && market.title.includes('TRUMP MUSK TOGETHER')
+    );
+}, [openMarketsToDisplay]); // This will only re-run when the list of markets changes
+
 // ... (rest of the component) ...
 
     return (
@@ -202,6 +216,18 @@ function PredictionMarketsListPage() {
                 <Link to="/resolved-markets" className="button secondary">View Recently Resolved Markets</Link>
             </div>
             <h2>Open Prediction Markets</h2>
+            {featuredMarket && (
+            <div className="featured-market-container">
+                <h2>The Billion-Dollar Feud</h2>
+                <p>After trading public insults, wild accusations, and financial threats, the powerful alliance between Donald Trump and Elon Musk appears to be broken.</p>
+                <p><strong>But in a world of massive egos and strategic maneuvers, is a reconciliation possible?</strong></p>
+                
+                {/* This button now links directly to the correct market page */}
+                <Link to={`/predictions/${featuredMarket.id}`} className="featured-market-button">
+                    Predict the Outcome
+                </Link>
+            </div>
+        )}
 
             {isLoading && <LoadingSpinner message="Loading open markets..." />}
             {error && <ErrorMessage title="Error Loading Markets" message={error} onRetry={fetchAllMarkets} />}
@@ -213,6 +239,7 @@ function PredictionMarketsListPage() {
                     <p>Or check the "Recently Resolved" section.</p>
                 </div>
             )}
+
 
             <div className="market-list">
                 {openMarketsToDisplay.map(market => (
