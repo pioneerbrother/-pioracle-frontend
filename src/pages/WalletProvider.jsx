@@ -35,7 +35,6 @@ export function WalletProvider({ children }) {
         return hex ? parseInt(hex, 16) : null;
     }, []);
 
-    // Effect 1: Initialize Web3Modal instance
     useEffect(() => {
         if (WALLETCONNECT_PROJECT_ID && loadedTargetChainIdNum) {
             const modal = createWeb3Modal({
@@ -74,20 +73,10 @@ export function WalletProvider({ children }) {
         if (accounts.length > 0) {
             const currentAddress = ethers.utils.getAddress(accounts[0]);
             setWalletAddress(currentAddress);
-            if (network.chainId === loadedTargetChainIdNum) {
-                const currentSigner = web3Provider.getSigner();
-                setSigner(currentSigner);
-                initializeContract(currentSigner);
-            } else {
-                setSigner(null);
-                initializeContract(web3Provider);
-            }
         } else {
             setWalletAddress(null);
-            setSigner(null);
-            initializeContract(web3Provider);
         }
-    }, [loadedTargetChainIdNum, initializeContract]);
+    }, []);
 
     const disconnect = useCallback(() => {
         const rpcUrl = getRpcUrl();
@@ -99,7 +88,6 @@ export function WalletProvider({ children }) {
         initializeContract(defaultProvider);
     }, [initializeContract]);
 
-    // Effect 2: Setup initial provider (Eager Connect or Read-Only Fallback)
     useEffect(() => {
         const setup = async () => {
             try {
@@ -108,14 +96,13 @@ export function WalletProvider({ children }) {
                     if (accounts.length > 0) {
                         await setProviderState(window.ethereum);
                     } else {
-                        disconnect(); // Set up read-only provider
+                        disconnect();
                     }
                 } else {
-                    disconnect(); // Set up read-only provider
+                    disconnect();
                 }
             } catch (e) {
-                console.error("Error in initial setup:", e);
-                disconnect(); // Fallback to read-only on error
+                disconnect();
             } finally {
                 setIsInitialized(true);
             }
@@ -123,12 +110,8 @@ export function WalletProvider({ children }) {
         setup();
     }, [setProviderState, disconnect]);
     
-    // Effect 3: EIP-1193 Event Listeners
     useEffect(() => {
-        const handleAccountsChanged = (accounts) => {
-            if (accounts.length === 0) disconnect();
-            else setProviderState(window.ethereum);
-        };
+        const handleAccountsChanged = (accounts) => { accounts.length === 0 ? disconnect() : setProviderState(window.ethereum); };
         const handleChainChanged = () => setProviderState(window.ethereum);
         const handleDisconnect = () => disconnect();
 
@@ -145,11 +128,22 @@ export function WalletProvider({ children }) {
             }
         };
     }, [setProviderState, disconnect]);
+
+    // This useEffect hook correctly sets the signer and contract AFTER the main state has been updated.
+    useEffect(() => {
+        if (provider && walletAddress && chainId === loadedTargetChainIdNum) {
+            const currentSigner = provider.getSigner();
+            setSigner(currentSigner);
+            initializeContract(currentSigner);
+        } else if (provider) {
+            setSigner(null);
+            initializeContract(provider);
+        }
+    }, [provider, walletAddress, chainId, loadedTargetChainIdNum, initializeContract]);
     
     const connectWallet = useCallback(async () => {
         if (!web3Modal) return;
         await web3Modal.open();
-        // After modal interaction, event listeners will handle the state update.
     }, [web3Modal]);
 
     const contextValue = useMemo(() => ({
