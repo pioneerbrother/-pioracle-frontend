@@ -31,12 +31,25 @@ const metadata = {
 };
 
 export function WalletProvider({ children }) {
+    const [isProviderInitialized, setIsProviderInitialized] = useState(false);
     console.log("MOB_DEBUG: WalletProvider START RENDER");
+    
     const [uiDebugMessages, setUiDebugMessages] = useState(["Provider Init..."]); // For UI debugging
     const addUiDebug = useCallback((msg) => { // Wrapped in useCallback
         setUiDebugMessages(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()}: ${msg}`]);
         console.log("MOB_DEBUG_UI_LOG:", msg); // Also log to console for easier debugging if possible
     }, []);
+
+    // --- ADD THIS ENTIRE "IF" BLOCK ---
+    // This will prevent the rest of the app from rendering until the provider is ready
+    if (!isProviderInitialized) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#282c34', color: 'white', fontSize: '1.5rem' }}>
+                Initializing PiOracle...
+            </div>
+        );
+    }
+    
 
 
     useEffect(() => {
@@ -192,8 +205,58 @@ export function WalletProvider({ children }) {
     const handleAccountsChanged = useCallback(async (accounts) => { /* ... as before ... */ }, [provider, disconnectWalletF, loadedTargetChainIdNum, addUiDebug]);
     const handleChainChanged = useCallback(async (newChainIdHex) => { /* ... as before ... */ }, [provider, walletAddress, loadedTargetChainIdNum, addUiDebug]);
 
-    // Effect 2: EIP-1193 Event Listeners
-    useEffect(() => { /* ... as before ... */ }, [eip1193ProviderState, handleAccountsChanged, handleChainChanged, disconnectWalletF, addUiDebug]);
+    // src/pages/WalletProvider.jsx
+
+// ...
+
+// Effect 2: Initial Provider Setup (Handles Eager Connection & Read-Only Fallback)
+useEffect(() => {
+    // ... (the canRunInitialSetup check remains the same)
+
+    if (!canRunInitialSetup) {
+        // ...
+        return;
+    }
+
+    const initialSetup = async () => {
+        addUiDebug("Effect 2: Starting initial provider setup...");
+        
+        // --- ADD A "finally" BLOCK TO THIS TRY/CATCH ---
+        try {
+            // 1. Try Eager Connect first...
+            if (window.ethereum && typeof window.ethereum.request === 'function') {
+                // ... (all the logic inside the try block remains exactly the same)
+            }
+
+            // 2. If Eager Connect did not happen, set up Read-Only provider...
+            addUiDebug("Effect 2: Eager connect did not complete. Setting up ReadOnly provider.");
+            // ... (all the logic inside this part of the try block remains the same)
+
+        } catch (e) {
+            // This catch block remains the same
+            addUiDebug(`ReadOnly Setup FAIL: ${e.message}`);
+            setConnectionStatus({ type: 'error', message: 'ReadOnly Provider Error' });
+        } finally {
+            // --- THIS IS THE NEW PART ---
+            // No matter what happens (eager success, read-only success, or error),
+            // we are now "initialized" and the app can be displayed.
+            addUiDebug("Effect 2: Initial setup finished. Rendering app.");
+            setIsProviderInitialized(true);
+        }
+    };
+
+    initialSetup();
+
+}, [
+    // The dependency array remains exactly the same
+    addUiDebug,
+    loadedReadOnlyRpcUrl, loadedContractAddress, loadedTargetChainIdNum,
+    provider, walletAddress, isConnecting,
+    web3ModalInstance, web3ModalInitError,
+]);
+
+// ...
+    
 
     // Effect 2.5: Initial Read-Only Provider Setup
     useEffect(() => { /* ... as before, ensure it checks !walletAddress so eager connect takes precedence if it finds an account ... */
