@@ -1,50 +1,85 @@
 /* src/components/common/ConnectWalletButton.css */
+
+/* Main button style when disconnected */
 .connect-wallet-button {
-    background-color: #f39c12; /* Orange accent */
-    color: #ffffff;
-    border: none;
-    padding: 0.6rem 1.2rem;
-    border-radius: 5px;
-    cursor: pointer;
+    background-color: #4a90e2; /* A pleasant blue */
+    color: white;
     font-weight: bold;
-    font-size: 0.9rem;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
     transition: background-color 0.2s ease-in-out, transform 0.1s ease;
-    white-space: nowrap;
 }
 
-.connect-wallet-button:hover:not(:disabled) {
-    background-color: #e67e22; /* Darker orange */
+.connect-wallet-button:hover {
+    background-color: #5aa1f2;
 }
 
-.connect-wallet-button:active:not(:disabled) {
-    transform: translateY(1px);
+.connect-wallet-button:active {
+    transform: scale(0.98);
 }
 
 .connect-wallet-button:disabled {
-    background-color: #cccccc;
-    color: #666666;
+    background-color: #555;
     cursor: not-allowed;
+    opacity: 0.8;
 }
 
-.wallet-info-container {
+/* Container for the address and disconnect button when connected */
+.wallet-widget-container {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #4a5568;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: border-color 0.2s ease;
 }
 
-.wallet-address-display {
-    background-color: #2c3e50; /* Darker background for contrast */
-    color: #ecf0f1;
-    padding: 0.5rem 0.8rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    white-space: nowrap;
+/* The small green/red dot indicator */
+.connection-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #48bb78; /* Green for connected */
 }
 
+/* Styling for the text of the wallet address */
+.wallet-address {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 500;
+    color: #e2e8f0;
+}
+
+/* Styling for the disconnect button */
 .disconnect-button {
-    background-color: #c0392b; /* Red for disconnect */
+    background: #4a5568;
+    color: #e2e8f0;
+    border: none;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
-.disconnect-button:hover:not(:disabled) {
-    background-color: #a93226; /* Darker red */
+.disconnect-button:hover {
+    background: #718096;
+}
+
+/* --- Error State for Wrong Network --- */
+
+.wallet-widget-container.error {
+    border-color: #e53e3e; /* Red border */
+}
+
+.wallet-widget-container.error .connection-indicator {
+    background-color: #e53e3e; /* Red dot */
+}
+
+.wallet-widget-container.error .wallet-address {
+    color: #fed7d7; /* Light red text */
 }
