@@ -154,3 +154,45 @@
     gap: 20px; /* Space between cards */
     padding: 20px 0;
 }
+/* In your CSS file, e.g., PredictionMarketListPage.css */
+
+.featured-market-container {
+    background-color: #ffffff; /* A clean white background */
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0 40px 0; /* Adds space above and below */
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.featured-market-container h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 1.75rem;
+    color: #1a202c;
+}
+
+.featured-market-container p {
+    font-size: 1.1rem;
+    color: #4a5568;
+    max-width: 600px;
+    margin: 0 auto 24px auto; /* Center the paragraph text */
+}
+
+.featured-market-button {
+    display: inline-block;
+    background-color: #2d68e5; /* A strong, clickable blue */
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 12px 32px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.featured-market-button:hover {
+    background-color: #2052c0;
+    transform: translateY(-2px); /* Slight lift on hover */
+}
