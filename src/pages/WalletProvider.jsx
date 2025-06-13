@@ -112,36 +112,51 @@ export function WalletProvider({ children }) {
         const canRunInitialSetup = loadedReadOnlyRpcUrl && loadedContractAddress && !provider && !walletAddress && !isConnecting && web3ModalInstance && !web3ModalInitError;
         if (!canRunInitialSetup) return;
 
-        const initialSetup = async () => {
-            addUiDebug("Effect 2: Starting initial provider setup...");
-            try {
-                if (window.ethereum && typeof window.ethereum.request === 'function') {
-                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                    if (accounts && accounts.length > 0) {
-                        addUiDebug(`EagerConnect: Found accounts. Reconnecting...`);
-                        const rawEip1193Provider = window.ethereum;
-                        setEip1193ProviderState(rawEip1193Provider);
-                        const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
-                        setProvider(newWeb3Provider);
-                        setWalletAddress(ethers.utils.getAddress(accounts[0]));
-                        const network = await newWeb3Provider.getNetwork();
-                        setChainId(network.chainId);
-                        return;
-                    }
-                }
-                addUiDebug("Effect 2: Eager connect did not complete. Setting up ReadOnly provider.");
-                const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
-                setProvider(defaultProvider);
-                defaultProvider.getNetwork().then(net => setChainId(net?.chainId || null));
-            } catch (err) {
-                console.error("MOB_DEBUG: Eager/ReadOnly Setup failed:", err);
-                addUiDebug(`Initial Setup Error: ${err.message}`);
-            } finally {
-                // --- CHANGE 2: SET INITIALIZATION TO TRUE AFTER SETUP ---
-                addUiDebug("Effect 2: Initial setup finished. Rendering app.");
-                setIsProviderInitialized(true);
+    // In src/pages/WalletProvider.jsx -> Effect 2
+
+const initialSetup = async () => {
+    addUiDebug("Effect 2: Starting initial provider setup...");
+    try {
+        if (window.ethereum && typeof window.ethereum.request === 'function') {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if (accounts && accounts.length > 0) {
+                addUiDebug(`EagerConnect: Found accounts. Reconnecting...`);
+
+                const rawEip1193Provider = window.ethereum;
+                setEip1193ProviderState(rawEip1193Provider);
+                
+                const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
+                setProvider(newWeb3Provider);
+
+                const currentAddress = ethers.utils.getAddress(accounts[0]);
+                const network = await newWeb3Provider.getNetwork(); // Get network info
+                
+                // --- ATOMIC STATE UPDATE ---
+                // Set Address and Chain ID together
+                setWalletAddress(currentAddress);
+                setChainId(network.chainId);
+                addUiDebug(`EagerConnect: Reconnected wallet ${currentAddress} on chain ${network.chainId}.`);
+                
+                return; // Eager connect succeeded
             }
-        };
+        }
+        
+        // Fallback to ReadOnly if Eager Connect fails
+        addUiDebug("Effect 2: Eager connect did not complete. Setting up ReadOnly provider.");
+        const defaultProvider = new ethers.providers.JsonRpcProvider(loadedReadOnlyRpcUrl);
+        const network = await defaultProvider.getNetwork();
+        setProvider(defaultProvider);
+        setChainId(network?.chainId || null);
+        addUiDebug(`Effect 2: ReadOnly provider is set for chain ${network?.chainId}.`);
+
+    } catch (err) {
+        console.error("MOB_DEBUG: Initial provider setup failed:", err);
+        addUiDebug(`Initial Setup Error: ${err.message}`);
+    } finally {
+        addUiDebug("Effect 2: Initial setup finished. Rendering app.");
+        setIsProviderInitialized(true);
+    }
+};
         initialSetup();
     }, [addUiDebug, loadedReadOnlyRpcUrl, loadedContractAddress, provider, walletAddress, isConnecting, web3ModalInstance, web3ModalInitError]);
 
@@ -218,29 +233,44 @@ export function WalletProvider({ children }) {
         }
     }, [provider, walletAddress, loadedContractAddress, initializeContract, chainId, loadedTargetChainIdNum]);
 
-    const connectWallet = useCallback(async () => {
-        if (web3ModalInitError || !web3ModalInstance || isConnecting || walletAddress) return;
-        setIsConnecting(true);
-        try {
-            await web3ModalInstance.open();
-            const rawEip1193Provider = web3ModalInstance.getWalletProvider();
-            if (rawEip1193Provider) {
-                setEip1193ProviderState(rawEip1193Provider);
-                const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
-                setProvider(newWeb3Provider);
-                const accounts = await newWeb3Provider.listAccounts();
-                if (accounts.length > 0) {
-                    setWalletAddress(ethers.utils.getAddress(accounts[0]));
-                    const network = await newWeb3Provider.getNetwork();
-                    setChainId(network.chainId);
-                }
+// In src/pages/WalletProvider.jsx
+
+const connectWallet = useCallback(async () => {
+    if (web3ModalInitError || !web3ModalInstance || isConnecting || walletAddress) return;
+    setIsConnecting(true);
+    addUiDebug("ConnectWallet: Opening modal...");
+    try {
+        await web3ModalInstance.open();
+        const rawEip1193Provider = web3ModalInstance.getWalletProvider();
+        if (rawEip1193Provider) {
+            setEip1193ProviderState(rawEip1193Provider);
+            
+            const newWeb3Provider = new ethers.providers.Web3Provider(rawEip1193Provider, "any");
+            setProvider(newWeb3Provider);
+            
+            const accounts = await newWeb3Provider.listAccounts();
+            const network = await newWeb3Provider.getNetwork(); // Get network info
+
+            if (accounts.length > 0) {
+                const currentAddress = ethers.utils.getAddress(accounts[0]);
+                // --- ATOMIC STATE UPDATE ---
+                // Set Address and Chain ID together
+                setWalletAddress(currentAddress);
+                setChainId(network.chainId);
+                addUiDebug(`ConnectWallet: Connected wallet ${currentAddress} on chain ${network.chainId}.`);
+            } else {
+                 addUiDebug(`ConnectWallet: Modal provided a provider, but no accounts found.`);
             }
-        } catch (error) {
-            console.error("Connect Wallet Error:", error);
-        } finally {
-            setIsConnecting(false);
+        } else {
+            addUiDebug("ConnectWallet: Modal was closed without connecting.");
         }
-    }, [web3ModalInstance, web3ModalInitError, isConnecting, walletAddress]);
+    } catch (error) {
+        console.error("Connect Wallet Error:", error);
+        addUiDebug(`ConnectWallet Error: ${error.message}`);
+    } finally {
+        setIsConnecting(false);
+    }
+}, [web3ModalInstance, web3ModalInitError, isConnecting, walletAddress, addUiDebug]);
 
     const contextValue = useMemo(() => ({
         walletAddress, provider, signer, contract,
