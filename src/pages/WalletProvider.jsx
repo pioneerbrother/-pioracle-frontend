@@ -7,7 +7,8 @@ import React, {
     useMemo
 } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal } from '@web3modal/ethers5'; // We don't need defaultConfig
+// --- CORRECT IMPORTS ---
+import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5';
 import { getContractAddress, getContractAbi, getRpcUrl, getTargetChainIdHex, getChainName, getCurrencySymbol, getExplorerUrl } from '../config/contractConfig';
 
 export const WalletContext = createContext(null);
@@ -41,12 +42,20 @@ export function WalletProvider({ children }) {
         return "ETH";
     };
 
-    // Effect 1: Initialize Web3Modal instance - SIMPLIFIED AND CORRECTED
+    // Effect 1: Initialize Web3Modal instance - FINAL CORRECTED VERSION
     useEffect(() => {
         if (WALLETCONNECT_PROJECT_ID && loadedTargetChainIdNum) {
+            
+            // --- THIS IS THE CRITICAL FIX ---
+            // We create the ethersConfig FIRST, ensuring it is not undefined.
+            const ethersConfig = defaultConfig({
+                metadata,
+                // Add a fallback for defaultChainId to prevent crashes
+                defaultChainId: loadedTargetChainIdNum || 1, 
+            });
+
             const modal = createWeb3Modal({
-                // This is the robust way to configure it
-                projectId: WALLETCONNECT_PROJECT_ID,
+                ethersConfig, // Pass the created config here
                 chains: [{
                     chainId: loadedTargetChainIdNum,
                     name: getChainName(),
@@ -54,7 +63,8 @@ export function WalletProvider({ children }) {
                     explorerUrl: getExplorerUrl(),
                     rpcUrl: getRpcUrl()
                 }],
-                // We no longer use the problematic ethersConfig/defaultConfig here
+                projectId: WALLETCONNECT_PROJECT_ID,
+                enableAnalytics: false,
             });
             setWeb3Modal(modal);
         }
