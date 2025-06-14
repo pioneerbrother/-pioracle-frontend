@@ -4,13 +4,12 @@ import { ethers } from 'ethers';
 import { WalletContext } from '../../pages/WalletProvider';
 import './PredictionForm.css';
 
-// This component is now simpler and trusts the props it's given.
 function PredictionForm({
     marketId,
     onBetPlaced,
     marketTarget,
     isEventMarket,
-    tokenSymbol // <-- It will now use this prop
+    tokenSymbol
 }) {
     const { walletAddress, signer, contract } = useContext(WalletContext);
     const [stakeAmount, setStakeAmount] = useState('');
@@ -23,15 +22,47 @@ function PredictionForm({
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // ... (The handleSubmit logic remains the same, no changes needed here)
+        setMessage({ text: '', type: '' });
+
+        // Backup guard clauses
+        if (!walletAddress || !signer || !contract) {
+            setMessage({ text: 'Please connect your wallet.', type: 'error' });
+            return;
+        }
+        if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
+            setMessage({ text: 'Please enter a stake amount greater than zero.', type: 'error' });
+            return;
+        }
+        
+        setIsLoading(true);
+        try {
+            const amountInWei = ethers.utils.parseUnits(stakeAmount, 18);
+            const predictYesBool = predictedOutcome === 'YES';
+
+            const tx = await contract.connect(signer).placeBet(marketId, predictYesBool, { value: amountInWei });
+            
+            setMessage({ text: `Bet submitted... waiting for confirmation.`, type: 'info' });
+            await tx.wait(1);
+
+            setMessage({ text: 'Bet placed successfully!', type: 'success' });
+            setStakeAmount(''); 
+            if (onBetPlaced) onBetPlaced();
+        } catch (err) {
+            const reason = err.reason || err.message || "An unknown error occurred.";
+            setMessage({ text: `Error: ${reason}`, type: 'error' });
+        }
+        setIsLoading(false);
     };
+
+    // --- THIS IS THE KEY FIX ---
+    // This variable continuously checks if the form is in a valid state to be submitted.
+    const canSubmit = !isLoading && stakeAmount && parseFloat(stakeAmount) > 0;
 
     return (
         <div className="prediction-form-container">
             <h3>Make Your Prediction</h3>
             <form onSubmit={handleSubmit} className="prediction-form">
                 <div className="form-group">
-                    {/* It now uses the tokenSymbol prop directly */}
                     <label htmlFor={`stakeAmount-${marketId}`}>Your Stake ({tokenSymbol})</label>
                     <input
                         type="number"
@@ -39,6 +70,8 @@ function PredictionForm({
                         value={stakeAmount}
                         onChange={(e) => setStakeAmount(e.target.value)}
                         placeholder="e.g., 0.1"
+                        min="0"
+                        step="any"
                         required
                     />
                 </div>
@@ -55,7 +88,8 @@ function PredictionForm({
                         </label>
                     </div>
                 </div>
-                <button type="submit" disabled={isLoading}>
+                {/* The button's disabled state is now tied to the 'canSubmit' variable */}
+                <button type="submit" disabled={!canSubmit}>
                     {isLoading ? "Submitting..." : "Submit Prediction"}
                 </button>
                 {message.text && <p className={`form-message type-${message.type}`}>{message.text}</p>}

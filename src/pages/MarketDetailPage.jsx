@@ -161,7 +161,8 @@ const isWrongNetwork = (walletAddress && !signer);
                     totalStakedYesNet={marketDetails.totalStakedYesNet}
                     totalStakedNoNet={marketDetails.totalStakedNoNet}
                     marketTarget={marketDetails.targetDisplay}
-                    isEventMarket={marketDetails.isEventMarket}                />
+                    isEventMarket={marketDetails.isEventMarket} 
+                     tokenSymbol={nativeTokenSymbol || "TOKEN"}                />
              <div className="betting-section">
     {/* The form for placing a bet */}
     {isMarketOpenForBetting && walletAddress && signer && (
