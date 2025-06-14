@@ -11,6 +11,7 @@ import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
 import BlogPage from './pages/BlogPage';
 import BlogPostPage from './pages/BlogPostPage';
+import GuidePage from './pages/GuidePage'; // <-- Make sure this import exists
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogPostPage />} />
+              <Route path="/guide" element={<GuidePage />} /> {/* <-- Make sure this route exists */}
               
               {/* You might need a simple component for the /guide route */}
               {/* <Route path="/guide" element={<GuidePage />} /> */}
