@@ -20,7 +20,10 @@ const aggregatorV3InterfaceABI = [
 function MarketDetailPage() {
     const { marketId } = useParams();
     // Destructure contract directly from WalletContext
-    const { contract, walletAddress, signer, provider, connectWallet } = useContext(WalletContext) || {};
+   
+ // --- THIS IS THE INCORRECT LINE ---
+// --- THIS IS THE CORRECT LINE ---
+const { contract, walletAddress, signer, provider, connectWallet, nativeTokenSymbol } = useContext(WalletContext) || {};
 
     const [marketDetails, setMarketDetails] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -157,12 +160,21 @@ const isWrongNetwork = (walletAddress && !signer);
                 <MarketOddsDisplay
                     totalStakedYesNet={marketDetails.totalStakedYesNet}
                     totalStakedNoNet={marketDetails.totalStakedNoNet}
-                />
-                <div className="betting-section">
-                    {/* The form for placing a bet */}
-                    {isMarketOpenForBetting && walletAddress && signer && (
-                        <PredictionForm marketId={marketDetails.id} onBetPlaced={() => setRefreshKey(k => k + 1)} />
-                    )}
+                    marketTarget={marketDetails.targetDisplay}
+                    isEventMarket={marketDetails.isEventMarket}                />
+             <div className="betting-section">
+    {/* The form for placing a bet */}
+    {isMarketOpenForBetting && walletAddress && signer && (
+        <PredictionForm 
+            marketId={marketDetails.id} 
+            onBetPlaced={() => setRefreshKey(k => k + 1)}
+            
+            // --- ADD THESE PROPS ---
+            tokenSymbol={nativeTokenSymbol || "TOKEN"} // Pass the native token symbol
+            marketTarget={marketDetails.targetDisplay} // Pass the formatted target (e.g., "$110,000")
+            isEventMarket={marketDetails.isEventMarket} // Let the form know if it's an event or price market
+        />
+    )}
 
                     {/* Notice to connect wallet */}
                     {isMarketOpenForBetting && !walletAddress && (
