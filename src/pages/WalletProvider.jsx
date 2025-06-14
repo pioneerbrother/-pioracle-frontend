@@ -162,9 +162,13 @@ export function WalletProvider({ children }) {
         nativeTokenSymbol // It's now being passed correctly from state
     }), [walletAddress, signer, contract, chainId, provider, isInitialized, loadedTargetChainIdNum, web3Modal, connectWallet, disconnect, nativeTokenSymbol]);
     
-    return (
-        <WalletContext.Provider value={contextValue}>
-            {isInitialized ? children : ( /* ... loading screen ... */ )}
-        </WalletContext.Provider>
-    );
+   return (
+    <WalletContext.Provider value={contextValue}>
+        {isInitialized ? children : (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#282c34', color: 'white', fontSize: '1.5rem' }}>
+                Initializing PiOracle...
+            </div>
+        )}
+    </WalletContext.Provider>
+);
 }
