@@ -1,62 +1,167 @@
-/* src/App.css */
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f4f6f8; /* Light background for the page body */
-  color: #333;
+/* src/components/common/Header.css */
+
+/* --- General Setup --- */
+.app-header {
+    background-color: #2d3748; /* Dark blue-gray */
+    padding: 0 2rem;
+    border-bottom: 1px solid #4a5568;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
-.app-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+.header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
 }
 
-.main-content {
-  flex-grow: 1;
-  padding-top: 60px; /* Height of the sticky header */
-  /* Add more padding if needed, e.g., for overall page layout */
-  /* max-width: 1200px; /* Optional: if you want to constrain main content width */
-  /* margin: 0 auto; */
+.logo-link {
+    text-decoration: none;
 }
 
-/* Basic button styling (can be in a global button.css or here) */
-.button {
-  padding: 10px 20px;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+.logo-text {
+    color: #ffffff;
+    font-size: 1.8rem;
+    font-weight: bold;
+    font-family: 'Georgia', serif;
+    margin: 0;
 }
 
-.button.primary {
-  background-color: #3498db; /* Blue */
-  color: white;
+/* --- Desktop Navigation (Hidden on Mobile) --- */
+.desktop-nav {
+    display: none; /* Hide by default */
+    align-items: center;
+    gap: 2rem; /* This creates the spacing */
 }
-.button.primary:hover {
-  background-color: #2980b9;
+
+@media (min-width: 1024px) { /* Show only on larger screens */
+    .desktop-nav {
+        display: flex;
+    }
 }
-.button.primary:active {
-    transform: translateY(1px);
+
+.nav-item {
+    color: #cbd5e0;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 0;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.nav-item:hover {
+    color: #ffffff;
+}
+
+.nav-item.active {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+/* Creates the underline effect for the active link */
+.nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: #4a90e2; /* Highlight blue */
+}
+
+.nav-item.special-action {
+    background-color: rgba(74, 144, 226, 0.2);
+    color: #a3c7f7;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-item.special-action:hover {
+    background-color: rgba(74, 144, 226, 0.4);
+    color: #ffffff;
+}
+
+.nav-item.special-action.active {
+    background-color: #4a90e2;
+    color: #ffffff;
+}
+.nav-item.special-action.active::after {
+    display: none; /* Don't need the underline for the button style */
+}
+
+/* --- Mobile Hamburger Button & Menu --- */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.hamburger-button {
+    display: flex; /* Show by default on smaller screens */
+    flex-direction: column;
+    justify-content: space-around;
+    width: 30px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1001; /* Above the header, below the open menu */
+}
+
+@media (min-width: 1024px) { /* Hide only on larger screens */
+    .hamburger-button {
+        display: none;
+    }
+}
+
+.hamburger-line {
+    width: 30px;
+    height: 3px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    transition: all 0.3s linear;
+    position: relative;
+    transform-origin: 1px;
+}
+
+/* Animate hamburger to an "X" when open */
+.hamburger-button.open .hamburger-line:nth-child(1) {
+    transform: rotate(45deg);
+}
+
+.hamburger-button.open .hamburger-line:nth-child(2) {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+.hamburger-button.open .hamburger-line:nth-child(3) {
+    transform: rotate(-45deg);
 }
 
 
-.button.secondary {
-  background-color: #ecf0f1; /* Light grey */
-  color: #2c3e50; /* Dark text */
-  border: 1px solid #bdc3c7;
+.mobile-nav-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    background-color: #2d3748;
+    position: absolute;
+    top: 70px; /* Position below the header */
+    left: 0;
+    width: 100%;
+    padding: 2rem 0;
+    border-bottom: 1px solid #4a5568;
 }
-.button.secondary:hover {
-  background-color: #bdc3c7;
-}
-.button.secondary:active {
-    transform: translateY(1px);
+
+@media (min-width: 1024px) {
+    .mobile-nav-menu {
+        display: none; /* Hide mobile menu on desktop */
+    }
 }

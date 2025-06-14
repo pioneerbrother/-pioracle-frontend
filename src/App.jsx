@@ -1,19 +1,10 @@
-// src/App.jsx
+// src/App.jsx - FINAL VERIFIED VERSION
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
-// Core Application Wrapper
 import { WalletProvider } from './pages/WalletProvider'; 
-
-// Layout Components
 import Header from './components/common/Header'; 
 import Footer from './components/common/Footer';
-
-// --- PAGE COMPONENTS ---
-// --- THIS IS THE CORRECTED IMPORT STATEMENT ---
-import PredictionMarketsListPage from './pages/PredictionMarketsListPage'; // Fixed typo (Markets with an 's')
-
-// Other page components
+import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
 import MarketDetailPage from './pages/MarketDetailPage';
 import CreateMarketPage from './pages/CreateMarketPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
@@ -29,17 +20,20 @@ function App() {
           <Header />
           <main>
             <Routes>
-              {/* The element now correctly uses the imported component */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
-
-              {/* Other routes */}
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
               <Route path="/create-market" element={<CreateMarketPage />} />
+              
+              {/* --- VERIFIED THIS ROUTE PATH --- */}
               <Route path="/recently-resolved" element={<RecentlyResolvedPage />} />
+
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogPostPage />} />
+              
+              {/* You might need a simple component for the /guide route */}
+              {/* <Route path="/guide" element={<GuidePage />} /> */}
             </Routes>
           </main>
           <Footer />
