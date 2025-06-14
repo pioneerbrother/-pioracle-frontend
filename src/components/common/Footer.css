@@ -1,0 +1,67 @@
+/* src/components/common/Footer.css */
+.site-footer {
+    background-color: #2d3748; /* Dark blue-gray */
+    color: #a0aec0; /* Lighter gray for text */
+    padding: 40px 20px;
+    margin-top: 40px; /* Add some space above the footer */
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.footer-section {
+    flex: 1;
+    min-width: 250px;
+}
+
+.footer-section h1, .footer-section h2 {
+    color: #ffffff;
+    margin-bottom: 15px;
+}
+
+.footer-section.about .logo-text {
+    font-family: 'Georgia', serif; /* A classic, trustworthy font */
+    font-size: 1.8rem;
+}
+
+.footer-section.about p {
+    line-height: 1.6;
+}
+
+.footer-section.links ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-section.links ul li {
+    margin-bottom: 10px;
+}
+
+.footer-section.links a, .footer-section.social a {
+    color: #a0aec0;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-section.links a:hover, .footer-section.social a:hover {
+    color: #ffffff;
+}
+
+.footer-section.social a {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.footer-bottom {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #4a5568;
+    font-size: 0.9rem;
+}
