@@ -13,12 +13,12 @@ import { getContractAddress, getContractAbi, getRpcUrl, getTargetChainIdHex, get
 export const WalletContext = createContext(null);
 
 const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+const metadata = { /* ... */ };
 
-const metadata = {
-    name: "Pioracle.online",
-    description: "Decentralized Prediction Markets",
-    url: "https://pioracle.online",
-    icons: ["https://pioracle.online/pioracle_logo_eyes_only_192.png"],
+const getSymbolForChain = (id) => {
+    if (id === 137 || id === 80002) return "MATIC";
+    // Add other chains here if needed
+    return "ETH"; // Default
 };
 
 export function WalletProvider({ children }) {
@@ -29,20 +29,15 @@ export function WalletProvider({ children }) {
     const [contract, setContract] = useState(null);
     const [chainId, setChainId] = useState(null);
     const [web3Modal, setWeb3Modal] = useState(null);
+    
+    // --- THIS IS THE KEY CHANGE ---
+    // We now store the symbol in state to avoid race conditions
+    const [nativeTokenSymbol, setNativeTokenSymbol] = useState("ETH");
 
     const loadedTargetChainIdNum = useMemo(() => {
         const hex = getTargetChainIdHex();
         return hex ? parseInt(hex, 16) : null;
     }, []);
-       // --- THIS IS THE NEW LOGIC ---
-    // Calculate the native token symbol based on the current chainId state
-    const nativeTokenSymbol = useMemo(() => {
-        if (chainId) {
-            if (chainId === 137 || chainId === 80002) return "MATIC";
-            // Add other chains here if needed
-        }
-        return "ETH"; // Default
-    }, [chainId]);
 
     useEffect(() => {
         if (WALLETCONNECT_PROJECT_ID && loadedTargetChainIdNum) {
@@ -76,12 +71,14 @@ export function WalletProvider({ children }) {
         const accounts = await web3Provider.listAccounts();
         const network = await web3Provider.getNetwork();
 
+        // --- ATOMIC STATE UPDATE ---
+        // Set everything that depends on the network together
         setProvider(web3Provider);
         setChainId(network.chainId);
+        setNativeTokenSymbol(getSymbolForChain(network.chainId)); // <-- Set symbol here
 
         if (accounts.length > 0) {
-            const currentAddress = ethers.utils.getAddress(accounts[0]);
-            setWalletAddress(currentAddress);
+            setWalletAddress(ethers.utils.getAddress(accounts[0]));
         } else {
             setWalletAddress(null);
         }
@@ -93,7 +90,10 @@ export function WalletProvider({ children }) {
         setWalletAddress(null);
         setSigner(null);
         setProvider(defaultProvider);
-        defaultProvider.getNetwork().then(net => setChainId(net.chainId));
+        defaultProvider.getNetwork().then(net => {
+            setChainId(net.chainId);
+            setNativeTokenSymbol(getSymbolForChain(net.chainId)); // <-- Set symbol here
+        });
         initializeContract(defaultProvider);
     }, [initializeContract]);
 
@@ -138,7 +138,6 @@ export function WalletProvider({ children }) {
         };
     }, [setProviderState, disconnect]);
 
-    // This useEffect hook correctly sets the signer and contract AFTER the main state has been updated.
     useEffect(() => {
         if (provider && walletAddress && chainId === loadedTargetChainIdNum) {
             const currentSigner = provider.getSigner();
@@ -160,16 +159,12 @@ export function WalletProvider({ children }) {
         isInitialized, loadedTargetChainIdNum,
         web3ModalInstanceExists: !!web3Modal,
         connectWallet, disconnectWallet: disconnect,
-        nativeTokenSymbol 
-    }), [walletAddress, signer, contract, chainId, provider, isInitialized, loadedTargetChainIdNum, web3Modal, connectWallet, disconnect,  nativeTokenSymbol]);
+        nativeTokenSymbol // It's now being passed correctly from state
+    }), [walletAddress, signer, contract, chainId, provider, isInitialized, loadedTargetChainIdNum, web3Modal, connectWallet, disconnect, nativeTokenSymbol]);
     
     return (
         <WalletContext.Provider value={contextValue}>
-            {isInitialized ? children : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#282c34', color: 'white', fontSize: '1.5rem' }}>
-                    Initializing PiOracle...
-                </div>
-            )}
+            {isInitialized ? children : ( /* ... loading screen ... */ )}
         </WalletContext.Provider>
     );
 }
