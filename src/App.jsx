@@ -5,19 +5,16 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 // Import the WalletProvider to wrap the whole app
 import { WalletProvider } from './pages/WalletProvider'; 
 
-// Import layout components
-import Header from './components/layout/Header';
-import Footer from './components/layout/Footer';
+// --- CORRECTED IMPORT PATHS ---
+import Header from './components/Header'; // Assuming Header.jsx is in src/components/
+import Footer from './components/Footer'; // Assuming Footer.jsx is in src/components/
 
-// --- THIS IS THE MISSING IMPORT ---
+// Import page components
 import PredictionMarketListPage from './pages/PredictionMarketListPage';
-
-// Import other page components
 import MarketDetailPage from './pages/MarketDetailPage';
 import CreateMarketPage from './pages/CreateMarketPage';
 import BlogPage from './pages/BlogPage';
 import BlogPostPage from './pages/BlogPostPage';
-
 
 function App() {
   return (
@@ -30,7 +27,9 @@ function App() {
             <Routes>
               {/* Default route and predictions route both point to the list page */}
               <Route path="/" element={<PredictionMarketListPage />} />
-              <Route path="/predictions" element={<PredictionMarket-market-list-page />} />
+              
+              {/* --- CORRECTED TYPO IN THIS ROUTE --- */}
+              <Route path="/predictions" element={<PredictionMarketListPage />} />
 
               {/* Other application routes */}
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
