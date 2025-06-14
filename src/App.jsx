@@ -11,6 +11,8 @@ import { WalletProvider } from './pages/WalletProvider'; // Adjust path if neede
 import CreateMarketPage from './pages/CreateMarketPage';
 import GuidePage from './pages/GuidePage';
 import ConnectTestPage from './pages/ConnectTestPage'; // Adjust path
+import BlogPage from './pages/BlogPage';
+import BlogPostPage from './pages/BlogPostPage';
 import './App.css';
 
 function App() {
@@ -51,6 +53,9 @@ function App() {
               <Route path="/create-market" element={<CreateMarketPage />} />
               <Route path="/guide" element={<GuidePage />} /> 
                <Route path="/connect-test" element={<ConnectTestPage />} />
+                <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/" element={<PredictionMarketListPage />} />
              
             
             </Routes>
