@@ -1,9 +1,9 @@
 // pioracle/vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { markdown, Mode } from 'vite-plugin-markdown';
+import vitePluginMarkdown from 'vite-plugin-markdown';
 
-// Ensure there are NO imports for 'vite-plugin-sitemap' here
+const { markdown, Mode } = vitePluginMarkdown;
 
 export default defineConfig({ // Removed async if not needed by other plugins
   plugins: [
