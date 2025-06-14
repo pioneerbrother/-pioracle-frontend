@@ -1,44 +1,30 @@
 // src/components/predictions/MarketOddsDisplay.jsx
-import React, { useContext, useMemo } from 'react';
+import React from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from '../../pages/WalletProvider';
 import './MarketOddsDisplay.css';
 
-const TOKEN_DECIMALS = 18;
-
-function MarketOddsDisplay({ 
-    totalStakedYesNet, 
-    totalStakedNoNet, 
-    marketTarget, 
-    isEventMarket // <-- The new, essential prop
+// This component is now simpler. It only displays data it receives via props.
+function MarketOddsDisplay({
+    totalStakedYesNet,
+    totalStakedNoNet,
+    marketTarget,
+    isEventMarket,
+    tokenSymbol // <-- It will now use this prop
 }) {
-    const { loadedTargetChainIdHex } = useContext(WalletContext) || {};
-
-    const nativeTokenSymbol = useMemo(() => {
-        if (loadedTargetChainIdHex) {
-            const id = parseInt(loadedTargetChainIdHex, 16);
-            if (id === 137 || id === 80002) return "MATIC";
-        }
-        return "ETH";
-    }, [loadedTargetChainIdHex]);
-
     const sYes = ethers.BigNumber.from(totalStakedYesNet || '0');
     const sNo = ethers.BigNumber.from(totalStakedNoNet || '0');
     const totalPool = sYes.add(sNo);
 
     const calculateOdds = (stakeOnSide) => {
-        if (stakeOnSide.isZero() || totalPool.isZero()) {
-            return "First Bet?";
-        }
-        const scale = ethers.utils.parseUnits("1", TOKEN_DECIMALS);
+        if (stakeOnSide.isZero() || totalPool.isZero()) return "First Bet?";
+        const scale = ethers.utils.parseUnits("1", 18);
         const rawOdds = totalPool.mul(scale).div(stakeOnSide);
-        return `${parseFloat(ethers.utils.formatUnits(rawOdds, TOKEN_DECIMALS)).toFixed(2)}x`;
+        return `${parseFloat(ethers.utils.formatUnits(rawOdds, 18)).toFixed(2)}x`;
     };
 
     const oddsYes = calculateOdds(sYes);
     const oddsNo = calculateOdds(sNo);
     
-    // --- THIS IS THE NEW, SIMPLER LABEL LOGIC ---
     const yesLabel = isEventMarket ? "Outcome: YES" : `Price ≥ ${marketTarget}`;
     const noLabel = isEventMarket ? "Outcome: NO" : `Price < ${marketTarget}`;
 
@@ -50,14 +36,14 @@ function MarketOddsDisplay({
                     <div className="odds-label">{yesLabel}</div>
                     <div className="odds-value">{oddsYes}</div>
                     <div className="pool-size">
-                        Pool: {ethers.utils.formatUnits(sYes, TOKEN_DECIMALS)} {nativeTokenSymbol}
+                        Pool: {ethers.utils.formatUnits(sYes, 18)} {tokenSymbol}
                     </div>
                 </div>
                 <div className="odds-option option-no">
                     <div className="odds-label">{noLabel}</div>
                     <div className="odds-value">{oddsNo}</div>
                     <div className="pool-size">
-                        Pool: {ethers.utils.formatUnits(sNo, TOKEN_DECIMALS)} {nativeTokenSymbol}
+                        Pool: {ethers.utils.formatUnits(sNo, 18)} {tokenSymbol}
                     </div>
                 </div>
             </div>
