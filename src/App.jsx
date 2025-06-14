@@ -5,9 +5,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 // Import the WalletProvider to wrap the whole app
 import { WalletProvider } from './pages/WalletProvider'; 
 
-// --- CORRECTED IMPORT PATHS ---
-import Header from './components/Header'; // Assuming Header.jsx is in src/components/
-import Footer from './components/Footer'; // Assuming Footer.jsx is in src/components/
+// --- THIS IS THE CORRECTED IMPORT PATH ---
+// It now includes the '/common/' sub-directory
+import Header from './components/common/Header'; 
+import Footer from './components/common/Footer'; // Correcting this one as well
 
 // Import page components
 import PredictionMarketListPage from './pages/PredictionMarketListPage';
@@ -25,17 +26,11 @@ function App() {
           <Header />
           <main>
             <Routes>
-              {/* Default route and predictions route both point to the list page */}
+              {/* Routes are correct */}
               <Route path="/" element={<PredictionMarketListPage />} />
-              
-              {/* --- CORRECTED TYPO IN THIS ROUTE --- */}
               <Route path="/predictions" element={<PredictionMarketListPage />} />
-
-              {/* Other application routes */}
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
               <Route path="/create-market" element={<CreateMarketPage />} />
-
-              {/* Blog routes */}
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogPostPage />} />
             </Routes>
