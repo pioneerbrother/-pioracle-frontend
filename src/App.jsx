@@ -11,7 +11,7 @@ import Header from './components/common/Header';
 import Footer from './components/common/Footer'; // Correcting this one as well
 
 // Import page components
-import PredictionMarketListPage from './pages/PredictionMarketListPage';
+import PredictionMarketsListPage from './pages/PredictionMarketListPage';
 import MarketDetailPage from './pages/MarketDetailPage';
 import CreateMarketPage from './pages/CreateMarketPage';
 import BlogPage from './pages/BlogPage';
@@ -28,7 +28,7 @@ function App() {
             <Routes>
               {/* Routes are correct */}
               <Route path="/" element={<PredictionMarketListPage />} />
-              <Route path="/predictions" element={<PredictionMarketListPage />} />
+              <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
               <Route path="/create-market" element={<CreateMarketPage />} />
               <Route path="/blog" element={<BlogPage />} />
