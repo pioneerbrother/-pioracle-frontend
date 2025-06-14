@@ -1,18 +1,23 @@
 // src/pages/BlogPage.jsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import matter from 'gray-matter'; // <-- Import the parser
 import './BlogPage.css';
 
-// This glob import now uses the vite-plugin-markdown loader automatically
-const posts = import.meta.glob('../posts/*.md', { eager: true });
-
-// --- ADJUSTMENT HERE ---
-// We now map the object to get the frontmatter from each module
-const postList = Object.values(posts)
-    .map(postModule => postModule.frontmatter) // <-- Get frontmatter from the module
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+// This special import syntax tells Vite to import all .md files as raw text strings
+const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
 function BlogPage() {
+    const postList = useMemo(() => {
+        return Object.entries(postModules).map(([path, rawContent]) => {
+            // Use gray-matter to parse the raw text
+            const { data } = matter(rawContent);
+            return {
+                ...data, // This is the frontmatter (title, date, description, slug)
+            };
+        }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, []);
+
     return (
         <div className="page-container blog-page">
             <h1 className="blog-title">PiOracle Insights</h1>

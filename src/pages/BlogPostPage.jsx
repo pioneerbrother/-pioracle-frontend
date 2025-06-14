@@ -1,12 +1,12 @@
 // src/pages/BlogPostPage.jsx
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import matter from 'gray-matter'; // <-- Import the parser
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import './BlogPostPage.css'; // We'll create this for styling
+import './BlogPostPage.css';
 
-// Use glob import to get a map of all possible posts
-const postModules = import.meta.glob('../posts/*.md');
+const postModules = import.meta.glob('../posts/*.md', { as: 'raw' });
 
 function BlogPostPage() {
     const { slug } = useParams();
@@ -15,15 +15,15 @@ function BlogPostPage() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Find the correct module path based on the slug
         const modulePath = `../posts/${slug}.md`;
 
         if (postModules[modulePath]) {
-            // Dynamically import the module
-            postModules[modulePath]().then(mod => {
+            postModules[modulePath]().then(rawContent => {
+                // Use gray-matter to parse the raw text string
+                const { data, content } = matter(rawContent);
                 setPost({
-                    frontmatter: mod.frontmatter,
-                    content: mod.default, // The default export is the markdown content string
+                    frontmatter: data,
+                    content: content,
                 });
                 setIsLoading(false);
             }).catch(err => {
@@ -36,18 +36,13 @@ function BlogPostPage() {
         }
     }, [slug]);
 
-    if (isLoading) {
-        return <LoadingSpinner message="Loading post..." />;
-    }
-
-    if (error) {
-        return (
-            <div className="page-container blog-post-page">
-                <p>{error}</p>
-                <Link to="/blog">← Back to all posts</Link>
-            </div>
-        );
-    }
+    if (isLoading) return <LoadingSpinner message="Loading post..." />;
+    if (error) return (
+        <div className="page-container blog-post-page">
+            <p>{error}</p>
+            <Link to="/blog">← Back to all posts</Link>
+        </div>
+    );
     
     return (
         <div className="page-container blog-post-page">
@@ -57,7 +52,6 @@ function BlogPostPage() {
                 <p className="post-meta">
                     By {post.frontmatter.author} on {new Date(post.frontmatter.date).toLocaleDateString()}
                 </p>
-                {/* Here we use ReactMarkdown to render the content */}
                 <ReactMarkdown>{post.content}</ReactMarkdown>
             </article>
         </div>
