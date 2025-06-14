@@ -7,18 +7,18 @@ import React, {
     useMemo
 } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5';
+import { createWeb3Modal } from '@web3modal/ethers5'; // We don't need defaultConfig
 import { getContractAddress, getContractAbi, getRpcUrl, getTargetChainIdHex, getChainName, getCurrencySymbol, getExplorerUrl } from '../config/contractConfig';
 
 export const WalletContext = createContext(null);
 
 const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
-const metadata = { /* ... */ };
 
-const getSymbolForChain = (id) => {
-    if (id === 137 || id === 80002) return "MATIC";
-    // Add other chains here if needed
-    return "ETH"; // Default
+const metadata = {
+    name: "Pioracle.online",
+    description: "Decentralized Prediction Markets",
+    url: "https://pioracle.online",
+    icons: ["https://pioracle.online/pioracle_logo_eyes_only_192.png"],
 };
 
 export function WalletProvider({ children }) {
@@ -29,9 +29,6 @@ export function WalletProvider({ children }) {
     const [contract, setContract] = useState(null);
     const [chainId, setChainId] = useState(null);
     const [web3Modal, setWeb3Modal] = useState(null);
-    
-    // --- THIS IS THE KEY CHANGE ---
-    // We now store the symbol in state to avoid race conditions
     const [nativeTokenSymbol, setNativeTokenSymbol] = useState("ETH");
 
     const loadedTargetChainIdNum = useMemo(() => {
@@ -39,10 +36,17 @@ export function WalletProvider({ children }) {
         return hex ? parseInt(hex, 16) : null;
     }, []);
 
+    const getSymbolForChain = (id) => {
+        if (id === 137 || id === 80002) return "MATIC";
+        return "ETH";
+    };
+
+    // Effect 1: Initialize Web3Modal instance - SIMPLIFIED AND CORRECTED
     useEffect(() => {
         if (WALLETCONNECT_PROJECT_ID && loadedTargetChainIdNum) {
             const modal = createWeb3Modal({
-                ethersConfig: defaultConfig({ metadata }),
+                // This is the robust way to configure it
+                projectId: WALLETCONNECT_PROJECT_ID,
                 chains: [{
                     chainId: loadedTargetChainIdNum,
                     name: getChainName(),
@@ -50,8 +54,7 @@ export function WalletProvider({ children }) {
                     explorerUrl: getExplorerUrl(),
                     rpcUrl: getRpcUrl()
                 }],
-                projectId: WALLETCONNECT_PROJECT_ID,
-                enableAnalytics: false,
+                // We no longer use the problematic ethersConfig/defaultConfig here
             });
             setWeb3Modal(modal);
         }
@@ -71,11 +74,9 @@ export function WalletProvider({ children }) {
         const accounts = await web3Provider.listAccounts();
         const network = await web3Provider.getNetwork();
 
-        // --- ATOMIC STATE UPDATE ---
-        // Set everything that depends on the network together
         setProvider(web3Provider);
         setChainId(network.chainId);
-        setNativeTokenSymbol(getSymbolForChain(network.chainId)); // <-- Set symbol here
+        setNativeTokenSymbol(getSymbolForChain(network.chainId));
 
         if (accounts.length > 0) {
             setWalletAddress(ethers.utils.getAddress(accounts[0]));
@@ -92,7 +93,7 @@ export function WalletProvider({ children }) {
         setProvider(defaultProvider);
         defaultProvider.getNetwork().then(net => {
             setChainId(net.chainId);
-            setNativeTokenSymbol(getSymbolForChain(net.chainId)); // <-- Set symbol here
+            setNativeTokenSymbol(getSymbolForChain(net.chainId));
         });
         initializeContract(defaultProvider);
     }, [initializeContract]);
@@ -104,17 +105,10 @@ export function WalletProvider({ children }) {
                     const accounts = await window.ethereum.request({ method: 'eth_accounts' });
                     if (accounts.length > 0) {
                         await setProviderState(window.ethereum);
-                    } else {
-                        disconnect();
-                    }
-                } else {
-                    disconnect();
-                }
-            } catch (e) {
-                disconnect();
-            } finally {
-                setIsInitialized(true);
-            }
+                    } else { disconnect(); }
+                } else { disconnect(); }
+            } catch (e) { disconnect(); }
+            finally { setIsInitialized(true); }
         };
         setup();
     }, [setProviderState, disconnect]);
@@ -159,16 +153,16 @@ export function WalletProvider({ children }) {
         isInitialized, loadedTargetChainIdNum,
         web3ModalInstanceExists: !!web3Modal,
         connectWallet, disconnectWallet: disconnect,
-        nativeTokenSymbol // It's now being passed correctly from state
+        nativeTokenSymbol
     }), [walletAddress, signer, contract, chainId, provider, isInitialized, loadedTargetChainIdNum, web3Modal, connectWallet, disconnect, nativeTokenSymbol]);
     
-   return (
-    <WalletContext.Provider value={contextValue}>
-        {isInitialized ? children : (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#282c34', color: 'white', fontSize: '1.5rem' }}>
-                Initializing PiOracle...
-            </div>
-        )}
-    </WalletContext.Provider>
-);
+    return (
+        <WalletContext.Provider value={contextValue}>
+            {isInitialized ? children : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#282c34', color: 'white', fontSize: '1.5rem' }}>
+                    Initializing PiOracle...
+                </div>
+            )}
+        </WalletContext.Provider>
+    );
 }
