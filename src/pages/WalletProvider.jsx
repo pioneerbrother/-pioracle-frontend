@@ -34,6 +34,15 @@ export function WalletProvider({ children }) {
         const hex = getTargetChainIdHex();
         return hex ? parseInt(hex, 16) : null;
     }, []);
+       // --- THIS IS THE NEW LOGIC ---
+    // Calculate the native token symbol based on the current chainId state
+    const nativeTokenSymbol = useMemo(() => {
+        if (chainId) {
+            if (chainId === 137 || chainId === 80002) return "MATIC";
+            // Add other chains here if needed
+        }
+        return "ETH"; // Default
+    }, [chainId]);
 
     useEffect(() => {
         if (WALLETCONNECT_PROJECT_ID && loadedTargetChainIdNum) {
@@ -151,7 +160,8 @@ export function WalletProvider({ children }) {
         isInitialized, loadedTargetChainIdNum,
         web3ModalInstanceExists: !!web3Modal,
         connectWallet, disconnectWallet: disconnect,
-    }), [walletAddress, signer, contract, chainId, provider, isInitialized, loadedTargetChainIdNum, web3Modal, connectWallet, disconnect]);
+        nativeTokenSymbol 
+    }), [walletAddress, signer, contract, chainId, provider, isInitialized, loadedTargetChainIdNum, web3Modal, connectWallet, disconnect,  nativeTokenSymbol]);
     
     return (
         <WalletContext.Provider value={contextValue}>
