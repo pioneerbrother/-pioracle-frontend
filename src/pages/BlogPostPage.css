@@ -54,3 +54,21 @@
     margin-bottom: 1rem;
     padding-left: 1.5rem;
 }
+
+/* src/pages/BlogPostPage.css */
+
+/* Add this new block at the end of the file */
+
+/* --- STYLING FOR IMAGES WITHIN THE BLOG POST --- */
+.blog-content img {
+    /* Control the size - it will take up 80% of its container's width */
+    max-width: 80%; 
+    
+    /* Center the image horizontally */
+    display: block;
+    margin: 2rem auto; /* Adds space above/below and centers it */
+
+    /* Add some professional polish */
+    border-radius: 8px; /* Slightly rounded corners */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* A subtle shadow for depth */
+}
