@@ -32,18 +32,35 @@ export function formatToUTC(timestamp) {
 }
 
 // This is the function that determines the icon based on keywords in the assetSymbol
+// src/utils/marketutils.js
+
 export function getMarketIcon(assetSymbol) {
     const defaultIcon = '/images/icons/default-icon.svg'; 
     if (!assetSymbol || typeof assetSymbol !== 'string') return defaultIcon;
 
     const lowerCaseSymbol = assetSymbol.toLowerCase();
 
-    if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
-    if (lowerCaseSymbol.includes('eth')) return '/images/icons/eth-icon.svg';
-    if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
-    if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
-    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('election')) return '/images/icons/politics-icon.svg';
+    // --- THIS IS THE CORRECTED LINE ---
+    // It now points to your specific trump-icon.svg file.
+    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('election')) {
+        return '/images/icons/trump-icon.svg';
+    }
 
+    // Now check for cryptocurrency symbols.
+    if (lowerCaseSymbol.includes('btc_') || lowerCaseSymbol.includes('btcusd')) {
+        return '/images/icons/btc-icon.svg';
+    }
+    if (lowerCaseSymbol.includes('eth_') || lowerCaseSymbol.includes('ethusd')) {
+        return '/images/icons/eth-icon.svg';
+    }
+    if (lowerCaseSymbol.includes('sol_') || lowerCaseSymbol.includes('solusd')) {
+        return '/images/icons/sol-icon.svg';
+    }
+    if (lowerCaseSymbol.includes('xrp_') || lowerCaseSymbol.includes('xrpusd')) {
+        return '/images/icons/xrp-icon.svg';
+    }
+    
+    // If no other match is found, return the default.
     return defaultIcon;
 }
 
