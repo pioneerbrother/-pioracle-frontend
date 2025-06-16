@@ -1,70 +1,128 @@
-/* pioracle/src/components/predictions/PredictionForm.css */
-.prediction-form {
-    border: 1px solid #ccc;
-    padding: 20px;
-    border-radius: 8px;
-    background-color: #f9f9f9;
+/* src/components/predictions/PredictionForm.css */
+
+.prediction-form-container {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
-.prediction-form h4 {
+
+.prediction-form-container h3 {
+    text-align: center;
     margin-top: 0;
-    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #334155;
 }
-.form-group {
-    margin-bottom: 15px;
+
+.prediction-form .form-group {
+    margin-bottom: 1.5rem;
 }
-.form-group label {
+
+.prediction-form label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }
-.form-group input[type="text"],
-.form-group input[type="number"] { /* If you revert to number type */
+
+.prediction-form .form-control,
+.prediction-form input[type="number"] {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
-.side-selection fieldset {
-    border: none;
-    padding: 0;
-    margin: 0;
+
+.prediction-form input[type="number"]:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
 }
-.side-selection legend {
-    font-weight: bold;
-    margin-bottom: 8px;
-    font-size: 1em;
+
+/* --- Radio Button Styling --- */
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
+
 .radio-label {
-    display: block;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    padding: 10px;
-    margin-bottom: 5px;
-    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: border-color 0.2s, background-color 0.2s;
 }
+
+.radio-label:hover {
+    border-color: #a0aec0;
+}
+
 .radio-label input[type="radio"] {
-    margin-right: 8px;
+    margin-right: 0.75rem;
+    /* Custom radio button styles can be added here if desired */
 }
-.radio-label.active {
-    background-color: #e7f3ff;
-    border-color: #90cdf4;
+
+/* Style for the selected radio button */
+input[type="radio"]:checked + .radio-label, /* If label is after input */
+.radio-label:has(input[type="radio"]:checked) { /* Modern way */
+    border-color: #4a90e2;
+    background-color: #eff6ff; /* A very light blue */
+    font-weight: bold;
 }
-.place-bet-btn { /* Assuming .button.primary from a global style */
-    display: block;
+
+
+/* --- Submit Button Styling --- */
+.submit-prediction-button {
     width: 100%;
-    padding: 10px 15px;
-    font-size: 1em;
-    /* Add your button styling here if not global */
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: white;
+    background-color: #2563eb; /* A strong, confident blue */
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
+
+.submit-prediction-button:hover:not(:disabled) {
+    background-color: #1d4ed8;
+}
+
+.submit-prediction-button:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+
+/* --- Message Styling --- */
 .form-message {
-    margin-top: 15px;
-    padding: 10px;
-    border-radius: 4px;
     text-align: center;
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    font-size: 0.9rem;
 }
-.form-message.type-info { background-color: #e0f0ff; color: #31708f; border: 1px solid #bce8f1;}
-.form-message.type-success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
-.form-message.type-error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
+
+.form-message.type-success {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.form-message.type-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.form-message.type-info {
+    background-color: #e0f2fe;
+    color: #0c4a6e;
+}
