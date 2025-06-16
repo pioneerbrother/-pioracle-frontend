@@ -68,8 +68,8 @@
 /* This is the Grid Layout for the cards */
 .market-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
 }
 
 /* --- Message for when no markets are open --- */
