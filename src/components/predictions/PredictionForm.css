@@ -1,6 +1,6 @@
 /* src/components/predictions/PredictionForm.css */
 
-.prediction-form-container {
+.prediction-form-card {
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -8,18 +8,19 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-.prediction-form-container h3 {
+.form-title {
     text-align: center;
     margin-top: 0;
     margin-bottom: 1.5rem;
     color: #334155;
+    font-size: 1.25rem;
 }
 
-.prediction-form .form-group {
-    margin-bottom: 1.5rem;
+.form-group {
+    margin-bottom: 1.25rem;
 }
 
-.prediction-form label {
+.form-group label {
     display: block;
     font-weight: 600;
     color: #475569;
@@ -27,23 +28,21 @@
     font-size: 0.9rem;
 }
 
-.prediction-form .form-control,
-.prediction-form input[type="number"] {
+.form-input {
     width: 100%;
     padding: 12px;
     border: 1px solid #cbd5e0;
     border-radius: 8px;
     font-size: 1rem;
+    box-sizing: border-box; /* Important for consistent sizing */
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.prediction-form input[type="number"]:focus {
+.form-input:focus {
     outline: none;
     border-color: #4a90e2;
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
 }
-
-/* --- Radio Button Styling --- */
 
 .radio-group {
     display: flex;
@@ -51,7 +50,7 @@
     gap: 0.75rem;
 }
 
-.radio-label {
+.radio-option {
     display: flex;
     align-items: center;
     padding: 1rem;
@@ -61,49 +60,47 @@
     transition: border-color 0.2s, background-color 0.2s;
 }
 
-.radio-label:hover {
+.radio-option:hover {
     border-color: #a0aec0;
 }
 
-.radio-label input[type="radio"] {
+.radio-option input[type="radio"] {
     margin-right: 0.75rem;
-    /* Custom radio button styles can be added here if desired */
 }
 
-/* Style for the selected radio button */
-input[type="radio"]:checked + .radio-label, /* If label is after input */
-.radio-label:has(input[type="radio"]:checked) { /* Modern way */
-    border-color: #4a90e2;
-    background-color: #eff6ff; /* A very light blue */
+/* Style the selected radio option's label */
+.radio-option:has(input[type="radio"]:checked) {
+    border-color: #2563eb;
+    background-color: #eff6ff;
+}
+
+.radio-option:has(input[type="radio"]:checked) .radio-text {
     font-weight: bold;
+    color: #1e40af;
 }
 
-
-/* --- Submit Button Styling --- */
-.submit-prediction-button {
+.submit-button {
     width: 100%;
     padding: 12px;
     font-size: 1.1rem;
     font-weight: bold;
     color: white;
-    background-color: #2563eb; /* A strong, confident blue */
+    background-color: #2563eb;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
-.submit-prediction-button:hover:not(:disabled) {
+.submit-button:hover:not(:disabled) {
     background-color: #1d4ed8;
 }
 
-.submit-prediction-button:disabled {
+.submit-button:disabled {
     background-color: #9ca3af;
     cursor: not-allowed;
 }
 
-
-/* --- Message Styling --- */
 .form-message {
     text-align: center;
     padding: 0.75rem;
@@ -111,18 +108,6 @@ input[type="radio"]:checked + .radio-label, /* If label is after input */
     margin-top: 1rem;
     font-size: 0.9rem;
 }
-
-.form-message.type-success {
-    background-color: #dcfce7;
-    color: #166534;
-}
-
-.form-message.type-error {
-    background-color: #fee2e2;
-    color: #991b1b;
-}
-
-.form-message.type-info {
-    background-color: #e0f2fe;
-    color: #0c4a6e;
-}
+.form-message.success { background-color: #dcfce7; color: #166534; }
+.form-message.error { background-color: #fee2e2; color: #991b1b; }
+.form-message.info { background-color: #e0f2fe; color: #0c4a6e; }
