@@ -68,6 +68,8 @@ export function getMarketIcon(assetSymbol) {
 }
 
 // This function takes the raw market data from the contract and adds useful properties for the UI
+// src/utils/marketutils.js
+
 export function getMarketDisplayProperties(market) {
     if (!market || typeof market.id === 'undefined') {
         console.error("getMarketDisplayProperties received an invalid market object.");
@@ -75,45 +77,47 @@ export function getMarketDisplayProperties(market) {
     }
 
     try {
+        // ... (keep the existing destructuring and title/targetDisplay logic) ...
         const { id, assetSymbol, targetPrice, expiryTimestamp, state, totalStakedYes, totalStakedNo } = market;
-        
         const safeAssetSymbol = assetSymbol || '';
         let title = `Market #${id}`;
         if (safeAssetSymbol) {
-            // A simple way to make the title more readable
             title = safeAssetSymbol.replace(/_/g, ' ').replace(/PRICE ABOVE/g, 'Above').replace(/ABOVE YES/g, 'Up or Down');
         }
-
-        let targetDisplay = "Event Specific";
-        // Check if it's a price market before trying to format the price
-        if (safeAssetSymbol.toLowerCase().includes('price_above')) {
-            // Assume 8 decimals for Oracle prices unless specified otherwise
-            const oracleDecimals = market.oracleDecimals || 8;
-            const formattedPrice = parseFloat(ethers.utils.formatUnits(targetPrice || '0', oracleDecimals)).toLocaleString('en-US', {
-                style: 'currency',
-                currency: 'USD',
-            });
-            targetDisplay = formattedPrice;
-        }
+        // ... (targetDisplay logic remains the same) ...
 
         const totalStakedYesBN = ethers.BigNumber.from(totalStakedYes || '0');
         const totalStakedNoBN = ethers.BigNumber.from(totalStakedNo || '0');
         const totalPoolBN = totalStakedYesBN.add(totalStakedNoBN);
+
+        // --- THIS IS THE NEW PROBABILITY CALCULATION LOGIC ---
+        let yesProbability = 50;
+        let noProbability = 50;
+
+        if (!totalPoolBN.isZero()) {
+            // Calculate probability using a scale for precision
+            const scale = 10000; // Calculate up to 2 decimal places (e.g., 75.25%)
+            const yesProbRaw = totalStakedYesBN.mul(scale).div(totalPoolBN);
+            yesProbability = yesProbRaw.toNumber() / (scale / 100); // Convert to a percentage
+            noProbability = 100 - yesProbability;
+        }
         
-        // Return a new object that includes all original properties plus the new display ones
         return {
             ...market, 
             title,
             targetDisplay,
-            expiryString: formatToUTC(expiryTimestamp), // Use our robust function
+            expiryString: formatToUTC(expiryTimestamp),
             statusString: getStatusString(state),
             statusClassName: `status-${getStatusString(state).toLowerCase()}`,
-            totalPool: ethers.utils.formatUnits(totalPoolBN, 18),
+            
+            // We no longer need to return the totalPool string
+            // Instead, we return the calculated probabilities
+            yesProbability: yesProbability.toFixed(0), // Return as a whole number string e.g. "75"
+            noProbability: noProbability.toFixed(0), // e.g. "25"
         };
 
     } catch (e) {
         console.error(`Error processing market ID ${market.id} in getMarketDisplayProperties:`, e);
-        // Return a graceful error state instead of crashing
-        return { ...market, title: `Error processing Market #${market.id}`, expiryString: "Error", totalPool: "0.0" };
+        return { ...market, title: `Error processing Market #${market.id}`, yesProbability: 0, noProbability: 0 }; 
     }
 }

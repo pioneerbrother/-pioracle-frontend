@@ -110,3 +110,52 @@
     background-color: #e2e8f0;
     color: #475569;
 }
+/* src/components/predictions/MarketCard.css */
+
+/* ... (keep all your existing styles for .market-card-v2, etc.) ... */
+
+
+/* --- NEW STYLES FOR THE PROBABILITY SECTION --- */
+.card-probability-section {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    flex-grow: 1; /* This will take up the available space */
+}
+
+.probability-bar {
+    width: 100%;
+    height: 10px;
+    background-color: #ef4444; /* Red color for NO */
+    border-radius: 9999px;
+    overflow: hidden;
+    margin: 4px 0;
+}
+
+.probability-fill {
+    height: 100%;
+    background-color: #22c55e; /* Green color for YES */
+    border-radius: 9999px;
+    transition: width 0.3s ease-in-out;
+}
+
+.outcome-probability {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.outcome-probability.yes .outcome-label {
+    color: #15803d; /* Darker Green */
+    font-weight: 600;
+}
+
+.outcome-probability.no .outcome-label {
+    color: #b91c1c; /* Darker Red */
+    font-weight: 600;
+}
+
+.outcome-percent {
+    font-weight: 700;
+    font-family: monospace;
+}
