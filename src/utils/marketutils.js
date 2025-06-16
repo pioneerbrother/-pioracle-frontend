@@ -12,7 +12,6 @@ export const MarketState = {
 };
 
 export function getStatusString(state) {
-    // ... (this function is likely fine, but we'll include it for completeness)
     switch (state) {
         case MarketState.Open: return 'Open';
         case MarketState.Closed_AwaitingResolution: return 'Closed';
@@ -32,33 +31,37 @@ export function formatToUTC(timestamp) {
     }
 }
 
-export function getMarketDisplayProperties(market) {
-    // --- THIS IS THE KEY FIX ---
-    // 1. Add a guard clause at the very beginning.
-    if (!market || typeof market.id === 'undefined') {
-        console.error("getMarketDisplayProperties received an invalid or null market object.");
-        return null; // Return null to signify an invalid object
-    }
+// This is the function that determines the icon based on keywords in the assetSymbol
+export function getMarketIcon(assetSymbol) {
+    const defaultIcon = '/images/icons/default-icon.svg'; 
+    if (!assetSymbol || typeof assetSymbol !== 'string') return defaultIcon;
 
+    const lowerCaseSymbol = assetSymbol.toLowerCase();
+
+    if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
+    if (lowerCaseSymbol.includes('eth')) return '/images/icons/eth-icon.svg';
+    if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
+    if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
+    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('election')) return '/images/icons/politics-icon.svg';
+
+    return defaultIcon;
+}
+
+export function getMarketDisplayProperties(market) {
+    if (!market || typeof market.id === 'undefined') {
+        return null;
+    }
     try {
         const { id, assetSymbol, targetPrice, expiryTimestamp, state, nativeTokenSymbol, totalStakedYes, totalStakedNo } = market;
-        
-        // 2. Add safety checks for any property you use.
-        const safeAssetSymbol = assetSymbol || ''; // Default to empty string if undefined
-
+        const safeAssetSymbol = assetSymbol || '';
         let title = `Market #${id}`;
-        // Use the assetSymbol for the title if it exists
         if (safeAssetSymbol) {
             title = safeAssetSymbol.replace(/_/g, ' ').replace(/PRICE ABOVE/g, 'Above');
         }
 
         let targetDisplay = "Event Specific";
-        // Check if it's a price market before trying to format the price
         if (safeAssetSymbol.toLowerCase().includes('price_above')) {
-            const formattedPrice = parseFloat(ethers.utils.formatUnits(targetPrice || '0', 8)).toLocaleString('en-US', {
-                style: 'currency',
-                currency: 'USD',
-            });
+            const formattedPrice = parseFloat(ethers.utils.formatUnits(targetPrice || '0', 8)).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
             targetDisplay = formattedPrice;
         }
 
@@ -67,7 +70,7 @@ export function getMarketDisplayProperties(market) {
         const totalPoolBN = totalStakedYesBN.add(totalStakedNoBN);
         
         return {
-            ...market, // Return all original properties
+            ...market,
             title,
             targetDisplay,
             expiryString: formatToUTC(expiryTimestamp),
@@ -76,40 +79,8 @@ export function getMarketDisplayProperties(market) {
             totalPool: ethers.utils.formatUnits(totalPoolBN, 18),
             nativeTokenSymbol: nativeTokenSymbol || 'MATIC',
         };
-
     } catch (e) {
         console.error(`Error processing market ID ${market.id} in getMarketDisplayProperties:`, e);
-        return { ...market, title: `Error processing Market #${market.id}` }; // Return gracefully
+        return { ...market, title: `Error processing Market #${market.id}` };
     }
-}
-// src/utils/marketutils.js
-
-// ... (keep your other functions like getMarketDisplayProperties)
-
-// --- ADD THIS NEW FUNCTION ---
-export function getMarketIcon(title) {
-    // Use a default icon for generic markets
-    const defaultIcon = '/images/icons/default-icon.svg'; 
-    if (!title || typeof title !== 'string') return defaultIcon;
-
-    const lowerCaseTitle = title.toLowerCase();
-
-    if (lowerCaseTitle.includes('btc') || lowerCaseTitle.includes('bitcoin')) {
-        return '/images/icons/btc-icon.svg';
-    }
-    if (lowerCaseTitle.includes('eth') || lowerCaseTitle.includes('ethereum')) {
-        return '/images/icons/eth-icon.svg';
-    }
-    if (lowerCaseTitle.includes('sol') || lowerCaseTitle.includes('solana')) {
-        return '/images/icons/sol-icon.svg';
-    }
-    if (lowerCaseTitle.includes('xrp')) {
-        return '/images/icons/xrp-icon.svg';
-    }
-    if (lowerCaseTitle.includes('trump') || lowerCaseTitle.includes('election')) {
-        return '/images/icons/politics-icon.svg';
-    }
-    // Add more rules as you create new market types
-
-    return defaultIcon;
 }

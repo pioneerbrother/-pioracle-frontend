@@ -1,24 +1,31 @@
 // src/components/predictions/MarketCard.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-// Import our new icon utility
 import { getMarketIcon } from '../../utils/marketutils'; 
 import './MarketCard.css';
 
 function MarketCard({ market }) {
-    if (!market || !market.exists) return null;
+    if (!market || !market.exists) {
+        return null;
+    }
 
-    const getStatusColorClass = (status) => { /* ... (same as before) ... */ };
+    const getStatusColorClass = (status) => {
+        switch (status) {
+            case 'Open': return 'status-open';
+            case 'Resolved': return 'status-resolved';
+            case 'Closed': return 'status-closed';
+            default: return 'status-unknown';
+        }
+    };
     
-    // --- Get the icon for this specific market ---
-    const iconSrc = getMarketIcon(market.title);
+    // --- THE CORRECTED LINE ---
+    // Pass the assetSymbol to the icon function, not the title.
+    const iconSrc = getMarketIcon(market.assetSymbol);
 
     return (
-        // The card now has a hover effect defined in the CSS
         <div className="market-card-v2"> 
             <Link to={`/predictions/${market.id}`} className="card-link-wrapper-v2">
                 <div className="card-top-section">
-                    {/* --- Display the Icon --- */}
                     <div className="card-icon-container">
                         <img src={iconSrc} alt={`${market.title} icon`} className="card-icon" />
                     </div>
