@@ -1,167 +1,19 @@
 /* src/pages/PredictionMarketsListPage.css */
-.prediction-markets-list-page {
-    max-width: 1200px;
+
+/* --- Main Page Container --- */
+.prediction-list-page {
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 2rem 1rem;
 }
 
-.list-page-header {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.list-page-header h1 {
-    font-size: 2.5em;
-    color: #333;
-    margin: 0;
-}
-
-.loading-inline {
-    text-align: center;
-    padding: 10px;
-    color: #555;
-    font-style: italic;
-}
-
-.markets-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Responsive grid */
-    gap: 25px;
-    padding: 0;
-    margin: 0;
-}
-
-.info-message {
-    text-align: center;
-    font-size: 1.1em;
-    color: #777;
-    padding: 40px 20px;
-}
-
-/* Styles for LoadingSpinner and ErrorMessage would be in their own CSS or a common one */
-.loading-container.page-centered, .error-container.page-centered {
-    /* Basic centering for full page messages */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-height: 300px; 
-    text-align: center;
-}
-/* src/pages/PredictionMarketsListPage.css */
-/* ... (your existing styles for .prediction-markets-list-page, .list-page-header, .markets-grid etc.) ... */
-
-.intro-section {
-    text-align: center;
-    padding: 20px;
-    margin-bottom: 30px;
-    background-color: #f8f9fa; /* Light background for intro */
-    border-radius: 8px;
-}
-
-.intro-section h2 {
-    font-size: 1.8em;
-    margin-bottom: 15px;
-    color: #343a40;
-}
-
-.intro-section p {
-    font-size: 1.1em;
-    color: #495057;
-    line-height: 1.6;
-    margin-bottom: 10px;
-}
-
-.intro-section .cta-buttons {
-    margin-top: 20px;
-}
-
-.cta-buttons .button { /* Assuming you have a general .button class */
-    margin: 0 10px;
-    padding: 10px 20px;
-    text-decoration: none;
-    border-radius: 5px;
-    font-weight: bold;
-}
-.cta-buttons .button-secondary { /* Example secondary button style */
-    background-color: #6c757d;
-    color: white;
-}
-.cta-buttons .button-secondary:hover {
-    background-color: #5a6268;
-}
-
-
-.markets-section-title {
-    text-align: center;
-    font-size: 1.8em;
-    color: #333;
-    margin-top: 40px; /* Space above markets list */
-    margin-bottom: 20px;
-}
-
-.how-to-guide-section {
-    margin-top: 50px;
-    padding: 20px;
-    border-top: 1px solid #eee;
-}
-
-.how-to-guide-section h2 {
-    text-align: center;
-    font-size: 2em;
-    margin-bottom: 30px;
-    color: #333;
-}
-
-.guide-step {
-    margin-bottom: 25px;
-    padding: 15px;
-    background-color: #fff;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-}
-
-.guide-step h3 {
-    font-size: 1.4em;
-    color: #007bff; /* Highlight step titles */
-    margin-top: 0;
-    margin-bottom: 10px;
-}
-
-.guide-step p, .guide-step ul {
-    font-size: 1em;
-    line-height: 1.7;
-    color: #495057;
-}
-
-.guide-step ul {
-    list-style-position: inside;
-    padding-left: 0;
-}
-.guide-step li {
-    margin-bottom: 8px;
-}
-.guide-step code {
-    background-color: #e9ecef;
-    padding: 2px 5px;
-    border-radius: 3px;
-    font-family: monospace;
-}
-/* In your App.css or PredictionMarketsListPage.css */
-.markets-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive columns */
-    gap: 20px; /* Space between cards */
-    padding: 20px 0;
-}
-/* In your CSS file, e.g., PredictionMarketListPage.css */
-
+/* --- Featured Market Banner --- */
 .featured-market-container {
-    background-color: #ffffff; /* A clean white background */
+    background-color: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 24px;
-    margin: 20px 0 40px 0; /* Adds space above and below */
+    margin: 20px 0 40px 0;
     text-align: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
@@ -177,12 +29,12 @@
     font-size: 1.1rem;
     color: #4a5568;
     max-width: 600px;
-    margin: 0 auto 24px auto; /* Center the paragraph text */
+    margin: 0 auto 24px auto;
 }
 
 .featured-market-button {
     display: inline-block;
-    background-color: #2d68e5; /* A strong, clickable blue */
+    background-color: #2d68e5;
     color: white;
     font-size: 1.2rem;
     font-weight: bold;
@@ -194,5 +46,73 @@
 
 .featured-market-button:hover {
     background-color: #2052c0;
-    transform: translateY(-2px); /* Slight lift on hover */
+    transform: translateY(-2px);
+}
+
+/* --- Main Market List Section --- */
+.market-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    color: #1a202c;
+    margin: 0;
+}
+
+/* This is the Grid Layout for the cards */
+.market-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+}
+
+/* --- Message for when no markets are open --- */
+.no-markets-message {
+    text-align: center;
+    padding: 3rem;
+    border: 1px dashed #cbd5e0;
+    border-radius: 12px;
+    background-color: #f8fafc;
+    margin-top: 2rem;
+}
+
+.no-markets-message p {
+    margin: 0.5rem 0;
+    color: #475569;
+}
+
+/* --- How to Participate Guide Section --- */
+.how-to-guide-section {
+    max-width: 800px; /* Make the guide section narrower for better readability */
+    margin: 50px auto 0 auto; /* Center the guide section */
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+}
+
+.how-to-guide-section h2 {
+    text-align: center;
+    font-size: 2em;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.how-to-guide-section ol {
+    list-style-position: inside;
+    padding-left: 0;
+    line-height: 1.8;
+}
+
+.how-to-guide-section li {
+    margin-bottom: 1.5rem;
+    color: #495057;
+}
+
+.how-to-guide-section strong {
+    color: #2d3748;
 }

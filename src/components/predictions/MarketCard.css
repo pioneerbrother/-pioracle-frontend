@@ -1,110 +1,93 @@
-/* MarketCard.css */
-.market-card-list-item {
-    list-style-type: none; /* Good if using <ul> for market-list */
-    margin-bottom: 20px;
-}
-
-.market-card-link {
-    text-decoration: none;
-    color: inherit; 
-    display: block; 
-}
+/* src/components/predictions/MarketCard.css */
 
 .market-card {
     background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px 20px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    overflow: hidden; /* Ensures content respects the border-radius */
 }
 
 .market-card:hover {
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
-.market-card-header {
+.card-link-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1rem 1.25rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 0.75rem;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.card-status-badge {
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.status-open {
+    background-color: #dcfce7; /* Light green */
+    color: #166534; /* Dark green */
+}
+
+.status-closed, .status-resolved {
+    background-color: #e2e8f0; /* Gray */
+    color: #475569; /* Dark gray */
+}
+
+.card-body {
+    flex-grow: 1; /* Pushes the footer down */
+}
+
+.card-detail {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #334155;
+}
+
+.card-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px dashed #eee;
-}
-
-.market-title {
-    font-size: 1.2rem; /* Consider adjusting if titles can be long */
-    font-weight: 600;
-    margin: 0;
-    color: #333;
-    flex-grow: 1; 
-    margin-right: 10px; 
-    word-break: break-word; /* Helps if title is very long without spaces */
-}
-
-.market-card-body .market-info,
-.market-card-footer .market-info {
-    font-size: 0.9rem;
-    color: #555;
-    margin: 5px 0;
-}
-
-.market-card-body .info-label,
-.market-card-footer .info-label {
-    font-weight: 600;
-    color: #444;
-}
-
-.market-card-footer {
-    margin-top: 10px;
-    padding-top: 10px;
-}
-
-.expiry-info { /* This class was in your example, good */
-    font-style: italic;
+    margin-top: 1rem;
     font-size: 0.85rem;
 }
 
-.resolution-info { /* Added this for potentially showing resolution time */
-    font-size: 0.8em;
-    font-style: italic;
-    color: #777;
+.card-volume {
+    color: #64748b;
+    font-weight: 500;
 }
 
-
-/* --- Status Badge Styles --- */
-.status-badge {
-    padding: 5px 12px; 
-    border-radius: 16px; 
-    font-size: 0.75rem; 
+.view-market-prompt {
+    color: #4a90e2;
     font-weight: bold;
-    text-transform: uppercase;
-    color: white;
-    white-space: nowrap; 
-    flex-shrink: 0; 
 }
-
-.status-badge.status-open {
-    background-color: #28a745; /* Green */
-}
-
-.status-badge.status-resolved-yes-won,
-.status-badge.status-resolvedearly-yes-won { /* Combined early and regular resolved states */
-    background-color: #007bff; /* Blue */
-}
-
-.status-badge.status-resolved-no-won,
-.status-badge.status-resolvedearly-no-won { /* Combined early and regular resolved states */
-    background-color: #dc3545; /* Red */
-}
-
-.status-badge.status-push {
-    background-color: #6c757d; /* Grey */
-}
-
-.status-badge.status-resolving { /* If you add a 'Resolvable' state to getStatusString */
-    background-color: #ffc107; /* Yellow */
-    color: #212529; 
-}
-/* Ensure your getMarketDisplayProperties generates class names like 'status-open', 'status-resolved-yes-won' etc. */
