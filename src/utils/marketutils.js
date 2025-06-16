@@ -82,3 +82,34 @@ export function getMarketDisplayProperties(market) {
         return { ...market, title: `Error processing Market #${market.id}` }; // Return gracefully
     }
 }
+// src/utils/marketutils.js
+
+// ... (keep your other functions like getMarketDisplayProperties)
+
+// --- ADD THIS NEW FUNCTION ---
+export function getMarketIcon(title) {
+    // Use a default icon for generic markets
+    const defaultIcon = '/images/icons/default-icon.svg'; 
+    if (!title || typeof title !== 'string') return defaultIcon;
+
+    const lowerCaseTitle = title.toLowerCase();
+
+    if (lowerCaseTitle.includes('btc') || lowerCaseTitle.includes('bitcoin')) {
+        return '/images/icons/btc-icon.svg';
+    }
+    if (lowerCaseTitle.includes('eth') || lowerCaseTitle.includes('ethereum')) {
+        return '/images/icons/eth-icon.svg';
+    }
+    if (lowerCaseTitle.includes('sol') || lowerCaseTitle.includes('solana')) {
+        return '/images/icons/sol-icon.svg';
+    }
+    if (lowerCaseTitle.includes('xrp')) {
+        return '/images/icons/xrp-icon.svg';
+    }
+    if (lowerCaseTitle.includes('trump') || lowerCaseTitle.includes('election')) {
+        return '/images/icons/politics-icon.svg';
+    }
+    // Add more rules as you create new market types
+
+    return defaultIcon;
+}

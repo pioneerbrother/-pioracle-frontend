@@ -1,93 +1,99 @@
 /* src/components/predictions/MarketCard.css */
 
-.market-card {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+.market-card-v2 {
+    background: #fff;
+    border: 1px solid #e7eaf3;
+    border-radius: 16px; /* More pronounced rounded corners */
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    overflow: hidden; /* Ensures content respects the border-radius */
 }
 
-.market-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+.market-card-v2:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.card-link-wrapper {
+.card-link-wrapper-v2 {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    padding: 1rem 1.25rem;
+    padding: 1.25rem;
     text-decoration: none;
     color: inherit;
+    height: 100%;
 }
 
-.card-header {
+.card-top-section {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 0.75rem;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.25rem;
 }
 
-.card-title {
-    font-size: 1.1rem;
+.card-icon-container {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f2f5;
+    border-radius: 50%;
+}
+
+.card-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.card-title-v2 {
+    font-size: 1.15rem;
     font-weight: 600;
     color: #1a202c;
     margin: 0;
     line-height: 1.4;
 }
 
-.card-status-badge {
-    padding: 4px 10px;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    white-space: nowrap;
+.card-details-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    flex-grow: 1; /* Pushes footer down */
 }
 
-.status-open {
-    background-color: #dcfce7; /* Light green */
-    color: #166534; /* Dark green */
-}
-
-.status-closed, .status-resolved {
-    background-color: #e2e8f0; /* Gray */
-    color: #475569; /* Dark gray */
-}
-
-.card-body {
-    flex-grow: 1; /* Pushes the footer down */
-}
-
-.card-detail {
-    margin: 0.5rem 0;
-    font-size: 0.9rem;
-    color: #4a5568;
-}
-
-.detail-label {
-    font-weight: 600;
-    color: #334155;
-}
-
-.card-footer {
+.detail-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 1rem;
-    font-size: 0.85rem;
 }
 
-.card-volume {
+.detail-label {
+    font-size: 0.9rem;
     color: #64748b;
-    font-weight: 500;
+}
+
+.detail-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #334155;
+    text-align: right;
+}
+
+.card-footer-v2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e7eaf3;
+    padding-top: 1rem;
 }
 
 .view-market-prompt {
-    color: #4a90e2;
+    font-size: 0.9rem;
     font-weight: bold;
+    color: #4338ca; /* A modern indigo color */
 }
+
+/* Status badge styling remains the same */
+.card-status-badge { /* ... */ }
+.status-open { /* ... */ }
+.status-resolved, .status-closed { /* ... */ }
