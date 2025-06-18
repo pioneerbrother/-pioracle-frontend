@@ -1,9 +1,13 @@
+---
 title: "Is OKX Delisting Pi? The Real Story Behind the June 20th Changes"
 slug: "okx-delisting-pi-safe"
 date: "2025-06-18"
 author: "The PiOracle Team"
 description: "A major delisting announcement from OKX has the community worried. We break down which tokens are affected and confirm the status of Pi (Pİ)."
 ---
+
+
+
 
 Crypto markets were rocked today as OKX, a leading global exchange, dropped a bombshell announcement: multiple trading pairs will be delisted on **June 20, 2025**, between 8:00 AM and 10:00 AM UTC.
 
