@@ -95,7 +95,7 @@ const { contract, walletAddress, signer, provider, connectWallet, nativeTokenSym
                 if (walletAddress && finalMarketDetails.state > MarketStateEnum.Open) {
                     const claimed = await contract.didUserClaim(numericMarketId, walletAddress);
                     if (!claimed) {
-                        const amount = await contract.getClaimableAmount(numericMarket_id, walletAddress);
+                       const amount = await contract.getClaimableAmount(numericMarketId, walletAddress);
                         setClaimableAmount(amount);
                     }
                 }
