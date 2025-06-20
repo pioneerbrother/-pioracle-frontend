@@ -33,12 +33,14 @@ export function formatToUTC(timestamp) {
     }
 }
 
+// --- THIS IS THE CORRECT ICON FUNCTION ---
 export function getMarketIcon(assetSymbol) {
     const defaultIcon = '/images/icons/default-icon.svg'; 
     if (!assetSymbol || typeof assetSymbol !== 'string') return defaultIcon;
 
     const lowerCaseSymbol = assetSymbol.toLowerCase();
 
+    // Check for geopolitics keywords first
     if (lowerCaseSymbol.includes('trump') || 
         lowerCaseSymbol.includes('election') ||
         lowerCaseSymbol.includes('us_') || 
@@ -47,20 +49,23 @@ export function getMarketIcon(assetSymbol) {
             return '/images/icons/trump-icon.png'; 
     }
 
+    // Then check for crypto symbols
     if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
     if (lowerCaseSymbol.includes('eth') || lowerCaseSymbol.includes('ethereum')) return '/images/icons/eth-icon.svg';
     if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
     if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
     
+    // Fallback to default
     return defaultIcon;
 }
 
+
+// --- THIS IS THE CORRECT DISPLAY PROPERTIES FUNCTION ---
 export function getMarketDisplayProperties(market) {
     if (!market || typeof market.id === 'undefined') {
         return null;
     }
 
-    // Define default values
     let title = `Market #${market.id}`;
     let targetDisplay = "Event Specific";
     let expiryString = "N/A";
@@ -74,23 +79,30 @@ export function getMarketDisplayProperties(market) {
         const safeAssetSymbol = assetSymbol || '';
         const lowerCaseSymbol = safeAssetSymbol.toLowerCase();
 
-        // --- NEW AND IMPROVED TITLE LOGIC ---
+        // Title Generation Logic
         if (lowerCaseSymbol.includes('up_or_down')) {
             const parts = safeAssetSymbol.split('_');
             const asset = parts[0];
             const date = parts[parts.length - 1];
             title = `${asset} Up or Down by ${date}?`;
-        } else if (lowerCaseSymbol.includes('price_above')) {
+        } 
+        else if (lowerCaseSymbol.includes('strike') && lowerCaseSymbol.includes('iran')) {
+            const date = safeAssetSymbol.split('_').pop();
+            title = `US to Strike Iran by ${date}?`;
+        }
+        else if (lowerCaseSymbol.includes('price_above')) {
             title = safeAssetSymbol.replace(/_/g, ' ').replace(/PRICE ABOVE/g, 'Above');
             const oracleDecimals = market.oracleDecimals || 8;
             const formattedPrice = parseFloat(ethers.utils.formatUnits(targetPrice || '0', oracleDecimals)).toLocaleString('en-US', {
                 style: 'currency', currency: 'USD'
             });
             targetDisplay = formattedPrice;
-        } else if (safeAssetSymbol) {
+        } 
+        else if (safeAssetSymbol) {
             title = safeAssetSymbol.replace(/_/g, ' ');
         }
         
+        // Probability Calculation Logic
         const totalStakedYesBN = ethers.BigNumber.from(totalStakedYes || '0');
         const totalStakedNoBN = ethers.BigNumber.from(totalStakedNo || '0');
         const totalPoolBN = totalStakedYesBN.add(totalStakedNoBN);
