@@ -33,34 +33,23 @@ export function formatToUTC(timestamp) {
     }
 }
 
-// --- THIS IS THE CORRECT ICON FUNCTION ---
 export function getMarketIcon(assetSymbol) {
     const defaultIcon = '/images/icons/default-icon.svg'; 
     if (!assetSymbol || typeof assetSymbol !== 'string') return defaultIcon;
 
     const lowerCaseSymbol = assetSymbol.toLowerCase();
 
-    // Check for geopolitics keywords first
-    if (lowerCaseSymbol.includes('trump') || 
-        lowerCaseSymbol.includes('election') ||
-        lowerCaseSymbol.includes('us_') || 
-        lowerCaseSymbol.includes('iran') ||
-        lowerCaseSymbol.includes('strike')) {
-            return '/images/icons/trump-icon.png'; 
+    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('election') || lowerCaseSymbol.includes('us_') || lowerCaseSymbol.includes('iran') || lowerCaseSymbol.includes('strike')) {
+        return '/images/icons/trump-icon.png'; 
     }
-
-    // Then check for crypto symbols
     if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
     if (lowerCaseSymbol.includes('eth') || lowerCaseSymbol.includes('ethereum')) return '/images/icons/eth-icon.svg';
     if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
     if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
     
-    // Fallback to default
     return defaultIcon;
 }
 
-
-// --- THIS IS THE CORRECT DISPLAY PROPERTIES FUNCTION ---
 export function getMarketDisplayProperties(market) {
     if (!market || typeof market.id === 'undefined') {
         return null;
@@ -74,35 +63,30 @@ export function getMarketDisplayProperties(market) {
     let noProbability = 50;
 
     try {
-        const { id, assetSymbol, targetPrice, expiryTimestamp, state, totalStakedYes, totalStakedNo } = market;
-        
+        const { id, assetSymbol, targetPrice, expiryTimestamp, state, totalStakedYes, totalStakedNo, isEventMarket } = market;
         const safeAssetSymbol = assetSymbol || '';
         const lowerCaseSymbol = safeAssetSymbol.toLowerCase();
+        const parts = safeAssetSymbol.split('_');
 
-        // Title Generation Logic
-        if (lowerCaseSymbol.includes('up_or_down')) {
-            const parts = safeAssetSymbol.split('_');
-            const asset = parts[0];
-            const date = parts[parts.length - 1];
-            title = `${asset} Up or Down by ${date}?`;
-        } 
-        else if (lowerCaseSymbol.includes('strike') && lowerCaseSymbol.includes('iran')) {
-            const date = safeAssetSymbol.split('_').pop();
-            title = `US to Strike Iran by ${date}?`;
-        }
-        else if (lowerCaseSymbol.includes('price_above')) {
-            title = safeAssetSymbol.replace(/_/g, ' ').replace(/PRICE ABOVE/g, 'Above');
+        // --- FINAL, CORRECTED TITLE LOGIC ---
+        if (isEventMarket) {
+            // For symbols like: US_STRIKE_IRAN_YES_JUL18
+            const date = parts.pop();
+            parts.pop(); // Remove "YES"
+            const questionPart = parts.join(' ');
+            title = `${questionPart} by ${date}?`;
+        } else { // Price Feed Market
+            // For symbols like: BTCUSD_PRICE_ABOVE_110000_JUN26
+            const date = parts.pop();
+            const price = parts.pop();
+            const asset = parts.shift();
+            title = `${asset} Above $${parseFloat(price).toLocaleString()} by ${date}?`;
+            
             const oracleDecimals = market.oracleDecimals || 8;
-            const formattedPrice = parseFloat(ethers.utils.formatUnits(targetPrice || '0', oracleDecimals)).toLocaleString('en-US', {
-                style: 'currency', currency: 'USD'
-            });
-            targetDisplay = formattedPrice;
-        } 
-        else if (safeAssetSymbol) {
-            title = safeAssetSymbol.replace(/_/g, ' ');
+            targetDisplay = parseFloat(ethers.utils.formatUnits(targetPrice || '0', oracleDecimals)).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         }
         
-        // Probability Calculation Logic
+        // Probability Calculation
         const totalStakedYesBN = ethers.BigNumber.from(totalStakedYes || '0');
         const totalStakedNoBN = ethers.BigNumber.from(totalStakedNo || '0');
         const totalPoolBN = totalStakedYesBN.add(totalStakedNoBN);
@@ -119,7 +103,7 @@ export function getMarketDisplayProperties(market) {
         
     } catch (e) {
         console.error(`Error processing market ID ${market.id} in getMarketDisplayProperties:`, e);
-        title = `Error processing Market #${market.id}`;
+        title = (market.assetSymbol || `Market #${market.id}`).replace(/_/g, ' ');
     }
 
     return {
