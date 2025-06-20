@@ -38,11 +38,11 @@ export function getMarketIcon(assetSymbol) {
 
     const lowerCaseSymbol = assetSymbol.toLowerCase();
 
-    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('us_') || lowerCaseSymbol.includes('iran')) {
-        return '/images/icons/trump-icon.png'; 
+    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('us_') || lowerCaseSymbol.includes('iran') || lowerCaseSymbol.includes('strike')) {
+        return '/images/icons/trump-icon.svg'; 
     }
     if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
-    if (lowerCaseSymbol.includes('eth')) return '/images/icons/eth-icon.svg';
+    if (lowerCaseSymbol.includes('eth') || lowerCaseSymbol.includes('ethereum')) return '/images/icons/eth-icon.svg';
     if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
     if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
     
@@ -50,42 +50,87 @@ export function getMarketIcon(assetSymbol) {
 }
 
 export function getMarketDisplayProperties(market) {
-    if (!market || !market.assetSymbol) {
-        return { ...market, title: `Market #${market.id || 'N/A'}` };
+    // 1. Guard clause for invalid input
+    if (!market || typeof market.id === 'undefined') {
+        console.error("getMarketDisplayProperties received an invalid market object.");
+        return null;
     }
 
+    // 2. Define default values to prevent errors
+    let title = `Market #${market.id}`;
+    let targetDisplay = "Event Specific";
+    let expiryString = "N/A";
+    let statusString = "Unknown";
+    let yesProbability = 50;
+    let noProbability = 50;
+
     try {
-        // --- THE NEW, FOOLPROOF TITLE LOGIC ---
-        // The title is now simply the assetSymbol cleaned up for display.
-        const title = market.assetSymbol.replace(/_/g, ' ');
+        // 3. Destructure properties safely
+        const { id, assetSymbol, targetPrice, expiryTimestamp, state, totalStakedYes, totalStakedNo, isEventMarket } = market;
         
-        const { expiryTimestamp, state, totalStakedYes, totalStakedNo } = market;
+        const safeAssetSymbol = assetSymbol || '';
+        const lowerCaseSymbol = safeAssetSymbol.toLowerCase();
         
+        // --- TITLE LOGIC ---
+        if (lowerCaseSymbol.includes('up_or_down')) {
+            const parts = safeAssetSymbol.split('_');
+            const asset = parts[0];
+            const date = parts[parts.length - 1];
+            title = `${asset} Up or Down by ${date}?`;
+        } 
+        else if (lowerCaseSymbol.includes('strike') && lowerCaseSymbol.includes('iran')) {
+            const date = safeAssetSymbol.split('_').pop();
+            title = `US to Strike Iran by ${date}?`;
+        }
+        else if (!isEventMarket && lowerCaseSymbol.includes('price_above')) {
+            const parts = safeAssetSymbol.split('_');
+            const date = parts.pop();
+            const price = parts.pop();
+            const asset = parts.shift();
+            title = `${asset} Above $${parseFloat(price).toLocaleString()} by ${date}?`;
+        } 
+        else if (safeAssetSymbol) {
+            title = safeAssetSymbol.replace(/_/g, ' ');
+        }
+        
+        // --- TARGET DISPLAY LOGIC ---
+        if (!isEventMarket) {
+            const oracleDecimals = market.oracleDecimals || 8;
+            targetDisplay = parseFloat(ethers.utils.formatUnits(targetPrice || '0', oracleDecimals)).toLocaleString('en-US', {
+                style: 'currency', currency: 'USD'
+            });
+        }
+        
+        // --- PROBABILITY CALCULATION ---
         const totalStakedYesBN = ethers.BigNumber.from(totalStakedYes || '0');
         const totalStakedNoBN = ethers.BigNumber.from(totalStakedNo || '0');
         const totalPoolBN = totalStakedYesBN.add(totalStakedNoBN);
 
-        let yesProbability = 50;
-        let noProbability = 50;
         if (!totalPoolBN.isZero()) {
             const scale = 10000;
             const yesProbRaw = totalStakedYesBN.mul(scale).div(totalPoolBN);
             yesProbability = yesProbRaw.toNumber() / (scale / 100);
             noProbability = 100 - yesProbability;
         }
+
+        // --- FINAL STRING FORMATTING ---
+        expiryString = formatToUTC(expiryTimestamp);
+        statusString = getStatusString(state);
         
-        return {
-            ...market, 
-            title,
-            targetDisplay: market.isEventMarket ? "YES / NO" : "Price Target",
-            expiryString: formatToUTC(expiryTimestamp),
-            statusString: getStatusString(state),
-            statusClassName: `status-${getStatusString(state).toLowerCase()}`,
-            yesProbability: yesProbability.toFixed(0),
-            noProbability: noProbability.toFixed(0),
-        };
     } catch (e) {
         console.error(`Error processing market ID ${market.id} in getMarketDisplayProperties:`, e);
-        return { ...market, title: `Error processing Market #${market.id}` };
+        title = `Error processing Market #${market.id}`;
     }
+
+    // 4. Return the complete, safe object
+    return {
+        ...market, 
+        title,
+        targetDisplay,
+        expiryString,
+        statusString,
+        statusClassName: `status-${statusString.toLowerCase()}`,
+        yesProbability: yesProbability.toFixed(0),
+        noProbability: noProbability.toFixed(0),
+    };
 }
