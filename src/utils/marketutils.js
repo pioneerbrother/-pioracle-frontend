@@ -35,22 +35,33 @@ export function formatToUTC(timestamp) {
     }
 }
 
+
+// src/utils/marketutils.js
+
 export function getMarketIcon(assetSymbol) {
     const defaultIcon = '/images/icons/default-icon.svg'; 
     if (!assetSymbol || typeof assetSymbol !== 'string') return defaultIcon;
+
     const lowerCaseSymbol = assetSymbol.toLowerCase();
-    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('election')) return '/images/icons/trump-icon.svg';
-    if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
-    if (lowerCaseSymbol.includes('eth') || lowerCaseSymbol.includes('ethereum')) return '/images/icons/eth-icon.svg';
-    if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
-    if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
-     if (lowerCaseSymbol.includes('trump') || 
+
+    // --- THIS IS THE CORRECT, COMBINED LOGIC ---
+    // Check for ANY of the politics-related keywords in a single "if" statement.
+    if (lowerCaseSymbol.includes('trump') || 
         lowerCaseSymbol.includes('election') ||
         lowerCaseSymbol.includes('us_') || 
         lowerCaseSymbol.includes('iran') ||
         lowerCaseSymbol.includes('strike')) {
-            return '/images/icons/trump-icon1.svg'; // It will now use your Trump icon for this market
+            // It will return your correct icon file.
+            return '/images/icons/trump-icon1.svg'; 
     }
+
+    // If it's not a politics market, THEN check for cryptocurrencies.
+    if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
+    if (lowerCaseSymbol.includes('eth') || lowerCaseSymbol.includes('ethereum')) return '/images/icons/eth-icon.svg';
+    if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
+    if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
+    
+    // If no matches are found at all, return the default icon.
     return defaultIcon;
 }
 
