@@ -52,7 +52,7 @@ export function getMarketIcon(assetSymbol) {
         lowerCaseSymbol.includes('iran') ||
         lowerCaseSymbol.includes('strike')) {
             // It will return your correct icon file.
-            return '/images/icons/trump-icon1.svg'; 
+            return '/images/icons/trump-icon.svg'; 
     }
 
     // If it's not a politics market, THEN check for cryptocurrencies.
