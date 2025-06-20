@@ -44,6 +44,13 @@ export function getMarketIcon(assetSymbol) {
     if (lowerCaseSymbol.includes('eth') || lowerCaseSymbol.includes('ethereum')) return '/images/icons/eth-icon.svg';
     if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
     if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
+     if (lowerCaseSymbol.includes('trump') || 
+        lowerCaseSymbol.includes('election') ||
+        lowerCaseSymbol.includes('us_') || 
+        lowerCaseSymbol.includes('iran') ||
+        lowerCaseSymbol.includes('strike')) {
+            return '/images/icons/trump-icon1.svg'; // It will now use your Trump icon for this market
+    }
     return defaultIcon;
 }
 
