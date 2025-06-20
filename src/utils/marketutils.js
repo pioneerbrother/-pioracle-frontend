@@ -11,8 +11,6 @@ export const MarketState = {
     ResolvedEarly_NoWon: 6,
 };
 
-// ... (getStatusString and getMarketIcon functions remain the same as the last correct version) ...
-
 export function getStatusString(state) {
     switch (state) {
         case MarketState.Open: return 'Open';
@@ -35,45 +33,34 @@ export function formatToUTC(timestamp) {
     }
 }
 
-
-// src/utils/marketutils.js
-
 export function getMarketIcon(assetSymbol) {
     const defaultIcon = '/images/icons/default-icon.svg'; 
     if (!assetSymbol || typeof assetSymbol !== 'string') return defaultIcon;
 
     const lowerCaseSymbol = assetSymbol.toLowerCase();
 
-    // --- THIS IS THE CORRECT, COMBINED LOGIC ---
-    // Check for ANY of the politics-related keywords in a single "if" statement.
     if (lowerCaseSymbol.includes('trump') || 
         lowerCaseSymbol.includes('election') ||
         lowerCaseSymbol.includes('us_') || 
         lowerCaseSymbol.includes('iran') ||
         lowerCaseSymbol.includes('strike')) {
-            // It will return your correct icon file.
             return '/images/icons/trump-icon.png'; 
     }
 
-    // If it's not a politics market, THEN check for cryptocurrencies.
     if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
     if (lowerCaseSymbol.includes('eth') || lowerCaseSymbol.includes('ethereum')) return '/images/icons/eth-icon.svg';
     if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
     if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
     
-    // If no matches are found at all, return the default icon.
     return defaultIcon;
 }
 
-
-// --- THIS IS THE FINAL, CORRECTED VERSION OF THIS FUNCTION ---
 export function getMarketDisplayProperties(market) {
     if (!market || typeof market.id === 'undefined') {
-        console.error("getMarketDisplayProperties received an invalid market object.");
         return null;
     }
 
-    // Define default values outside the try block to ensure they always exist
+    // Define default values
     let title = `Market #${market.id}`;
     let targetDisplay = "Event Specific";
     let expiryString = "N/A";
@@ -82,21 +69,28 @@ export function getMarketDisplayProperties(market) {
     let noProbability = 50;
 
     try {
-        const { assetSymbol, targetPrice, expiryTimestamp, state, totalStakedYes, totalStakedNo } = market;
+        const { id, assetSymbol, targetPrice, expiryTimestamp, state, totalStakedYes, totalStakedNo } = market;
         
         const safeAssetSymbol = assetSymbol || '';
-        if (safeAssetSymbol) {
-            title = safeAssetSymbol.replace(/_/g, ' ').replace(/PRICE ABOVE/g, 'Above').replace(/ABOVE YES/g, 'Up or Down');
-        }
+        const lowerCaseSymbol = safeAssetSymbol.toLowerCase();
 
-        if (safeAssetSymbol.toLowerCase().includes('price_above')) {
+        // --- NEW AND IMPROVED TITLE LOGIC ---
+        if (lowerCaseSymbol.includes('up_or_down')) {
+            const parts = safeAssetSymbol.split('_');
+            const asset = parts[0];
+            const date = parts[parts.length - 1];
+            title = `${asset} Up or Down by ${date}?`;
+        } else if (lowerCaseSymbol.includes('price_above')) {
+            title = safeAssetSymbol.replace(/_/g, ' ').replace(/PRICE ABOVE/g, 'Above');
             const oracleDecimals = market.oracleDecimals || 8;
             const formattedPrice = parseFloat(ethers.utils.formatUnits(targetPrice || '0', oracleDecimals)).toLocaleString('en-US', {
                 style: 'currency', currency: 'USD'
             });
             targetDisplay = formattedPrice;
+        } else if (safeAssetSymbol) {
+            title = safeAssetSymbol.replace(/_/g, ' ');
         }
-
+        
         const totalStakedYesBN = ethers.BigNumber.from(totalStakedYes || '0');
         const totalStakedNoBN = ethers.BigNumber.from(totalStakedNo || '0');
         const totalPoolBN = totalStakedYesBN.add(totalStakedNoBN);
@@ -108,17 +102,14 @@ export function getMarketDisplayProperties(market) {
             noProbability = 100 - yesProbability;
         }
 
-        // Update status and expiry strings only if successful
         expiryString = formatToUTC(expiryTimestamp);
         statusString = getStatusString(state);
         
     } catch (e) {
         console.error(`Error processing market ID ${market.id} in getMarketDisplayProperties:`, e);
-        // If an error occurs, the title will be an error message
         title = `Error processing Market #${market.id}`;
     }
 
-    // Return a complete object using the calculated or default values
     return {
         ...market, 
         title,
