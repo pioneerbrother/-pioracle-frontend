@@ -25,8 +25,7 @@ export function formatToUTC(timestamp) {
     }
     try {
         return new Date(timestamp * 1000).toLocaleString('en-US', {
-            year: 'numeric', month: 'short', day: 'numeric',
-            hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short'
+            year: 'numeric', month: 'short', day: 'numeric'
         });
     } catch (e) {
         return 'Invalid Date';
@@ -39,11 +38,11 @@ export function getMarketIcon(assetSymbol) {
 
     const lowerCaseSymbol = assetSymbol.toLowerCase();
 
-    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('election') || lowerCaseSymbol.includes('us_') || lowerCaseSymbol.includes('iran') || lowerCaseSymbol.includes('strike')) {
+    if (lowerCaseSymbol.includes('trump') || lowerCaseSymbol.includes('us_') || lowerCaseSymbol.includes('iran')) {
         return '/images/icons/trump-icon.png'; 
     }
     if (lowerCaseSymbol.includes('btc')) return '/images/icons/btc-icon.svg';
-    if (lowerCaseSymbol.includes('eth') || lowerCaseSymbol.includes('ethereum')) return '/images/icons/eth-icon.svg';
+    if (lowerCaseSymbol.includes('eth')) return '/images/icons/eth-icon.svg';
     if (lowerCaseSymbol.includes('sol')) return '/images/icons/sol-icon.svg';
     if (lowerCaseSymbol.includes('xrp')) return '/images/icons/xrp-icon.svg';
     
@@ -51,69 +50,42 @@ export function getMarketIcon(assetSymbol) {
 }
 
 export function getMarketDisplayProperties(market) {
-    if (!market || typeof market.id === 'undefined') {
-        return null;
+    if (!market || !market.assetSymbol) {
+        return { ...market, title: `Market #${market.id || 'N/A'}` };
     }
 
-    let title = `Market #${market.id}`;
-    let targetDisplay = "Event Specific";
-    let expiryString = "N/A";
-    let statusString = "Unknown";
-    let yesProbability = 50;
-    let noProbability = 50;
-
     try {
-        const { id, assetSymbol, targetPrice, expiryTimestamp, state, totalStakedYes, totalStakedNo, isEventMarket } = market;
-        const safeAssetSymbol = assetSymbol || '';
-        const lowerCaseSymbol = safeAssetSymbol.toLowerCase();
-        const parts = safeAssetSymbol.split('_');
-
-        // --- FINAL, CORRECTED TITLE LOGIC ---
-        if (isEventMarket) {
-            // For symbols like: US_STRIKE_IRAN_YES_JUL18
-            const date = parts.pop();
-            parts.pop(); // Remove "YES"
-            const questionPart = parts.join(' ');
-            title = `${questionPart} by ${date}?`;
-        } else { // Price Feed Market
-            // For symbols like: BTCUSD_PRICE_ABOVE_110000_JUN26
-            const date = parts.pop();
-            const price = parts.pop();
-            const asset = parts.shift();
-            title = `${asset} Above $${parseFloat(price).toLocaleString()} by ${date}?`;
-            
-            const oracleDecimals = market.oracleDecimals || 8;
-            targetDisplay = parseFloat(ethers.utils.formatUnits(targetPrice || '0', oracleDecimals)).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-        }
+        // --- THE NEW, FOOLPROOF TITLE LOGIC ---
+        // The title is now simply the assetSymbol cleaned up for display.
+        const title = market.assetSymbol.replace(/_/g, ' ');
         
-        // Probability Calculation
+        const { expiryTimestamp, state, totalStakedYes, totalStakedNo } = market;
+        
         const totalStakedYesBN = ethers.BigNumber.from(totalStakedYes || '0');
         const totalStakedNoBN = ethers.BigNumber.from(totalStakedNo || '0');
         const totalPoolBN = totalStakedYesBN.add(totalStakedNoBN);
 
+        let yesProbability = 50;
+        let noProbability = 50;
         if (!totalPoolBN.isZero()) {
             const scale = 10000;
             const yesProbRaw = totalStakedYesBN.mul(scale).div(totalPoolBN);
             yesProbability = yesProbRaw.toNumber() / (scale / 100);
             noProbability = 100 - yesProbability;
         }
-
-        expiryString = formatToUTC(expiryTimestamp);
-        statusString = getStatusString(state);
         
+        return {
+            ...market, 
+            title,
+            targetDisplay: market.isEventMarket ? "YES / NO" : "Price Target",
+            expiryString: formatToUTC(expiryTimestamp),
+            statusString: getStatusString(state),
+            statusClassName: `status-${getStatusString(state).toLowerCase()}`,
+            yesProbability: yesProbability.toFixed(0),
+            noProbability: noProbability.toFixed(0),
+        };
     } catch (e) {
         console.error(`Error processing market ID ${market.id} in getMarketDisplayProperties:`, e);
-        title = (market.assetSymbol || `Market #${market.id}`).replace(/_/g, ' ');
+        return { ...market, title: `Error processing Market #${market.id}` };
     }
-
-    return {
-        ...market, 
-        title,
-        targetDisplay,
-        expiryString,
-        statusString,
-        statusClassName: `status-${statusString.toLowerCase()}`,
-        yesProbability: yesProbability.toFixed(0),
-        noProbability: noProbability.toFixed(0),
-    };
 }
