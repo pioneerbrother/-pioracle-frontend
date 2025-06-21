@@ -9,7 +9,7 @@ import MarketOddsDisplay from '../components/predictions/MarketOddsDisplay';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { getMarketDisplayProperties, MarketState } from '../utils/marketutils.js';
-import './MarketDetailPage.css'; // Make sure you have styling for this page
+import './MarketDetailPage.css';
 
 function MarketDetailPage() {
     const { marketId } = useParams();
@@ -66,6 +66,8 @@ function MarketDetailPage() {
                     exists: detailsArray[10],
                     isEventMarket: detailsArray[11],
                     creationTimestamp: Number(detailsArray[12]),
+                    // You might need to add resolutionDetails if it comes from the contract
+                    // resolutionDetails: detailsArray[13] 
                 };
                 
                 const finalMarketDetails = getMarketDisplayProperties(intermediateMarket);
@@ -101,7 +103,7 @@ function MarketDetailPage() {
             const tx = await contract.connect(signer).claimWinnings(marketDetails.id);
             await tx.wait(1);
             setActionMessage({ text: "Winnings successfully claimed!", type: "success" });
-            setRefreshKey(k => k + 1); // Trigger a data refresh
+            setRefreshKey(k => k + 1);
         } catch (err) {
             const reason = err.reason || "An unknown error occurred while claiming.";
             setActionMessage({ text: `Claim failed: ${reason}`, type: "error" });
@@ -110,8 +112,13 @@ function MarketDetailPage() {
         }
     }, [contract, signer, marketDetails, claimableAmount]);
 
+    // Hardcoded resolution text for specific markets.
+    // In the future, this should come from a database or off-chain store.
+    const resolutionText = marketDetails && marketDetails.assetSymbol.includes('US_STRIKE_IRAN') 
+        ? "This market covers the period from July 5, 2025, 00:00 UTC to July 18, 2025, 23:59 UTC. It will resolve to YES if the United States government officially orders or carries out military strikes on targets within Iran during this specific two-week window. Resolution will be based on announcements from the White House, the Pentagon, or confirmed reports from at least two major international news agencies (e.g., Reuters, Associated Press). If no strikes occur within this timeframe, it resolves to NO."
+        : "The resolution of this market is determined by the specific terms and verifiable source of truth defined at the time of its creation.";
 
-    // --- GUARD CLAUSES TO PREVENT CRASHING ---
+
     if (isLoading) {
         return <div className="page-container"><LoadingSpinner message={`Loading Market #${marketId}...`} /></div>;
     }
@@ -121,7 +128,6 @@ function MarketDetailPage() {
     if (!marketDetails) {
         return <div className="page-container"><ErrorMessage title="Not Found" message={`Market #${marketId} could not be loaded.`} /></div>;
     }
-
 
     const isMarketOpenForBetting = marketDetails.state === MarketState.Open;
     const isWrongNetwork = walletAddress && !signer;
@@ -186,6 +192,15 @@ function MarketDetailPage() {
                     {actionMessage.text && <p className={`form-message type-${actionMessage.type}`}>{actionMessage.text}</p>}
                 </div>
             </section>
+
+            {/* --- THIS IS THE NEW SECTION, GUARANTEED TO BE HERE --- */}
+            {marketDetails.isEventMarket && (
+                <section className="market-rules-section">
+                    <h3>Resolution Rules</h3>
+                    <p>{resolutionText}</p>
+                </section>
+            )}
+
         </div>
     );
 }
