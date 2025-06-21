@@ -110,3 +110,43 @@
     line-height: 1.7;
     font-size: 0.95rem;
 }
+/* src/pages/MarketDetailPage.css */
+
+/* ... (keep all your existing styles for .market-detail-page-v2, etc.) ... */
+
+
+/* --- NEW STYLES FOR THE CALL-TO-ACTION BUTTON --- */
+/* This will style the "Connect Wallet" button in the interaction panel */
+
+.interaction-notice .button.primary.large {
+    /* --- The Colors --- */
+    background-color: #2563eb; /* A strong, confident blue */
+    color: white;
+    border: none;
+
+    /* --- The Sizing & Spacing --- */
+    padding: 12px 32px;
+    width: 100%;
+    max-width: 250px; /* Prevents the button from being too wide */
+    
+    /* --- The Text & Feel --- */
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    
+    /* --- The Effects --- */
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+}
+
+.interaction-notice .button.primary.large:hover {
+    background-color: #1d4ed8; /* A slightly darker blue on hover */
+    transform: translateY(-2px);
+}
+
+.interaction-notice .button.primary.large:active {
+    transform: translateY(0);
+}
