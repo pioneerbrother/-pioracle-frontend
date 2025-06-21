@@ -104,49 +104,57 @@
     color: #334155;
 }
 
-.market-rules-section p {
-    margin: 0;
-    color: #475569;
-    line-height: 1.7;
-    font-size: 0.95rem;
-}
 /* src/pages/MarketDetailPage.css */
 
-/* ... (keep all your existing styles for .market-detail-page-v2, etc.) ... */
+/* --- NEW, CHARISMATIC RESOLUTION RULES CARD --- */
+.market-rules-card {
+    margin-top: 2.5rem;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); /* Subtle gradient */
+    border: 1px solid #d1d5db;
+    border-radius: 16px; /* A more modern, larger radius */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    overflow: hidden; /* Important for containing the footer */
+}
 
+.rules-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 1rem 1.5rem;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-bottom: 1px solid #d1d5db;
+}
 
-/* --- NEW STYLES FOR THE CALL-TO-ACTION BUTTON --- */
-/* This will style the "Connect Wallet" button in the interaction panel */
+.rules-icon {
+    width: 24px;
+    height: 24px;
+    opacity: 0.7;
+}
 
-.interaction-notice .button.primary.large {
-    /* --- The Colors --- */
-    background-color: #2563eb; /* A strong, confident blue */
-    color: white;
-    border: none;
-
-    /* --- The Sizing & Spacing --- */
-    padding: 12px 32px;
-    width: 100%;
-    max-width: 250px; /* Prevents the button from being too wide */
-    
-    /* --- The Text & Feel --- */
+.rules-card-header h3 {
+    margin: 0;
     font-size: 1.1rem;
-    font-weight: bold;
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    
-    /* --- The Effects --- */
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+    font-weight: 600;
+    color: #1f2937;
 }
 
-.interaction-notice .button.primary.large:hover {
-    background-color: #1d4ed8; /* A slightly darker blue on hover */
-    transform: translateY(-2px);
+.rules-card-body {
+    padding: 1.5rem;
 }
 
-.interaction-notice .button.primary.large:active {
-    transform: translateY(0);
+.rules-card-body p {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.7;
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+}
+
+.rules-card-footer {
+    background-color: #e5e7eb;
+    padding: 0.75rem 1.5rem;
+    text-align: right;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #4b5563;
 }

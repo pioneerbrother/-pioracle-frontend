@@ -9,7 +9,7 @@ import MarketOddsDisplay from '../components/predictions/MarketOddsDisplay';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { getMarketDisplayProperties, MarketState } from '../utils/marketutils.js';
-import './MarketDetailPage.css'; // Make sure this CSS file is imported
+import './MarketDetailPage.css';
 
 function MarketDetailPage() {
     const { marketId } = useParams();
@@ -41,12 +41,16 @@ function MarketDetailPage() {
         const fetchAllMarketData = async () => {
             setIsLoading(true);
             setError(null);
+            // Reset states on each fetch
+            setClaimableAmount(ethers.BigNumber.from(0));
+            setHasUserClaimed(false);
+            setActionMessage({ text: "", type: "" });
 
             try {
                 const detailsArray = await contract.getMarketStaticDetails(numericMarketId);
                 
                 if (!detailsArray || detailsArray.exists !== true) {
-                    throw new Error(`Market #${numericMarketId} could not be found.`);
+                    throw new Error(`Market #${numericMarketId} could not be found or does not exist.`);
                 }
                 
                 const intermediateMarket = {
@@ -78,6 +82,7 @@ function MarketDetailPage() {
                     }
                 }
             } catch (err) {
+                console.error("Error fetching market details:", err);
                 setError(err.message);
             } finally {
                 setIsLoading(false);
@@ -88,12 +93,28 @@ function MarketDetailPage() {
     }, [marketId, contract, walletAddress, refreshKey]);
 
     const handleClaimWinnings = useCallback(async () => {
-        // ... (claim winnings logic remains the same) ...
+        if (!contract || !signer || !marketDetails || claimableAmount.isZero()) return;
+        
+        setIsClaiming(true);
+        setActionMessage({ text: "Processing your claim...", type: "info" });
+        
+        try {
+            const tx = await contract.connect(signer).claimWinnings(marketDetails.id);
+            await tx.wait(1);
+            setActionMessage({ text: "Winnings successfully claimed!", type: "success" });
+            setRefreshKey(k => k + 1);
+        } catch (err) {
+            const reason = err.reason || "An unknown error occurred while claiming.";
+            setActionMessage({ text: `Claim failed: ${reason}`, type: "error" });
+        } finally {
+            setIsClaiming(false);
+        }
     }, [contract, signer, marketDetails, claimableAmount]);
 
     const resolutionText = (marketDetails && marketDetails.assetSymbol.includes('US_STRIKE_IRAN')) 
-        ? "This market covers the period from July 5, 2025, 00:00 UTC to July 18, 2025, 23:59 UTC. It will resolve to YES if the United States government officially orders or carries out military strikes on targets within Iran during this specific two-week window..."
+        ? "This market covers the period from July 5, 2025, 00:00 UTC to July 18, 2025, 23:59 UTC. It will resolve to YES if the United States government officially orders or carries out military strikes on targets within Iran during this specific two-week window. Resolution will be based on announcements from the White House, the Pentagon, or confirmed reports from at least two major international news agencies (e.g., Reuters, Associated Press). If no strikes occur within this timeframe, it resolves to NO."
         : "The resolution of this market is determined by the specific terms and verifiable source of truth defined at the time of its creation.";
+
 
     if (isLoading) return <div className="page-container"><LoadingSpinner message={`Loading Market #${marketId}...`} /></div>;
     if (error) return <div className="page-container"><ErrorMessage title="Market Data Error" message={error} /></div>;
@@ -132,12 +153,11 @@ function MarketDetailPage() {
                                 isEventMarket={marketDetails.isEventMarket}
                             />
                         ) : isMarketOpenForBetting && !walletAddress ? (
-                        // --- AFTER ---
-<div className="interaction-notice">
-    <h3>Join the Forecast</h3>
-    <p>Connect your wallet to make your prediction.</p>
-    <button onClick={connectWallet} className="button primary large">Connect Wallet</button>
-</div>
+                            <div className="interaction-notice">
+                                <h3>Join the Forecast</h3>
+                                <p>Connect your wallet to make your prediction.</p>
+                                <button onClick={connectWallet} className="button primary large">Connect Wallet</button>
+                            </div>
                         ) : isWrongNetwork ? (
                              <div className="interaction-notice error">
                                 <h3>Wrong Network</h3>
@@ -160,11 +180,20 @@ function MarketDetailPage() {
                     </div>
                 </div>
 
+                {/* --- THIS IS THE NEW, CHARISMATIC RESOLUTION SECTION --- */}
                 {marketDetails.isEventMarket && (
                     <div className="market-info-zone">
-                        <section className="market-rules-section">
-                            <h3>Resolution Rules</h3>
-                            <p>{resolutionText}</p>
+                        <section className="market-rules-card">
+                            <div className="rules-card-header">
+                                <img src="/images/icons/scales-of-justice-icon.svg" alt="Resolution Rules" className="rules-icon" />
+                                <h3>Resolution Source & Rules</h3>
+                            </div>
+                            <div className="rules-card-body">
+                                <p>{resolutionText}</p>
+                            </div>
+                            <div className="rules-card-footer">
+                                <span>Verified by PiOracle Admin</span>
+                            </div>
                         </section>
                     </div>
                 )}
