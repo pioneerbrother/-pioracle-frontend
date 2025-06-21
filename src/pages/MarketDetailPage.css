@@ -1,12 +1,13 @@
 /* src/pages/MarketDetailPage.css */
 
+/* --- Main Page Layout --- */
 .market-detail-page-v2 {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem 1.5rem;
 }
 
-/* --- New Header Styling --- */
+/* --- Header Section --- */
 .market-header-v2 {
     text-align: center;
     margin-bottom: 2.5rem;
@@ -22,7 +23,7 @@
 }
 
 .market-header-v2 h1 {
-    font-size: 2.5rem; /* Larger, more impactful title */
+    font-size: 2.5rem;
     color: #1a202c;
     line-height: 1.2;
     margin-bottom: 1rem;
@@ -36,23 +37,27 @@
     color: #64748b;
 }
 
-
-/* --- New Body Layout --- */
+/* --- Main Body Layout (Two Columns) --- */
 .market-body-v2 {
     display: flex;
     flex-direction: column;
     gap: 2.5rem;
 }
 
+.market-action-zone {
+    display: grid;
+    grid-template-columns: 1fr; /* Default to single column */
+    gap: 2rem;
+    align-items: start;
+}
+
 @media (min-width: 1024px) {
     .market-action-zone {
-        display: grid;
-        grid-template-columns: 55% 1fr; /* 55% for probs, rest for form */
-        gap: 2rem;
-        align-items: start;
+        grid-template-columns: 55% 1fr; /* Two columns on desktop */
     }
 }
 
+/* --- Interaction Panel (Right Side) --- */
 .interaction-panel {
     background: #fff;
     padding: 1.5rem;
@@ -68,12 +73,11 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    min-height: 200px; /* Give it some height */
 }
 
 .interaction-notice h3 {
     font-size: 1.5rem;
-    margin-top: 0;
-    margin-bottom: 0.5rem;
     color: #1a202c;
 }
 
@@ -82,38 +86,29 @@
     margin-bottom: 1.5rem;
 }
 
-.interaction-notice.error h3 {
-    color: #b91c1c;
-}
-
-.button.primary.large {
+/* --- THIS IS THE CORRECTED BUTTON STYLE --- */
+.interaction-notice .button.primary.large {
+    background-color: #2563eb;
+    color: white;
+    border: none;
     padding: 12px 32px;
     font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.interaction-notice .button.primary.large:hover {
+    background-color: #1d4ed8;
 }
 
-/* --- Resolution Rules Section --- */
-.market-rules-section {
-    padding: 1.5rem;
-    background-color: #f8fafc;
-    border-radius: 12px;
-}
-
-.market-rules-section h3 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    color: #334155;
-}
-
-/* src/pages/MarketDetailPage.css */
-
-/* --- NEW, CHARISMATIC RESOLUTION RULES CARD --- */
+/* --- Charismatic Resolution Rules Card --- */
 .market-rules-card {
-    margin-top: 2.5rem;
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); /* Subtle gradient */
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
     border: 1px solid #d1d5db;
-    border-radius: 16px; /* A more modern, larger radius */
+    border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-    overflow: hidden; /* Important for containing the footer */
+    overflow: hidden;
 }
 
 .rules-card-header {
