@@ -184,6 +184,7 @@ function MarketDetailPage() {
                 {marketDetails.isEventMarket && (
                     <div className="market-info-zone">
                         <section className="market-rules-card">
+                           <div className="rules-card-inner"></div>
                             <div className="rules-card-header">
                                 <img src="/images/icons/scales-of-justice-icon.svg" alt="Resolution Rules" className="rules-icon" />
                                 <h3>Resolution Source & Rules</h3>
