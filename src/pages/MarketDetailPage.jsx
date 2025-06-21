@@ -132,11 +132,12 @@ function MarketDetailPage() {
                                 isEventMarket={marketDetails.isEventMarket}
                             />
                         ) : isMarketOpenForBetting && !walletAddress ? (
-                            <div className="interaction-notice">
-                                <h3>Join the Forecast</h3>
-                                <p>Connect your wallet to make your prediction.</p>
-                                <button onClick={connectWallet} className="button primary large">Connect Wallet</button>
-                            </div>
+                        // --- AFTER ---
+<div className="interaction-notice">
+    <h3>Join the Forecast</h3>
+    <p>Connect your wallet to make your prediction.</p>
+    <button onClick={connectWallet} className="button primary large">Connect Wallet</button>
+</div>
                         ) : isWrongNetwork ? (
                              <div className="interaction-notice error">
                                 <h3>Wrong Network</h3>
