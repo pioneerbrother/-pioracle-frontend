@@ -109,55 +109,67 @@
 
 
 /* --- NEW, CHARISMATIC RESOLUTION RULES CARD --- */
+/* src/pages/MarketDetailPage.css */
+
+/* ... (keep all your other styles for the header, action zone, etc.) ... */
+
+
+/* --- NEW, VIBRANT & CHARISMATIC RESOLUTION RULES CARD --- */
 .market-rules-card {
-    background-color: #f8fafc; /* A very light, clean gray */
-    border: 1px solid #e2e8f0;
-    border-radius: 16px; /* A more modern, larger radius */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-    overflow: hidden; /* This is important for the footer's background color */
-    margin-top: 2rem; /* Ensure space from the content above */
+    margin-top: 2.5rem;
+    
+    /* --- The Beautiful Gradient Background --- */
+    background: linear-gradient(110deg, #1e3a8a 0%, #3b82f6 50%, #fbbf24 100%);
+    
+    border-radius: 20px; /* Softer, more elegant curves */
+    padding: 3px; /* This is for the gradient border effect */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.rules-card-inner {
+    background: #1e293b; /* A deep, rich navy blue for the inside */
+    border-radius: 18px; /* Slightly smaller radius to show the gradient border */
+    padding: 1.5rem 2rem;
 }
 
 .rules-card-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 1rem 1.5rem;
-    background-color: #ffffff; /* A clean white header */
-    border-bottom: 1px solid #e2e8f0;
+    gap: 15px;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .rules-icon {
-    width: 24px;
-    height: 24px;
-    opacity: 0.6; /* Soften the icon slightly */
+    width: 28px;
+    height: 28px;
+    /* --- Gold Color for the Icon --- */
+    filter: invert(80%) sepia(50%) saturate(400%) hue-rotate(350deg) brightness(110%) contrast(90%);
 }
 
 .rules-card-header h3 {
     margin: 0;
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #1f2937; /* A strong, dark text color */
-}
-
-.rules-card-body {
-    padding: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff; /* Bright white text */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
 .rules-card-body p {
     margin: 0;
-    color: #4b5563; /* A softer text color for readability */
-    line-height: 1.7;
-    font-size: 0.95rem;
-    white-space: pre-wrap; /* Ensures long text wraps correctly */
+    color: #cbd5e0; /* A soft, light gray for readability */
+    line-height: 1.8;
+    font-size: 1rem;
 }
 
 .rules-card-footer {
-    background-color: #e5e7eb; /* A distinct gray for the footer */
-    padding: 0.75rem 1.5rem;
     text-align: right;
-    font-size: 0.8rem;
-    font-style: italic;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.85rem;
     font-weight: 500;
-    color: #4b5563;
+    color: #fbbf24; /* Gold color for the verified stamp */
+    font-style: italic;
 }
