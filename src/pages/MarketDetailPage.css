@@ -103,12 +103,19 @@
 }
 
 /* --- Charismatic Resolution Rules Card --- */
+/* src/pages/MarketDetailPage.css */
+
+/* ... (keep all your other styles for the header, action zone, etc.) ... */
+
+
+/* --- NEW, CHARISMATIC RESOLUTION RULES CARD --- */
 .market-rules-card {
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-    border: 1px solid #d1d5db;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-    overflow: hidden;
+    background-color: #f8fafc; /* A very light, clean gray */
+    border: 1px solid #e2e8f0;
+    border-radius: 16px; /* A more modern, larger radius */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    overflow: hidden; /* This is important for the footer's background color */
+    margin-top: 2rem; /* Ensure space from the content above */
 }
 
 .rules-card-header {
@@ -116,21 +123,21 @@
     align-items: center;
     gap: 12px;
     padding: 1rem 1.5rem;
-    background-color: rgba(255, 255, 255, 0.5);
-    border-bottom: 1px solid #d1d5db;
+    background-color: #ffffff; /* A clean white header */
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .rules-icon {
     width: 24px;
     height: 24px;
-    opacity: 0.7;
+    opacity: 0.6; /* Soften the icon slightly */
 }
 
 .rules-card-header h3 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 600;
-    color: #1f2937;
+    color: #1f2937; /* A strong, dark text color */
 }
 
 .rules-card-body {
@@ -139,17 +146,18 @@
 
 .rules-card-body p {
     margin: 0;
-    color: #4b5563;
+    color: #4b5563; /* A softer text color for readability */
     line-height: 1.7;
     font-size: 0.95rem;
-    white-space: pre-wrap;
+    white-space: pre-wrap; /* Ensures long text wraps correctly */
 }
 
 .rules-card-footer {
-    background-color: #e5e7eb;
+    background-color: #e5e7eb; /* A distinct gray for the footer */
     padding: 0.75rem 1.5rem;
     text-align: right;
     font-size: 0.8rem;
+    font-style: italic;
     font-weight: 500;
     color: #4b5563;
 }
