@@ -12,19 +12,16 @@ function CreateMarketPage() {
     const { walletAddress, contract, signer, nativeTokenSymbol } = useContext(WalletContext);
     const navigate = useNavigate();
 
-    // State for the form
     const [marketQuestion, setMarketQuestion] = useState('');
     const [expiryDate, setExpiryDate] = useState('');
     const [expiryTime, setExpiryTime] = useState('23:59');
     const [resolutionDetails, setResolutionDetails] = useState('');
     
-    // State for the fee and submission logic
     const [listingFeeDisplay, setListingFeeDisplay] = useState('Loading...');
     const [listingFeeWei, setListingFeeWei] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
     
-    // Auto-generate the on-chain symbol
     const assetSymbol = marketQuestion
         .trim()
         .toUpperCase()
@@ -33,28 +30,33 @@ function CreateMarketPage() {
         .replace(/[^A-Z0-9_]/g, '')
         .substring(0, 60);
 
-    // --- The FINAL Fix is in this useEffect block ---
+    // --- THE FINAL, BULLETPROOF FIX ---
     useEffect(() => {
-        if (contract && nativeTokenSymbol) {
-            const fetchFee = async () => {
-                setSubmitError('');
-                try {
-                    // --- THE ONLY CHANGE: Using the function name you originally had ---
-                    const feeInWei = await contract.marketCreationListingFee();
-                    // --- END OF CHANGE ---
-
-                    setListingFeeWei(feeInWei);
-                    setListingFeeDisplay(`${ethers.formatEther(feeInWei)} ${nativeTokenSymbol}`);
-                } catch (e) {
-                    console.error("Error fetching listing fee:", e);
-                    setSubmitError("Could not load market listing fee.");
-                    setListingFeeDisplay('Error');
-                }
-            };
-            fetchFee();
-        } else {
-            setListingFeeDisplay('...');
+        // This is a "guard clause". It stops the function immediately if 'contract' is not ready.
+        // This prevents the "(void 0) is not a function" race condition error.
+        if (!contract) {
+            setListingFeeDisplay('...'); // Show a neutral loading state
+            return; // Exit the effect early
         }
+
+        const fetchFee = async () => {
+            setSubmitError('');
+            try {
+                // Now we are certain 'contract' exists when we call this.
+                const feeInWei = await contract.marketCreationListingFee();
+                
+                setListingFeeWei(feeInWei);
+                // Ensure nativeTokenSymbol is also ready before displaying, with a fallback.
+                setListingFeeDisplay(`${ethers.formatEther(feeInWei)} ${nativeTokenSymbol || ''}`);
+            } catch (e) {
+                console.error("Error fetching listing fee:", e);
+                setSubmitError("Could not load market listing fee. Please ensure you are on the correct network.");
+                setListingFeeDisplay('Error');
+            }
+        };
+
+        fetchFee();
+    // This effect will re-run correctly when the contract is finally initialized.
     }, [contract, nativeTokenSymbol]);
 
     const handleSubmit = async (e) => {
@@ -74,14 +76,13 @@ function CreateMarketPage() {
                 throw new Error("Invalid or past expiry date.");
             }
             
-            // Calling your custom function to create a market
             const tx = await contract.connect(signer).createUserMarket(
                 assetSymbol,
                 ethers.ZeroAddress,
                 ethers.toBigInt(1),
                 expiryTimestamp,
                 true,
-                0, // Assuming 0 creator fee for this simple form for now
+                0, 
                 { value: listingFeeWei }
             );
             
