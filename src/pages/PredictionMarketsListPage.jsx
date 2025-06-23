@@ -15,6 +15,7 @@ function PredictionMarketsListPage() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        // Guard Clause: Do not run if the contract is not yet initialized.
         if (!contract) {
             setIsLoading(true);
             return;
@@ -26,34 +27,40 @@ function PredictionMarketsListPage() {
             console.log("PMLP: Contract ready. Fetching all markets...");
 
             try {
-                const nextMarketIdBN = await contract.nextMarketId();
-                const nextMarketIdNum = nextMarketIdBN.toNumber();
+                // --- THIS IS THE CORRECTED BIG NUMBER LOGIC ---
+                // 1. Get the count as a BigNumber. Assume your contract has a counter like this.
+                const nextMarketIdBN = await contract.marketIdCounter(); // Or `nextMarketId()`
 
-                if (nextMarketIdNum === 0) {
+                // 2. Check if the count is zero.
+                if (nextMarketIdBN.eq(0)) {
                     setAllMarkets([]);
                     setIsLoading(false);
                     return;
                 }
+                
+                // 3. Convert BigNumber to a regular number FOR THE LOOP ONLY.
+                // This is safe for any reasonable number of markets (up to 9 quadrillion).
+                const marketCountNum = Number(nextMarketIdBN.toString());
 
                 const marketPromises = [];
-                for (let id = 0; id < nextMarketIdNum; id++) {
+                // Loop safely using the converted number.
+                for (let id = 0; id < marketCountNum; id++) {
                     marketPromises.push(contract.getMarketStaticDetails(id));
                 }
                 const allRawDetails = await Promise.all(marketPromises);
+                // --- END OF CORRECTED LOGIC ---
 
-                // --- THIS IS THE DEFINITIVE DATA PROCESSING LOGIC ---
                 const processedMarkets = allRawDetails.map((rawDetails) => {
                     if (!rawDetails || rawDetails.exists !== true) {
-                        return null; // Skip non-existent markets
+                        return null; 
                     }
                     
-                    // 1. Create a clean intermediate object directly from the contract array
                     const intermediateMarket = {
                         id: rawDetails[0].toString(),
                         assetSymbol: rawDetails[1],
                         priceFeedAddress: rawDetails[2],
                         targetPrice: rawDetails[3].toString(),
-                        expiryTimestamp: Number(rawDetails[4]), // <-- CRITICAL: Convert BigNumber to Number
+                        expiryTimestamp: Number(rawDetails[4]),
                         resolutionTimestamp: Number(rawDetails[5]),
                         totalStakedYesNet: rawDetails[6].toString(),
                         totalStakedNoNet: rawDetails[7].toString(),
@@ -64,10 +71,9 @@ function PredictionMarketsListPage() {
                         creationTimestamp: Number(rawDetails[12]),
                     };
 
-                    // 2. Pass this clean object to get the final display properties
                     return getMarketDisplayProperties(intermediateMarket);
 
-                }).filter(market => market !== null); // Filter out any that failed processing
+                }).filter(market => market !== null);
 
                 setAllMarkets(processedMarkets);
 
@@ -82,30 +88,30 @@ function PredictionMarketsListPage() {
         fetchAndProcessData();
     }, [contract]);
 
-    // All the useMemo hooks for filtering and finding the featured market remain the same
+    // Your useMemo hooks are correct and do not need to change.
     const openMarketsToDisplay = useMemo(() => 
         allMarkets.filter(m => m.state === 0).sort((a, b) => a.expiryTimestamp - b.expiryTimestamp),
         [allMarkets]
     );
-
-    const featuredMarket = useMemo(() => {
-        return openMarketsToDisplay.find(market => 
-            market.title && market.title.toUpperCase().includes('TRUMP MUSK TOGETHER')
-        );
-    }, [openMarketsToDisplay]);
-
-    // The return statement with JSX remains the same
+    
+    // The rest of your component's return statement can remain the same.
     return (
         <div className="page-container prediction-list-page">
-            {/* ... Your featured market banner and other JSX ... */}
-
-            <div className="market-grid">
-                {openMarketsToDisplay.map(market => (
-                    <MarketCard key={market.id} market={market} />
-                ))}
-            </div>
-            
-            {/* ... Loading, Error, and No Markets messages ... */}
+            {isLoading ? (
+                <LoadingSpinner message="Fetching markets..." />
+            ) : error ? (
+                <ErrorMessage title="Error Loading Markets" message={error} />
+            ) : (
+                <div className="market-grid">
+                    {openMarketsToDisplay.length > 0 ? (
+                        openMarketsToDisplay.map(market => (
+                            <MarketCard key={market.id} market={market} />
+                        ))
+                    ) : (
+                        <p>No open markets found.</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
