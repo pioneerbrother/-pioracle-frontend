@@ -9,7 +9,6 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import './CreateMarketPage.css';
 
 function CreateMarketPage() {
-    // --- FIX #1: Get the 'nativeTokenSymbol' from the context ---
     const { walletAddress, contract, signer, nativeTokenSymbol } = useContext(WalletContext);
     const navigate = useNavigate();
 
@@ -34,17 +33,17 @@ function CreateMarketPage() {
         .replace(/[^A-Z0-9_]/g, '')
         .substring(0, 60);
 
-    // --- FIX #2: Correctly fetch the fee AND use the dynamic symbol ---
+    // --- The FINAL Fix is in this useEffect block ---
     useEffect(() => {
-        // Only run if the contract and symbol are loaded from the context
         if (contract && nativeTokenSymbol) {
             const fetchFee = async () => {
-                setSubmitError(''); // Clear previous errors
+                setSubmitError('');
                 try {
-                    // Use the CORRECT public getter function from your contract
-                    const feeInWei = await contract.userMarketListingFee();
+                    // --- THE ONLY CHANGE: Using the function name you originally had ---
+                    const feeInWei = await contract.marketCreationListingFee();
+                    // --- END OF CHANGE ---
+
                     setListingFeeWei(feeInWei);
-                    // Use the DYNAMIC nativeTokenSymbol from the context
                     setListingFeeDisplay(`${ethers.formatEther(feeInWei)} ${nativeTokenSymbol}`);
                 } catch (e) {
                     console.error("Error fetching listing fee:", e);
@@ -54,9 +53,8 @@ function CreateMarketPage() {
             };
             fetchFee();
         } else {
-            setListingFeeDisplay('...'); // Show loading state if wallet not connected
+            setListingFeeDisplay('...');
         }
-    // Re-run this effect if the user connects or switches networks
     }, [contract, nativeTokenSymbol]);
 
     const handleSubmit = async (e) => {
@@ -76,19 +74,19 @@ function CreateMarketPage() {
                 throw new Error("Invalid or past expiry date.");
             }
             
-            // For all user-created markets, they are "Event Markets"
-            // Using modern ethers v6 syntax for consistency
-            const tx = await contract.connect(signer).createMarket(
+            // Calling your custom function to create a market
+            const tx = await contract.connect(signer).createUserMarket(
                 assetSymbol,
-                ethers.ZeroAddress, // priceFeedAddress for event markets
-                ethers.toBigInt(1), // targetPrice for event markets (YES = 1)
+                ethers.ZeroAddress,
+                ethers.toBigInt(1),
                 expiryTimestamp,
-                true,               // isEventMarket
+                true,
+                0, // Assuming 0 creator fee for this simple form for now
                 { value: listingFeeWei }
             );
             
             await tx.wait(1);
-            navigate('/predictions'); // Navigate to predictions list on success
+            navigate('/predictions');
 
         } catch (err) {
             const reason = err.reason || err.message || "An error occurred.";
