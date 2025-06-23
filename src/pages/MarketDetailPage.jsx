@@ -20,7 +20,7 @@ function MarketDetailPage() {
     const [error, setError] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
 
-    const [claimableAmount, setClaimableAmount] = useState(ethers.BigNumber.from(0));
+    const [claimableAmount, setClaimableAmount] = useState(ethers.toBigInt(0));
     const [hasUserClaimed, setHasUserClaimed] = useState(false);
     const [isClaiming, setIsClaiming] = useState(false);
     const [actionMessage, setActionMessage] = useState({ text: "", type: "" });
@@ -41,8 +41,7 @@ function MarketDetailPage() {
         const fetchAllMarketData = async () => {
             setIsLoading(true);
             setError(null);
-            // Reset states on each fetch
-            setClaimableAmount(ethers.BigNumber.from(0));
+            setClaimableAmount(ethers.toBigInt(0));
             setHasUserClaimed(false);
             setActionMessage({ text: "", type: "" });
 
@@ -93,7 +92,7 @@ function MarketDetailPage() {
     }, [marketId, contract, walletAddress, refreshKey]);
 
     const handleClaimWinnings = useCallback(async () => {
-        if (!contract || !signer || !marketDetails || claimableAmount.isZero()) return;
+        if (!contract || !signer || !marketDetails || claimableAmount === ethers.toBigInt(0)) return;
         
         setIsClaiming(true);
         setActionMessage({ text: "Processing your claim...", type: "info" });
@@ -122,7 +121,7 @@ function MarketDetailPage() {
 
     const isMarketOpenForBetting = marketDetails.state === MarketState.Open;
     const isWrongNetwork = walletAddress && !signer;
-    const canClaim = !hasUserClaimed && claimableAmount.gt(0);
+    const canClaim = !hasUserClaimed && claimableAmount > ethers.toBigInt(0);
 
     return (
         <div className="page-container market-detail-page-v2">
@@ -169,7 +168,7 @@ function MarketDetailPage() {
                             <div className="claim-winnings-section">
                                 <h4>Congratulations! You have winnings to claim.</h4>
                                 <button onClick={handleClaimWinnings} disabled={isClaiming} className="button primary claim-button">
-                                    {isClaiming ? "Claiming..." : `Claim ${ethers.utils.formatEther(claimableAmount)} MATIC`}
+                                    {isClaiming ? "Claiming..." : `Claim ${ethers.formatEther(claimableAmount)} ${nativeTokenSymbol || ''}`}
                                 </button>
                             </div>
                         )}
@@ -179,8 +178,7 @@ function MarketDetailPage() {
                         )}
                     </div>
                 </div>
-
-                {/* --- THIS IS THE NEW, CHARISMATIC RESOLUTION SECTION --- */}
+                
                 {marketDetails.isEventMarket && (
                     <div className="market-info-zone">
                         <section className="market-rules-card">
