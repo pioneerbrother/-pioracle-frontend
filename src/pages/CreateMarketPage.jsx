@@ -8,57 +8,61 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import './CreateMarketPage.css';
 
-// Price feed data can be kept for when you use that market type
-const SUPPORTED_PRICE_FEEDS = [
-    { name: "Bitcoin (BTC/USD)", symbolPrefix: "BTCUSD", address: "0x...", decimals: 8 },
-    { name: "Ethereum (ETH/USD)", symbolPrefix: "ETHUSD", address: "0x...", decimals: 8 },
-];
-
 function CreateMarketPage() {
-    const { walletAddress, contract, signer } = useContext(WalletContext);
+    // --- FIX #1: Get the 'nativeTokenSymbol' from the context ---
+    const { walletAddress, contract, signer, nativeTokenSymbol } = useContext(WalletContext);
     const navigate = useNavigate();
 
-    // Simplified State
+    // State for the form
     const [marketQuestion, setMarketQuestion] = useState('');
     const [expiryDate, setExpiryDate] = useState('');
     const [expiryTime, setExpiryTime] = useState('23:59');
     const [resolutionDetails, setResolutionDetails] = useState('');
-    const [creatorFeePercent, setCreatorFeePercent] = useState("1.0");
-
-    const [listingFeeDisplay, setListingFeeDisplay] = useState('...');
+    
+    // State for the fee and submission logic
+    const [listingFeeDisplay, setListingFeeDisplay] = useState('Loading...');
     const [listingFeeWei, setListingFeeWei] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
     
-    // Auto-generate the on-chain symbol from the market question
+    // Auto-generate the on-chain symbol
     const assetSymbol = marketQuestion
         .trim()
         .toUpperCase()
-        .replace(/[?]/g, '') // Remove question marks for the symbol
+        .replace(/[?]/g, '')
         .replace(/ /g, '_')
         .replace(/[^A-Z0-9_]/g, '')
         .substring(0, 60);
 
-    // Fetch listing fee from contract
+    // --- FIX #2: Correctly fetch the fee AND use the dynamic symbol ---
     useEffect(() => {
-        if (contract) {
+        // Only run if the contract and symbol are loaded from the context
+        if (contract && nativeTokenSymbol) {
             const fetchFee = async () => {
+                setSubmitError(''); // Clear previous errors
                 try {
-                    const feeInWei = await contract.marketCreationListingFee();
+                    // Use the CORRECT public getter function from your contract
+                    const feeInWei = await contract.userMarketListingFee();
                     setListingFeeWei(feeInWei);
-                    setListingFeeDisplay(`${ethers.utils.formatEther(feeInWei)} MATIC`);
+                    // Use the DYNAMIC nativeTokenSymbol from the context
+                    setListingFeeDisplay(`${ethers.formatEther(feeInWei)} ${nativeTokenSymbol}`);
                 } catch (e) {
+                    console.error("Error fetching listing fee:", e);
                     setSubmitError("Could not load market listing fee.");
+                    setListingFeeDisplay('Error');
                 }
             };
             fetchFee();
+        } else {
+            setListingFeeDisplay('...'); // Show loading state if wallet not connected
         }
-    }, [contract]);
+    // Re-run this effect if the user connects or switches networks
+    }, [contract, nativeTokenSymbol]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!signer || !contract) {
-            setSubmitError("Please connect a wallet to create a market.");
+            setSubmitError("Please connect a wallet and ensure you are on the correct network.");
             return;
         }
 
@@ -72,21 +76,19 @@ function CreateMarketPage() {
                 throw new Error("Invalid or past expiry date.");
             }
             
-            const _creatorFeeBP = Math.round(parseFloat(creatorFeePercent) * 100);
-
-            // For all user-created markets now, they are "Event Markets"
-            const tx = await contract.connect(signer).createUserMarket(
+            // For all user-created markets, they are "Event Markets"
+            // Using modern ethers v6 syntax for consistency
+            const tx = await contract.connect(signer).createMarket(
                 assetSymbol,
-                ethers.constants.AddressZero, // priceFeedAddress
-                ethers.BigNumber.from(1),    // targetPrice
+                ethers.ZeroAddress, // priceFeedAddress for event markets
+                ethers.toBigInt(1), // targetPrice for event markets (YES = 1)
                 expiryTimestamp,
-                true,                        // isEventMarket
-                _creatorFeeBP,
+                true,               // isEventMarket
                 { value: listingFeeWei }
             );
             
             await tx.wait(1);
-            navigate('/predictions');
+            navigate('/predictions'); // Navigate to predictions list on success
 
         } catch (err) {
             const reason = err.reason || err.message || "An error occurred.";
@@ -114,11 +116,10 @@ function CreateMarketPage() {
                             id="marketQuestion"
                             value={marketQuestion}
                             onChange={(e) => setMarketQuestion(e.target.value)}
-                            placeholder="e.g., Will the US Strike Iran by JUL18?"
+                            placeholder="e.g., Will PiOracle have over 500 users on BNB Chain by August 1st?"
                             required
                             maxLength={100}
                         />
-                        <small>This question will be displayed directly on the market card.</small>
                     </div>
 
                     <div className="form-group">
@@ -139,12 +140,12 @@ function CreateMarketPage() {
                     
                     <div className="form-group">
                         <label htmlFor="resolutionDetails">Resolution Details & Source of Truth</label>
-                        <textarea id="resolutionDetails" value={resolutionDetails} onChange={e => setResolutionDetails(e.target.value)} required />
+                        <textarea id="resolutionDetails" value={resolutionDetails} placeholder="Explain how this market will be resolved and what data source will be used." onChange={e => setResolutionDetails(e.target.value)} required />
                     </div>
 
-                    <p>Market Listing Fee: <strong>{listingFeeDisplay}</strong></p>
+                    <p className="fee-label">Market Listing Fee: <strong>{listingFeeDisplay}</strong></p>
 
-                    <button type="submit" disabled={isSubmitting || !listingFeeWei}>
+                    <button type="submit" disabled={isSubmitting || !listingFeeWei || !signer}>
                         {isSubmitting ? <LoadingSpinner /> : `Create Market & Pay Fee`}
                     </button>
 
