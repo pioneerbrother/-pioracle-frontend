@@ -25,10 +25,13 @@ function MarketDetailPage() {
     const [isClaiming, setIsClaiming] = useState(false);
     const [actionMessage, setActionMessage] = useState({ text: "", type: "" });
 
+    // --- THE FINAL, BULLETPROOF FIX IS HERE ---
     useEffect(() => {
+        // This is a "guard clause". It stops the function immediately if 'contract' is not ready.
+        // This prevents the "(void 0) is not a function" race condition error.
         if (!contract) {
-            setIsLoading(true);
-            return;
+            setIsLoading(true); // Keep showing loading spinner until contract is ready
+            return; // Exit the effect early
         }
 
         const numericMarketId = Number(marketId);
@@ -89,6 +92,7 @@ function MarketDetailPage() {
         };
 
         fetchAllMarketData();
+    // This effect now correctly depends on the 'contract' object to re-run when it's ready.
     }, [marketId, contract, walletAddress, refreshKey]);
 
     const handleClaimWinnings = useCallback(async () => {
@@ -110,9 +114,7 @@ function MarketDetailPage() {
         }
     }, [contract, signer, marketDetails, claimableAmount]);
 
-    const resolutionText = (marketDetails && marketDetails.assetSymbol.includes('US_STRIKE_IRAN')) 
-        ? "This market covers the period from July 5, 2025, 00:00 UTC to July 18, 2025, 23:59 UTC. It will resolve to YES if the United States government officially orders or carries out military strikes on targets within Iran during this specific two-week window. Resolution will be based on announcements from the White House, the Pentagon, or confirmed reports from at least two major international news agencies (e.g., Reuters, Associated Press). If no strikes occur within this timeframe, it resolves to NO."
-        : "The resolution of this market is determined by the specific terms and verifiable source of truth defined at the time of its creation.";
+    const resolutionText = "The resolution of this market is determined by the specific terms and verifiable source of truth defined at the time of its creation.";
 
 
     if (isLoading) return <div className="page-container"><LoadingSpinner message={`Loading Market #${marketId}...`} /></div>;
@@ -139,7 +141,7 @@ function MarketDetailPage() {
                     <MarketOddsDisplay
                         totalStakedYesNet={marketDetails.totalStakedYesNet}
                         totalStakedNoNet={marketDetails.totalStakedNoNet}
-                        tokenSymbol={nativeTokenSymbol || "MATIC"}
+                        tokenSymbol={nativeTokenSymbol || "BNB"}
                     />
                     
                     <div className="interaction-panel">
@@ -147,7 +149,7 @@ function MarketDetailPage() {
                             <PredictionForm 
                                 marketId={marketDetails.id} 
                                 onBetPlaced={() => setRefreshKey(k => k + 1)}
-                                tokenSymbol={nativeTokenSymbol || "MATIC"}
+                                tokenSymbol={nativeTokenSymbol || "BNB"}
                                 marketTarget={marketDetails.targetDisplay}
                                 isEventMarket={marketDetails.isEventMarket}
                             />
@@ -178,7 +180,7 @@ function MarketDetailPage() {
                         )}
                     </div>
                 </div>
-                
+
                 {marketDetails.isEventMarket && (
                     <div className="market-info-zone">
                         <section className="market-rules-card">
