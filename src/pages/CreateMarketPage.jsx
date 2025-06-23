@@ -30,9 +30,9 @@ function CreateMarketPage() {
         .replace(/[^A-Z0-9_]/g, '')
         .substring(0, 60);
 
-    // --- THE FINAL, BULLETPROOF FIX ---
+    // --- THIS IS THE FINAL, BULLETPROOF FIX ---
     useEffect(() => {
-        // This is a "guard clause". It stops the function immediately if 'contract' is not ready.
+        // This "guard clause" stops the function immediately if 'contract' is not ready.
         // This prevents the "(void 0) is not a function" race condition error.
         if (!contract) {
             setListingFeeDisplay('...'); // Show a neutral loading state
@@ -47,7 +47,7 @@ function CreateMarketPage() {
                 
                 setListingFeeWei(feeInWei);
                 // Ensure nativeTokenSymbol is also ready before displaying, with a fallback.
-                setListingFeeDisplay(`${ethers.formatEther(feeInWei)} ${nativeTokenSymbol || ''}`);
+                setListingFeeDisplay(`${ethers.utils.formatEther(feeInWei)} ${nativeTokenSymbol || ''}`);
             } catch (e) {
                 console.error("Error fetching listing fee:", e);
                 setSubmitError("Could not load market listing fee. Please ensure you are on the correct network.");
@@ -76,13 +76,17 @@ function CreateMarketPage() {
                 throw new Error("Invalid or past expiry date.");
             }
             
+            // Note: Assuming a default creator fee of 0 for simplicity here.
+            // You may want to add an input for this later.
+            const creatorFeeBP = 0;
+
             const tx = await contract.connect(signer).createUserMarket(
                 assetSymbol,
-                ethers.ZeroAddress,
-                ethers.toBigInt(1),
+                ethers.constants.AddressZero,
+                ethers.BigNumber.from(1),
                 expiryTimestamp,
-                true,
-                0, 
+                true, // isEventMarket
+                creatorFeeBP, 
                 { value: listingFeeWei }
             );
             
