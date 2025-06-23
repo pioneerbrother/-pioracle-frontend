@@ -23,10 +23,7 @@ function PredictionMarketsListPage() {
             setIsLoading(true);
             setError(null);
             try {
-                // --- THIS IS THE FINAL FIX: Using the correct function name from the ABI ---
                 const nextMarketIdBN = await contract.nextMarketId();
-                // --- END OF FIX ---
-
                 if (nextMarketIdBN.eq(0)) {
                     setAllMarkets([]);
                     setIsLoading(false);
@@ -53,7 +50,7 @@ function PredictionMarketsListPage() {
                         resolutionTimestamp: Number(rawDetails[5]),
                         totalStakedYesNet: rawDetails[6].toString(),
                         totalStakedNoNet: rawDetails[7].toString(),
-                        state: Number(rawDetails[8]),
+                        state: Number(rawDetails[8]), // This is the value we need to check
                         actualOutcomeValue: rawDetails[9].toString(),
                         exists: rawDetails[10],
                         isEventMarket: rawDetails[11],
@@ -62,7 +59,11 @@ function PredictionMarketsListPage() {
                     return getMarketDisplayProperties(intermediateMarket);
                 }).filter(market => market !== null);
 
-                setAllMarkets(processedMarkets.reverse()); // Show newest first
+                // --- ADD THIS DEBUGGING LOG ---
+                console.log("All Processed Markets (before filtering):", processedMarkets);
+                // --- END OF DEBUGGING LOG ---
+
+                setAllMarkets(processedMarkets.reverse());
 
             } catch (err) {
                 console.error("PMLP: Failed to fetch markets:", err);
@@ -75,10 +76,15 @@ function PredictionMarketsListPage() {
         fetchAndProcessData();
     }, [contract]);
 
+    // Your existing useMemo hook
     const openMarketsToDisplay = useMemo(() => 
-        allMarkets.filter(m => m.state === 0), // Already sorted by newest first
+        allMarkets.filter(m => m.state === 0), // We will fix this line next
         [allMarkets]
     );
+
+    // --- ADD THIS SECOND DEBUGGING LOG ---
+    console.log("Filtered Open Markets (to be displayed):", openMarketsToDisplay);
+    // --- END OF DEBUGGING LOG ---
     
     return (
         <div className="page-container prediction-list-page">
@@ -94,6 +100,7 @@ function PredictionMarketsListPage() {
                             <MarketCard key={market.id} market={market} />
                         ))
                     ) : (
+                        // This message is what you are currently seeing
                         <p>No open markets found. Create one!</p>
                     )}
                 </div>
