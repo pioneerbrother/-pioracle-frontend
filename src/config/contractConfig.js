@@ -29,6 +29,14 @@ const chains = {
         symbol: 'MATIC',
         explorerUrl: 'https://polygonscan.com/',
     },
+    bsc_testnet: {
+        contractAddress: import.meta.env.VITE_BSC_TESTNET_CONTRACT_ADDRESS,
+        rpcUrl: import.meta.env.VITE_BSC_TESTNET_RPC_URL,
+        chainId: '0x61', // 97 in hex for BSC Testnet
+        name: 'BNB Smart Chain Testnet',
+        symbol: 'tBNB',
+        explorerUrl: 'https://testnet.bscscan.com',
+    },
     bnb_mainnet: {
         contractAddress: import.meta.env.VITE_BNB_MAINNET_CONTRACT_ADDRESS,
         rpcUrl: import.meta.env.VITE_BNB_MAINNET_RPC_URL,
