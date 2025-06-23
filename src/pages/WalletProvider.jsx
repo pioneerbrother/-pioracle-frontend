@@ -38,9 +38,17 @@ export function WalletProvider({ children }) {
     }, []);
 
     const getSymbolForChain = (id) => {
-        if (id === 137 || id === 80002) return "MATIC";
-        return "ETH";
-    };
+    if (!id) return "ETH"; 
+
+    // BNB Chain (Mainnet and Testnet)
+    if (id === 56 || id === 97) return "BNB";
+
+    // Polygon (Mainnet and Amoy Testnet)
+    if (id === 137 || id === 80002) return "MATIC";
+    
+    // Default for Ethereum, Localhost, etc.
+    return "ETH"; 
+};
 
     // Effect 1: Initialize Web3Modal instance - FINAL CORRECTED VERSION
     useEffect(() => {
