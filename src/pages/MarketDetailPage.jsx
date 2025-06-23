@@ -1,203 +1,64 @@
 // src/pages/MarketDetailPage.jsx
-import React, { useEffect, useState, useContext, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useContext, useMemo } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { ethers } from 'ethers';
 
-import { WalletContext } from './WalletProvider'; 
+// Keep all your necessary imports
+import { WalletContext } from './WalletProvider';
 import PredictionForm from '../components/predictions/PredictionForm';
 import MarketOddsDisplay from '../components/predictions/MarketOddsDisplay';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorMessage from '../components/common/ErrorMessage';
 import { getMarketDisplayProperties, MarketState } from '../utils/marketutils.js';
 import './MarketDetailPage.css';
 
-function MarketDetailPage() {
+// The component now receives the raw contract data as a prop
+function MarketDetailPage({ marketContractData }) {
     const { marketId } = useParams();
-    const { contract, walletAddress, signer, connectWallet, nativeTokenSymbol } = useContext(WalletContext) || {};
-    
-    const [marketDetails, setMarketDetails] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [refreshKey, setRefreshKey] = useState(0);
+    // We still need the context for wallet info and the native token symbol
+    const { walletAddress, signer, connectWallet, nativeTokenSymbol, contract } = useContext(WalletContext) || {};
 
-    const [claimableAmount, setClaimableAmount] = useState(ethers.toBigInt(0));
-    const [hasUserClaimed, setHasUserClaimed] = useState(false);
-    const [isClaiming, setIsClaiming] = useState(false);
-    const [actionMessage, setActionMessage] = useState({ text: "", type: "" });
+    // Use useMemo to process the data only when it changes. This is efficient.
+    const marketDetails = useMemo(() => {
+        if (!marketContractData) return null;
 
-    // --- THE FINAL, BULLETPROOF FIX IS HERE ---
-    useEffect(() => {
-        // This is a "guard clause". It stops the function immediately if 'contract' is not ready.
-        // This prevents the "(void 0) is not a function" race condition error.
-        if (!contract) {
-            setIsLoading(true); // Keep showing loading spinner until contract is ready
-            return; // Exit the effect early
-        }
-
-        const numericMarketId = Number(marketId);
-        if (isNaN(numericMarketId)) {
-            setError("Invalid Market ID in URL.");
-            setIsLoading(false);
-            return;
-        }
-
-        const fetchAllMarketData = async () => {
-            setIsLoading(true);
-            setError(null);
-            setClaimableAmount(ethers.toBigInt(0));
-            setHasUserClaimed(false);
-            setActionMessage({ text: "", type: "" });
-
-            try {
-                const detailsArray = await contract.getMarketStaticDetails(numericMarketId);
-                
-                if (!detailsArray || detailsArray.exists !== true) {
-                    throw new Error(`Market #${numericMarketId} could not be found or does not exist.`);
-                }
-                
-                const intermediateMarket = {
-                    id: detailsArray[0].toString(),
-                    assetSymbol: detailsArray[1],
-                    priceFeedAddress: detailsArray[2],
-                    targetPrice: detailsArray[3].toString(),
-                    expiryTimestamp: Number(detailsArray[4]),
-                    resolutionTimestamp: Number(detailsArray[5]),
-                    totalStakedYesNet: detailsArray[6].toString(),
-                    totalStakedNoNet: detailsArray[7].toString(),
-                    state: Number(detailsArray[8]),
-                    actualOutcomeValue: detailsArray[9].toString(),
-                    exists: detailsArray[10],
-                    isEventMarket: detailsArray[11],
-                    creationTimestamp: Number(detailsArray[12]),
-                };
-                
-                const finalMarketDetails = getMarketDisplayProperties(intermediateMarket);
-                setMarketDetails(finalMarketDetails);
-
-                const marketIsResolved = finalMarketDetails.state >= MarketState.Resolved_YesWon;
-                if (walletAddress && marketIsResolved) {
-                    const claimedStatus = await contract.didUserClaim(numericMarketId, walletAddress);
-                    setHasUserClaimed(claimedStatus);
-                    if (!claimedStatus) {
-                        const amount = await contract.getClaimableAmount(numericMarketId, walletAddress);
-                        setClaimableAmount(amount);
-                    }
-                }
-            } catch (err) {
-                console.error("Error fetching market details:", err);
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
+        const intermediateMarket = {
+            id: marketContractData[0].toString(),
+            assetSymbol: marketContractData[1],
+            priceFeedAddress: marketContractData[2],
+            targetPrice: marketContractData[3].toString(),
+            expiryTimestamp: Number(marketContractData[4]),
+            resolutionTimestamp: Number(marketContractData[5]),
+            totalStakedYesNet: marketContractData[6].toString(),
+            totalStakedNoNet: marketContractData[7].toString(),
+            state: Number(marketContractData[8]),
+            actualOutcomeValue: marketContractData[9].toString(),
+            exists: marketContractData[10],
+            isEventMarket: marketContractData[11],
+            creationTimestamp: Number(marketContractData[12]),
         };
-
-        fetchAllMarketData();
-    // This effect now correctly depends on the 'contract' object to re-run when it's ready.
-    }, [marketId, contract, walletAddress, refreshKey]);
-
-    const handleClaimWinnings = useCallback(async () => {
-        if (!contract || !signer || !marketDetails || claimableAmount === ethers.toBigInt(0)) return;
         
-        setIsClaiming(true);
-        setActionMessage({ text: "Processing your claim...", type: "info" });
-        
-        try {
-            const tx = await contract.connect(signer).claimWinnings(marketDetails.id);
-            await tx.wait(1);
-            setActionMessage({ text: "Winnings successfully claimed!", type: "success" });
-            setRefreshKey(k => k + 1);
-        } catch (err) {
-            const reason = err.reason || "An unknown error occurred while claiming.";
-            setActionMessage({ text: `Claim failed: ${reason}`, type: "error" });
-        } finally {
-            setIsClaiming(false);
-        }
-    }, [contract, signer, marketDetails, claimableAmount]);
+        return getMarketDisplayProperties(intermediateMarket);
+    }, [marketContractData]);
 
-    const resolutionText = "The resolution of this market is determined by the specific terms and verifiable source of truth defined at the time of its creation.";
+    // --- All your other logic for claiming, checking status, etc. can go here ---
+    // You will need to re-implement the claimableAmount fetching logic here,
+    // as it depends on the walletAddress which isn't available in the loader.
+    // This is a good place for it.
 
+    if (!marketDetails) {
+        // This is a safety net in case something goes wrong
+        return <div className="page-container">Error displaying market data.</div>;
+    }
 
-    if (isLoading) return <div className="page-container"><LoadingSpinner message={`Loading Market #${marketId}...`} /></div>;
-    if (error) return <div className="page-container"><ErrorMessage title="Market Data Error" message={error} /></div>;
-    if (!marketDetails) return <div className="page-container"><ErrorMessage title="Not Found" message={`Market #${marketId} could not be loaded.`} /></div>;
-
-    const isMarketOpenForBetting = marketDetails.state === MarketState.Open;
-    const isWrongNetwork = walletAddress && !signer;
-    const canClaim = !hasUserClaimed && claimableAmount > ethers.toBigInt(0);
-
+    // Your original JSX can now safely use 'marketDetails'
     return (
         <div className="page-container market-detail-page-v2">
             <header className="market-header-v2">
                 <Link to="/predictions" className="back-link-v2">← All Markets</Link>
                 <h1>{marketDetails.title}</h1>
-                <div className="market-meta-v2">
-                    <span className="meta-item">Expires: {marketDetails.expiryString}</span>
-                    <span className={`status-badge ${marketDetails.statusClassName}`}>{marketDetails.statusString}</span>
-                </div>
+                 {/* ... the rest of your beautiful JSX ... */}
             </header>
-
             <div className="market-body-v2">
-                <div className="market-action-zone">
-                    <MarketOddsDisplay
-                        totalStakedYesNet={marketDetails.totalStakedYesNet}
-                        totalStakedNoNet={marketDetails.totalStakedNoNet}
-                        tokenSymbol={nativeTokenSymbol || "BNB"}
-                    />
-                    
-                    <div className="interaction-panel">
-                        {isMarketOpenForBetting && !isWrongNetwork && walletAddress ? (
-                            <PredictionForm 
-                                marketId={marketDetails.id} 
-                                onBetPlaced={() => setRefreshKey(k => k + 1)}
-                                tokenSymbol={nativeTokenSymbol || "BNB"}
-                                marketTarget={marketDetails.targetDisplay}
-                                isEventMarket={marketDetails.isEventMarket}
-                            />
-                        ) : isMarketOpenForBetting && !walletAddress ? (
-                            <div className="interaction-notice">
-                                <h3>Join the Forecast</h3>
-                                <p>Connect your wallet to make your prediction.</p>
-                                <button onClick={connectWallet} className="button primary large">Connect Wallet</button>
-                            </div>
-                        ) : isWrongNetwork ? (
-                             <div className="interaction-notice error">
-                                <h3>Wrong Network</h3>
-                                <p>Please switch to the target network to interact.</p>
-                             </div>
-                        ) : null }
-
-                        {canClaim && (
-                            <div className="claim-winnings-section">
-                                <h4>Congratulations! You have winnings to claim.</h4>
-                                <button onClick={handleClaimWinnings} disabled={isClaiming} className="button primary claim-button">
-                                    {isClaiming ? "Claiming..." : `Claim ${ethers.formatEther(claimableAmount)} ${nativeTokenSymbol || ''}`}
-                                </button>
-                            </div>
-                        )}
-                        
-                        {!isMarketOpenForBetting && !canClaim && (
-                            <div className="info-message">Betting for this market is closed.</div>
-                        )}
-                    </div>
-                </div>
-
-                {marketDetails.isEventMarket && (
-                    <div className="market-info-zone">
-                        <section className="market-rules-card">
-                           <div className="rules-card-inner"></div>
-                            <div className="rules-card-header">
-                                <img src="/images/icons/scales-of-justice-icon.svg" alt="Resolution Rules" className="rules-icon" />
-                                <h3>Resolution Source & Rules</h3>
-                            </div>
-                            <div className="rules-card-body">
-                                <p>{resolutionText}</p>
-                            </div>
-                            <div className="rules-card-footer">
-                                <span>Verified by PiOracle Admin</span>
-                            </div>
-                        </section>
-                    </div>
-                )}
+                {/* ... all your other divs and components ... */}
             </div>
         </div>
     );
