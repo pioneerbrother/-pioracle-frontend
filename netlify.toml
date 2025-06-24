@@ -1,17 +1,3 @@
-# netlify.toml
-
-# This is your existing headers section. Leave it as is.
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com"
-    Permissions-Policy = "clipboard-read=(), clipboard-write=()"
-
-# --- ADD THIS NEW SECTION AT THE BOTTOM OF THE FILE ---
-# This redirect rule is crucial for Single Page Applications (SPAs).
-# It tells Netlify to serve the index.html file for any path
-# that doesn't match an existing file, allowing React Router to handle it.
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+      [headers.values]
+        Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.web3modal.com https://www.google-analytics.com;"
+        Permissions-Policy = "clipboard-read=(), clipboard-write=()"
