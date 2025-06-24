@@ -1,73 +1,64 @@
 // src/config/contractConfig.js
 import PREDICTION_MARKET_ABI from './PredictionMarketP2P.json';
 
-// --- Central Configuration Object ---
-// All network-specific details are defined here.
 const chains = {
-    // Removed 'local' as it's not typically for Web3Modal production
-    amoy_testnet: { // Keep for testing if needed by Web3Modal
-        contractAddress: import.meta.env.VITE_AMOY_PREDICTION_MARKET_CONTRACT_ADDRESS,
-        rpcUrl: import.meta.env.VITE_AMOY_RPC_URL,
-        chainIdHex: import.meta.env.VITE_AMOY_CHAIN_ID_HEX || '0x13882', // Store as hex
-        name: 'Polygon Amoy',
-        symbol: 'MATIC',
-        explorerUrl: 'https://www.oklink.com/amoy',
-    },
+    // Polygon Mainnet - Chain ID: 137 (decimal)
     polygon_mainnet: {
-        contractAddress: import.meta.env.VITE_POLYGON_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
-        rpcUrl: import.meta.env.VITE_POLYGON_MAINNET_RPC_URL,
-        chainIdHex: import.meta.env.VITE_POLYGON_MAINNET_CHAIN_ID_HEX || '0x89', // Store as hex
+        contractAddress: import.meta.env.VITE_POLYGON_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS || "0x1F52a81DF45d8098E676285a436e51a49dC145BC", // Your old contract
+        rpcUrl: import.meta.env.VITE_POLYGON_MAINNET_RPC_URL || "https://polygon-rpc.com/", // USE YOUR ALCHEMY URL HERE
+        chainIdHex: '0x89',
         name: 'Polygon Mainnet',
         symbol: 'MATIC',
         explorerUrl: 'https://polygonscan.com/',
     },
-    bsc_testnet: { // Keep for testing if needed by Web3Modal
-        contractAddress: import.meta.env.VITE_BSC_TESTNET_CONTRACT_ADDRESS,
-        rpcUrl: import.meta.env.VITE_BSC_TESTNET_RPC_URL,
-        chainIdHex: '0x61', // Store as hex
-        name: 'BNB Smart Chain Testnet',
-        symbol: 'tBNB',
-        explorerUrl: 'https://testnet.bscscan.com',
-    },
+    // BNB Smart Chain Mainnet - Chain ID: 56 (decimal)
     bnb_mainnet: {
-        contractAddress: import.meta.env.VITE_BNB_MAINNET_CONTRACT_ADDRESS,
-        rpcUrl: import.meta.env.VITE_BNB_MAINNET_RPC_URL,
-        chainIdHex: '0x38', // Store as hex
+        contractAddress: import.meta.env.VITE_BNB_MAINNET_CONTRACT_ADDRESS || "0x3D93FD642837e61Ef34D6808cE0b29Ec3e15d1C8", // Your new contract
+        rpcUrl: import.meta.env.VITE_BNB_MAINNET_RPC_URL || "https://bsc-dataseed.binance.org/",
+        chainIdHex: '0x38',
         name: 'BNB Smart Chain',
         symbol: 'BNB',
         explorerUrl: 'https://bscscan.com',
     },
+    // Add other chains like amoy_testnet, bsc_testnet if you want them in Web3Modal's list
 };
 
-const VITE_NETWORK_TARGET = import.meta.env.VITE_NETWORK_TARGET || 'polygon_mainnet';
-const currentConfig = chains[VITE_NETWORK_TARGET];
+// --- VITE_NETWORK_TARGET determines the DEFAULT chain for users NOT YET CONNECTED ---
+const VITE_NETWORK_TARGET = import.meta.env.VITE_NETWORK_TARGET || 'bnb_mainnet'; // Default to bnb for new users
+const defaultConfig = chains[VITE_NETWORK_TARGET];
 
-if (!currentConfig) {
-    throw new Error(`Fatal Error: Configuration for network "${VITE_NETWORK_TARGET}" is not defined in contractConfig.js.`);
+if (!defaultConfig) {
+    throw new Error(`[contractConfig] Config for VITE_NETWORK_TARGET "${VITE_NETWORK_TARGET}" not found.`);
 }
-console.log(`[contractConfig] Loaded configuration for VITE_NETWORK_TARGET: '${VITE_NETWORK_TARGET}'`);
+console.log(`[contractConfig] Default configuration loaded for VITE_NETWORK_TARGET: '${VITE_NETWORK_TARGET}'`);
 
-// --- Exported Getter Functions for the CURRENT TARGET NETWORK ---
-export const getContractAddress = () => currentConfig.contractAddress;
-export const getRpcUrl = () => currentConfig.rpcUrl;
-export const getTargetChainIdHex = () => currentConfig.chainIdHex; // Use consistent naming
-export const getChainName = () => currentConfig.name;
-export const getCurrencySymbol = () => currentConfig.symbol;
-export const getExplorerUrl = () => currentConfig.explorerUrl;
 export const getContractAbi = () => PREDICTION_MARKET_ABI.abi || PREDICTION_MARKET_ABI;
 
+// --- GETTERS FOR THE DEFAULT TARGET NETWORK (used by Web3Modal defaultChainId) ---
+export const getTargetChainIdHex = () => defaultConfig.chainIdHex;
 
-// --- NEW FUNCTION: Get all supported chains for Web3Modal ---
+// --- NEW FUNCTION: Get config for a SPECIFIC chainId ---
+export const getConfigForChainId = (chainId) => {
+    if (!chainId) return null;
+    const chainIdStr = typeof chainId === 'number' ? chainId.toString() : chainId; // Ensure it's a string for lookup if needed
+    
+    for (const key in chains) {
+        if (parseInt(chains[key].chainIdHex, 16).toString() === chainIdStr) {
+            return chains[key];
+        }
+    }
+    console.warn(`[contractConfig] No configuration found for chainId: ${chainId}`);
+    return null; // Or return defaultConfig as a fallback? Careful with this.
+};
+
+// --- UPDATED FUNCTION: Get all supported chains for Web3Modal ---
 export const getAllSupportedChainsForModal = () => {
-    // Define which chains from your 'chains' object are supported by Web3Modal
-    // For example, you might only want mainnets in production
-    const supportedChainKeys = ['polygon_mainnet', 'bnb_mainnet']; // Add 'amoy_testnet', 'bsc_testnet' if needed for dev/testing
-
+    const supportedChainKeys = ['polygon_mainnet', 'bnb_mainnet']; // Define which chains are in Web3Modal
     return supportedChainKeys.map(key => {
         const chain = chains[key];
-        if (!chain) return null; // Should not happen if keys are correct
+        if (!chain) return null;
         return {
-            chainId: parseInt(chain.chainIdHex, 16), // Web3Modal needs chainId as a number
+            chainId: parseInt(chain.chainIdHex, 16),
             name: chain.name,
             currency: chain.symbol,
             explorerUrl: chain.explorerUrl,
