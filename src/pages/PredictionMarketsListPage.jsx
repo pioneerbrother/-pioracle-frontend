@@ -41,6 +41,7 @@ function PredictionMarketsListPage() {
                 const processedMarkets = allRawDetails.map((rawDetails) => {
                     if (!rawDetails || !rawDetails.exists !== true) return null; 
                     
+                    // --- THIS IS THE FINAL FIX: Using the correct field names from the ABI ---
                     const intermediateMarket = {
                         id: rawDetails[0].toString(),
                         assetSymbol: rawDetails[1],
@@ -48,9 +49,9 @@ function PredictionMarketsListPage() {
                         targetPrice: rawDetails[3].toString(),
                         expiryTimestamp: Number(rawDetails[4]),
                         resolutionTimestamp: Number(rawDetails[5]),
-                        totalStakedYesNet: rawDetails[6].toString(),
-                        totalStakedNoNet: rawDetails[7].toString(),
-                        state: Number(rawDetails[8]), // This is the value we need to check
+                        totalStakedYes: rawDetails[6].toString(), // CORRECTED
+                        totalStakedNo: rawDetails[7].toString(),  // CORRECTED
+                        state: Number(rawDetails[8]),
                         actualOutcomeValue: rawDetails[9].toString(),
                         exists: rawDetails[10],
                         isEventMarket: rawDetails[11],
@@ -58,10 +59,6 @@ function PredictionMarketsListPage() {
                     };
                     return getMarketDisplayProperties(intermediateMarket);
                 }).filter(market => market !== null);
-
-                // --- ADD THIS DEBUGGING LOG ---
-                console.log("All Processed Markets (before filtering):", processedMarkets);
-                // --- END OF DEBUGGING LOG ---
 
                 setAllMarkets(processedMarkets.reverse());
 
@@ -76,31 +73,21 @@ function PredictionMarketsListPage() {
         fetchAndProcessData();
     }, [contract]);
 
-    // Your existing useMemo hook
     const openMarketsToDisplay = useMemo(() => 
-        allMarkets.filter(m => m.state === 0), // We will fix this line next
+        allMarkets.filter(m => m.state === 0),
         [allMarkets]
     );
-
-    // --- ADD THIS SECOND DEBUGGING LOG ---
-    console.log("Filtered Open Markets (to be displayed):", openMarketsToDisplay);
-    // --- END OF DEBUGGING LOG ---
     
     return (
         <div className="page-container prediction-list-page">
             <h1>Open Markets</h1>
-            {isLoading ? (
-                <LoadingSpinner message="Fetching markets..." />
-            ) : error ? (
-                <ErrorMessage title="Error Loading Markets" message={error} />
-            ) : (
+            {isLoading ? ( <LoadingSpinner message="Fetching markets..." /> ) : 
+             error ? ( <ErrorMessage title="Error Loading Markets" message={error} /> ) : 
+            (
                  <div className="market-grid">
                     {openMarketsToDisplay.length > 0 ? (
-                        openMarketsToDisplay.map(market => (
-                            <MarketCard key={market.id} market={market} />
-                        ))
+                        openMarketsToDisplay.map(market => <MarketCard key={market.id} market={market} />)
                     ) : (
-                        // This message is what you are currently seeing
                         <p>No open markets found. Create one!</p>
                     )}
                 </div>
