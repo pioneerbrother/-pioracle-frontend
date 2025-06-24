@@ -1,22 +1,54 @@
 // src/pages/MarketDetailPage.jsx
-import React, { useContext, useMemo } from 'react';
+import React, { useContext, useMemo, useState, useCallback, useEffect } from 'react'; // Added useState, useCallback, useEffect
 import { Link, useParams } from 'react-router-dom';
-import { ethers } from 'ethers';
+import { ethers } from 'ethers'; // This should be your v5 import
 
-// Keep all your necessary imports
 import { WalletContext } from './WalletProvider';
 import PredictionForm from '../components/predictions/PredictionForm';
 import MarketOddsDisplay from '../components/predictions/MarketOddsDisplay';
 import { getMarketDisplayProperties, MarketState } from '../utils/marketutils.js';
+import LoadingSpinner from '../components/common/LoadingSpinner'; // Assuming you have this
+import ErrorMessage from '../components/common/ErrorMessage';   // Assuming you have this
 import './MarketDetailPage.css';
 
-// The component now receives the raw contract data as a prop
-function MarketDetailPage({ marketContractData }) {
+// The component now receives the raw contract data as a prop from a loader OR fetches it.
+// For robustness, let's ensure it can fetch if data isn't passed (though loader is better).
+function MarketDetailPage({ marketContractData: initialMarketContractData }) {
     const { marketId } = useParams();
-    // We still need the context for wallet info and the native token symbol
     const { walletAddress, signer, connectWallet, nativeTokenSymbol, contract } = useContext(WalletContext) || {};
 
-    // Use useMemo to process the data only when it changes. This is efficient.
+    const [marketContractData, setMarketContractData] = useState(initialMarketContractData);
+    const [isLoading, setIsLoading] = useState(!initialMarketContractData); // Only load if no initial data
+    const [error, setError] = useState('');
+
+    // Fetch data if not provided by a loader or if contract changes (e.g., network switch)
+    useEffect(() => {
+        if (!contract || initialMarketContractData) { // If we have initial data, don't re-fetch unless contract changes
+            if(initialMarketContractData && !marketContractData) setMarketContractData(initialMarketContractData);
+            setIsLoading(false);
+            return;
+        }
+
+        const fetchMarket = async () => {
+            setIsLoading(true);
+            setError('');
+            try {
+                const data = await contract.getMarketStaticDetails(marketId);
+                if (!data || !data.exists) {
+                    throw new Error(`Market #${marketId} not found.`);
+                }
+                setMarketContractData(data);
+            } catch (err) {
+                console.error(`Failed to load market #${marketId}:`, err);
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchMarket();
+    }, [contract, marketId, initialMarketContractData, marketContractData]);
+
+
     const marketDetails = useMemo(() => {
         if (!marketContractData) return null;
 
@@ -27,8 +59,8 @@ function MarketDetailPage({ marketContractData }) {
             targetPrice: marketContractData[3].toString(),
             expiryTimestamp: Number(marketContractData[4]),
             resolutionTimestamp: Number(marketContractData[5]),
-            totalStakedYesNet: marketContractData[6].toString(),
-            totalStakedNoNet: marketContractData[7].toString(),
+            totalStakedYes: marketContractData[6].toString(), // Corrected from ...Net
+            totalStakedNo: marketContractData[7].toString(),  // Corrected from ...Net
             state: Number(marketContractData[8]),
             actualOutcomeValue: marketContractData[9].toString(),
             exists: marketContractData[10],
@@ -39,26 +71,118 @@ function MarketDetailPage({ marketContractData }) {
         return getMarketDisplayProperties(intermediateMarket);
     }, [marketContractData]);
 
-    // --- All your other logic for claiming, checking status, etc. can go here ---
-    // You will need to re-implement the claimableAmount fetching logic here,
-    // as it depends on the walletAddress which isn't available in the loader.
-    // This is a good place for it.
+    // --- Re-implement claimableAmount fetching logic and other interactions ---
+    const [claimableAmount, setClaimableAmount] = useState(ethers.BigNumber.from(0));
+    const [hasUserClaimed, setHasUserClaimed] = useState(false);
+    const [isClaiming, setIsClaiming] = useState(false);
+    const [actionMessage, setActionMessage] = useState({ text: "", type: "" });
+    const [refreshKey, setRefreshKey] = useState(0); // For refreshing data after claim
 
-    if (!marketDetails) {
-        // This is a safety net in case something goes wrong
-        return <div className="page-container">Error displaying market data.</div>;
-    }
+    useEffect(() => {
+        if (walletAddress && marketDetails && marketDetails.state >= MarketState.Resolved_YesWon && contract) {
+            const checkClaimStatus = async () => {
+                const numericMarketId = Number(marketDetails.id);
+                const claimedStatus = await contract.didUserClaim(numericMarketId, walletAddress);
+                setHasUserClaimed(claimedStatus);
+                if (!claimedStatus) {
+                    const amount = await contract.getClaimableAmount(numericMarketId, walletAddress);
+                    setClaimableAmount(amount);
+                }
+            };
+            checkClaimStatus();
+        }
+    }, [walletAddress, marketDetails, contract, refreshKey]);
 
-    // Your original JSX can now safely use 'marketDetails'
+    const handleClaimWinnings = useCallback(async () => {
+        // Ensure all dependencies for claiming are present
+        if (!contract || !signer || !marketDetails || claimableAmount.isZero()) return;
+        
+        setIsClaiming(true);
+        setActionMessage({ text: "Processing your claim...", type: "info" });
+        
+        try {
+            const tx = await contract.connect(signer).claimWinnings(marketDetails.id);
+            await tx.wait(1);
+            setActionMessage({ text: "Winnings successfully claimed!", type: "success" });
+            setRefreshKey(k => k + 1); // Trigger data refresh
+        } catch (err) {
+            const reason = err.reason || "An unknown error occurred while claiming.";
+            setActionMessage({ text: `Claim failed: ${reason}`, type: "error" });
+        } finally {
+            setIsClaiming(false);
+        }
+    }, [contract, signer, marketDetails, claimableAmount]);
+
+
+    if (isLoading) return <div className="page-container"><LoadingSpinner message={`Loading Market #${marketId}...`} /></div>;
+    if (error) return <div className="page-container"><ErrorMessage title="Market Data Error" message={error} /></div>;
+    if (!marketDetails) return <div className="page-container"><ErrorMessage title="Not Found" message={`Market #${marketId} could not be loaded or data is invalid.`} /></div>;
+    
+    const isMarketOpenForBetting = marketDetails.state === MarketState.Open;
+    const isWrongNetwork = walletAddress && !signer; // Assuming signer is null on wrong network
+    const canClaim = !hasUserClaimed && claimableAmount.gt(0);
+
     return (
         <div className="page-container market-detail-page-v2">
             <header className="market-header-v2">
                 <Link to="/predictions" className="back-link-v2">← All Markets</Link>
                 <h1>{marketDetails.title}</h1>
-                 {/* ... the rest of your beautiful JSX ... */}
+                <div className="market-meta-v2">
+                    <span className="meta-item">Expires: {marketDetails.expiryString}</span>
+                    <span className={`status-badge ${marketDetails.statusClassName}`}>{marketDetails.statusString}</span>
+                </div>
             </header>
+
             <div className="market-body-v2">
-                {/* ... all your other divs and components ... */}
+                <div className="market-action-zone">
+                     <MarketOddsDisplay
+                        totalStakedYes={marketDetails.totalStakedYes} // Using corrected prop name
+                        totalStakedNo={marketDetails.totalStakedNo}   // Using corrected prop name
+                        tokenSymbol={nativeTokenSymbol || "BNB"} // Default to BNB or MATIC based on context
+                    />
+                    
+                    <div className="interaction-panel">
+                        {isMarketOpenForBetting && !isWrongNetwork && walletAddress ? (
+                            <PredictionForm 
+                                marketId={marketDetails.id} 
+                                onBetPlaced={() => setRefreshKey(k => k + 1)}
+                                tokenSymbol={nativeTokenSymbol || "BNB"}
+                                marketTarget={marketDetails.targetDisplay}
+                                isEventMarket={marketDetails.isEventMarket}
+                            />
+                        ) : isMarketOpenForBetting && !walletAddress ? (
+                            <div className="interaction-notice">
+                                <h3>Join the Forecast</h3>
+                                <p>Connect your wallet to make your prediction.</p>
+                                <button onClick={connectWallet} className="button primary large">Connect Wallet</button>
+                            </div>
+                        ) : isWrongNetwork ? (
+                             <div className="interaction-notice error">
+                                <h3>Wrong Network</h3>
+                                <p>Please switch to the target network to interact.</p>
+                             </div>
+                        ) : null }
+
+                        {canClaim && (
+                            <div className="claim-winnings-section">
+                                <h4>Congratulations! You have winnings to claim.</h4>
+                                <button onClick={handleClaimWinnings} disabled={isClaiming} className="button primary claim-button">
+                                    {isClaiming ? "Claiming..." : `Claim ${ethers.utils.formatEther(claimableAmount)} ${nativeTokenSymbol || ''}`}
+                                </button>
+                            </div>
+                        )}
+                        
+                        {!isMarketOpenForBetting && !canClaim && marketDetails.state !== MarketState.Open && (
+                             <div className="info-message">Betting for this market is closed. Outcome: {marketDetails.outcomeString || 'Pending Resolution'}</div>
+                        )}
+                    </div>
+                </div>
+                 {/* You'll need to ensure resolutionText is defined or dynamically generated */}
+                {marketDetails.isEventMarket && (
+                    <div className="market-info-zone">
+                        {/* ... Your resolution rules section ... */}
+                    </div>
+                )}
             </div>
         </div>
     );

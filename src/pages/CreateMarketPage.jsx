@@ -1,7 +1,7 @@
 // src/pages/CreateMarketPage.jsx
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ethers } from 'ethers';
+import { ethers } from 'ethers'; // This should be your v5 import
 import { WalletContext } from './WalletProvider';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -31,12 +31,10 @@ function CreateMarketPage() {
         const fetchFee = async () => {
             setSubmitError('');
             try {
-                // --- THIS IS THE FINAL FIX: Using the correct function name from the ABI ---
                 const feeInWei = await contract.marketCreationListingFee();
-                // --- END OF FIX ---
-                
                 setListingFeeWei(feeInWei);
-                setListingFeeDisplay(`${ethers.formatEther(feeInWei)} ${nativeTokenSymbol || ''}`);
+                // --- ETHERS V5 FIX ---
+                setListingFeeDisplay(`${ethers.utils.formatEther(feeInWei)} ${nativeTokenSymbol || ''}`);
             } catch (e) {
                 console.error("Error fetching listing fee:", e);
                 setSubmitError("Could not load market listing fee. Please ensure you are on the correct network.");
@@ -62,8 +60,15 @@ function CreateMarketPage() {
 
             if (isNaN(expiryTimestamp) || expiryTimestamp * 1000 < Date.now()) throw new Error("Invalid or past expiry date.");
             
+            // --- ETHERS V5 FIXES ---
             const tx = await contract.connect(signer).createUserMarket(
-                assetSymbol, ethers.ZeroAddress, ethers.toBigInt(1), expiryTimestamp, true, 0, { value: listingFeeWei }
+                assetSymbol, 
+                ethers.constants.AddressZero, // Correct for v5
+                ethers.BigNumber.from(1),    // Correct for v5
+                expiryTimestamp, 
+                true, 
+                0, 
+                { value: listingFeeWei }
             );
             
             await tx.wait(1);
