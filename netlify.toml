@@ -1,26 +1,10 @@
-# netlify.toml
+# netlify.toml (MINIMAL TEST VERSION)
 
 [build]
-  command = "npm run build"
-  publish = "dist"
-  environment = { NODE_VERSION = "18" }
+  command = "npm run build" # Or your actual build command
+  publish = "dist"          # Or your actual publish directory (e.g., "build")
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Security Headers - Including the comprehensive Content Security Policy
-[[headers]]
-  for = "/*"
-  [headers.values]
-    # Content Security Policy (CSP) - Single Line for TOML compatibility
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://api.web3modal.org https://rpc.walletconnect.org wss://*.bridge.walletconnect.org https://*.rpc.thirdweb.com https://bsc-dataseed.binance.org https://polygon-rpc.com https://*.google-analytics.com https://*.analytics.google.com; img-src 'self' data: https://*.walletconnect.com https://api.web3modal.org; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://secure.walletconnect.org;"
-    
-    # Other important security headers
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    X-Content-Type-Options = "nosniff" # Added for good measure
-    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload" # Added for HTTPS enforcement
-    Permissions-Policy = "clipboard-read=(), clipboard-write=()" # You already had this
