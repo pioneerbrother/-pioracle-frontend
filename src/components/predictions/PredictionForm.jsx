@@ -31,14 +31,22 @@ function PredictionForm({
         
         setIsLoading(true);
         try {
-            const amountInWei = ethers.utils.parseUnits(stakeAmount, 18);
+           const amountInWei = ethers.utils.parseUnits(stakeAmount, 18); // Ethers v5
             const predictYesBool = predictedOutcome === 'YES';
             const tx = await contract.connect(signer).placeBet(marketId, predictYesBool, { value: amountInWei });
-            setMessage({ text: `Submitting...`, type: 'info' });
-            await tx.wait(1);
-            setMessage({ text: 'Bet placed successfully!', type: 'success' });
-            setStakeAmount(''); 
-            if (onBetPlaced) onBetPlaced();
+            setMessage({ text: `Submitting... Tx: ${tx.hash.substring(0,10)}...`, type: 'info' });
+            await tx.wait(1); // Wait for 1 confirmation
+
+            // --- ADD DELAY HERE ---
+            console.log("PredictionForm: Bet confirmed on-chain. Waiting 3 seconds before triggering UI refresh...");
+            setTimeout(() => {
+                console.log("PredictionForm: 3-second delay finished. Calling onBetPlaced.");
+                setMessage({ text: 'Bet placed successfully! Refreshing market data...', type: 'success' });
+                setStakeAmount(''); 
+                if (onBetPlaced) onBetPlaced(); // This calls setRefreshKey in MarketDetailPage
+            }, 3000); // 3000 milliseconds = 3 seconds
+            // --- END OF DELAY ---
+
         } catch (err) {
             const reason = err.reason || err.message || "An unknown error occurred.";
             setMessage({ text: `Error: ${reason}`, type: 'error' });
