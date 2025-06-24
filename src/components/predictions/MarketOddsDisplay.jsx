@@ -1,54 +1,76 @@
 // src/components/predictions/MarketOddsDisplay.jsx
 import React from 'react';
-import { ethers } from 'ethers';
-import './MarketOddsDisplay.css'; // We'll update this CSS next
+import { ethers } from 'ethers'; // Ensure this is v5: ethers.utils
+import './MarketOddsDisplay.css'; 
 
 function MarketOddsDisplay({ 
-    totalStakedYesNet, 
-    totalStakedNoNet,
+    // --- FIX: Correct prop names ---
+    totalStakedYes, 
+    totalStakedNo,
+    // --- END OF FIX ---
     tokenSymbol 
 }) {
-    const sYes = ethers.BigNumber.from(totalStakedYesNet || '0');
-    const sNo = ethers.BigNumber.from(totalStakedNoNet || '0');
+    // --- ADD THE LOGS WE DISCUSSED TO VERIFY PROPS ---
+    console.log("MarketOddsDisplay PROPS RECEIVED:", { 
+        totalStakedYes, 
+        totalStakedNo, 
+        tokenSymbol 
+    });
+    // --- END OF LOG ---
+
+    // Use the corrected prop names here
+    const sYes = ethers.BigNumber.from(totalStakedYes || '0');
+    const sNo = ethers.BigNumber.from(totalStakedNo || '0');
     const totalPool = sYes.add(sNo);
 
-    // --- NEW PROBABILITY & ODDS CALCULATION LOGIC ---
     let oddsYes = "N/A", oddsNo = "N/A";
-    let probYes = 50, probNo = 50;
+    let probYes = 50, probNo = 50; // Default for display before calculation
     
     if (totalPool.isZero()) {
         oddsYes = "First Bet?";
         oddsNo = "First Bet?";
+        // Probabilities remain 50/50 if pool is zero
     } else {
-        const scale = ethers.utils.parseUnits("1", 18);
+        const scale = ethers.utils.parseUnits("1", 18); // For v5
         
-        // Calculate YES side
         if (!sYes.isZero()) {
             const oddsYesRaw = totalPool.mul(scale).div(sYes);
             oddsYes = `${parseFloat(ethers.utils.formatUnits(oddsYesRaw, 18)).toFixed(2)}x Payout`;
-            
-            const probYesRaw = sNo.mul(10000).div(totalPool);
-            probYes = (probYesRaw.toNumber() / 100).toFixed(0);
         } else {
-            oddsYes = "∞ Payout"; // Infinite payout if no one has bet yet
-            probYes = 0;
+            oddsYes = "∞ Payout"; 
         }
 
-        // Calculate NO side
         if (!sNo.isZero()) {
             const oddsNoRaw = totalPool.mul(scale).div(sNo);
             oddsNo = `${parseFloat(ethers.utils.formatUnits(oddsNoRaw, 18)).toFixed(2)}x Payout`;
-
-            const probNoRaw = sYes.mul(10000).div(totalPool);
-            probNo = (probNoRaw.toNumber() / 100).toFixed(0);
         } else {
             oddsNo = "∞ Payout";
-            probNo = 0;
         }
 
-        // Adjust if one pool is empty
-        if(sYes.isZero()) probNo = 100;
-        if(sNo.isZero()) probYes = 100;
+        // Probabilities based on relative stake
+        // To avoid division by zero if totalPool is not zero but one stake is, handle explicitly
+        if (!sYes.isZero() && !sNo.isZero()) {
+            probYes = parseFloat((sYes.mul(10000).div(totalPool)).toString()) / 100;
+            probNo = parseFloat((sNo.mul(10000).div(totalPool)).toString()) / 100;
+
+            // Ensure they sum to 100 and handle potential floating point inaccuracies
+            const probSum = probYes + probNo;
+            if (probSum > 0 && probSum !== 100) {
+                 // A simple normalization, can be improved for precision
+                probYes = (probYes / probSum) * 100;
+                probNo = (probNo / probSum) * 100;
+            }
+            probYes = Math.round(probYes);
+            probNo = 100 - probYes; // Ensure they sum to 100
+
+        } else if (sYes.isZero() && !sNo.isZero()) {
+            probYes = 0;
+            probNo = 100;
+        } else if (!sYes.isZero() && sNo.isZero()) {
+            probYes = 100;
+            probNo = 0;
+        }
+        // If both are zero, it's handled by the initial 50/50
     }
 
     return (

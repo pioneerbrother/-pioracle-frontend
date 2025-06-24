@@ -91,9 +91,15 @@ function MarketDetailPage() {
     }, [marketId, contract, walletAddress, refreshKey, chainId]); // Added chainId to re-fetch if network changes
 
     // Memoized processing of market details for UI display
+ // src/pages/MarketDetailPage.jsx
+
     const marketDetails = useMemo(() => {
-        if (!marketContractData) return null;
-        console.log(`MarketDetailPage (ID: ${marketId}): Processing marketContractData for display.`);
+        console.log(`MarketDetailPage (ID: ${marketId}): marketContractData input to useMemo:`, JSON.parse(JSON.stringify(marketContractData)));
+        if (!marketContractData) {
+            console.log(`MarketDetailPage (ID: ${marketId}): marketContractData is null, returning null for marketDetails.`);
+            return null;
+        }
+        
         const intermediateMarket = {
             id: marketContractData[0].toString(),
             assetSymbol: marketContractData[1],
@@ -101,16 +107,19 @@ function MarketDetailPage() {
             targetPrice: marketContractData[3].toString(),
             expiryTimestamp: Number(marketContractData[4]),
             resolutionTimestamp: Number(marketContractData[5]),
-            totalStakedYes: marketContractData[6].toString(), // Corrected field name
-            totalStakedNo: marketContractData[7].toString(),  // Corrected field name
+            totalStakedYes: marketContractData[6].toString(),
+            totalStakedNo: marketContractData[7].toString(), 
             state: Number(marketContractData[8]),
             actualOutcomeValue: marketContractData[9].toString(),
             exists: marketContractData[10],
             isEventMarket: marketContractData[11],
             creationTimestamp: Number(marketContractData[12]),
         };
-        return getMarketDisplayProperties(intermediateMarket);
-    }, [marketContractData, marketId]); // marketId added for safety, though data drives it
+        console.log(`MarketDetailPage (ID: ${marketId}): Intermediate data for getMarketDisplayProperties:`, intermediateMarket);
+        const displayProps = getMarketDisplayProperties(intermediateMarket);
+        console.log(`MarketDetailPage (ID: ${marketId}): Data AFTER getMarketDisplayProperties (this becomes marketDetails):`, displayProps);
+        return displayProps;
+    }, [marketContractData, marketId]);
 
     const handleClaimWinnings = useCallback(async () => {
         if (!contract || !signer || !marketDetails || claimableAmount.isZero()) {
