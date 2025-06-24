@@ -1,18 +1,11 @@
-# netlify.toml
+# netlify.toml (MINIMAL TEST VERSION)
 
 [build]
   command = "npm run build"
   publish = "dist"
   environment = { NODE_VERSION = "20" } # Or your preferred Node version
 
-# We keep your security headers, but remove the [[redirects]] section
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://api.web3modal.org https://rpc.walletconnect.org wss://*.bridge.walletconnect.org https://*.rpc.thirdweb.com https://bsc-dataseed.binance.org https://polygon-rpc.com https://*.google-analytics.com https://*.analytics.google.com; img-src 'self' data: https://*.walletconnect.com https://api.web3modal.org; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://secure.walletconnect.org;"
-    Permissions-Policy = "clipboard-read=(), clipboard-write=()"
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    X-Content-Type-Options = "nosniff"
-    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
