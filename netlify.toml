@@ -3,7 +3,7 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  environment = { NODE_VERSION = "18" } # Or your preferred Node version
+  environment = { NODE_VERSION = "20" } # Or your preferred Node version
 
 # We keep your security headers, but remove the [[redirects]] section
 [[headers]]
