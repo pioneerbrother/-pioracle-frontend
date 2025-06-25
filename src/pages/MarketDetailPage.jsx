@@ -13,7 +13,7 @@ import './MarketDetailPage.css';
 
 function MarketDetailPage() { // Note: We removed the 'marketContractData' prop for this version
     const { marketId } = useParams();
-    const { contract, walletAddress, signer, connectWallet, nativeTokenSymbol, chainId } = useContext(WalletContext) || {};
+    const { contract, walletAddress, signer, connectWallet, nativeTokenSymbol, chainId, defaultTargetChainIdNum } = useContext(WalletContext) || {};
     
     const [marketContractData, setMarketContractData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
