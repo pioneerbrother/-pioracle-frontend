@@ -1,8 +1,8 @@
 /* src/components/common/ConnectWalletButton.css */
 
-/* Main button style when disconnected */
+/* Main button style when disconnected OR for "Unsupported Network" */
 .connect-wallet-button {
-    background-color: #4a90e2; /* A pleasant blue */
+    background-color: #4a90e2; /* Default Pleasant blue for "Connect Wallet" */
     color: white;
     font-weight: bold;
     border: none;
@@ -10,10 +10,11 @@
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+    font-size: 0.9rem; /* Consistent font size */
 }
 
 .connect-wallet-button:hover {
-    background-color: #5aa1f2;
+    background-color: #5aa1f2; /* Lighter blue on hover */
 }
 
 .connect-wallet-button:active {
@@ -21,45 +22,61 @@
 }
 
 .connect-wallet-button:disabled {
-    background-color: #555;
+    background-color: #555; /* Darker, muted for disabled */
     cursor: not-allowed;
     opacity: 0.8;
 }
+
+/* Specific style for the "Unsupported Network" button variant */
+/* This will override the default blue when this class is also present */
+.connect-wallet-button.wrong-network-button { 
+    background-color: #c53030; /* Distinct red for error/warning */
+    /* border: 1px solid #e53e3e; /* Optional: if you want a border too */
+}
+.connect-wallet-button.wrong-network-button:hover {
+    background-color: #e53e3e; /* Lighter red on hover */
+}
+
 
 /* Container for the address and disconnect button when connected */
 .wallet-widget-container {
     display: flex;
     align-items: center;
-    gap: 12px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border: 1px solid #4a5568;
-    padding: 6px 12px;
+    gap: 12px; /* Your original gap */
+    background-color: rgba(0, 0, 0, 0.2); /* Your original background */
+    border: 1px solid #4a5568; /* Default border */
+    padding: 6px 12px; /* Your original padding */
     border-radius: 8px;
     transition: border-color 0.2s ease;
 }
 
 /* The small green/red dot indicator */
-.connection-indicator {
+/* This selector targets the old .connection-indicator AND the new .connection-indicator-dot */
+.connection-indicator, 
+.connection-indicator-dot { 
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: #48bb78; /* Green for connected */
+    background-color: #48bb78; /* Green for connected by default */
+    margin-right: 6px; /* Added space between dot and address text */
 }
 
 /* Styling for the text of the wallet address */
 .wallet-address {
     font-family: 'Courier New', Courier, monospace;
     font-weight: 500;
-    color: #e2e8f0;
+    color: #e2e8f0; /* Your original light text color */
+    display: flex; /* To align dot and text nicely if dot is inside */
+    align-items: center;
 }
 
 /* Styling for the disconnect button */
 .disconnect-button {
-    background: #4a5568;
-    color: #e2e8f0;
+    background: #4a5568; /* Your original background */
+    color: #e2e8f0; /* Your original text color */
     border: none;
-    padding: 6px 10px;
-    font-size: 0.85rem;
+    padding: 6px 10px; /* Your original padding */
+    font-size: 0.85rem; /* Your original font size */
     font-weight: bold;
     border-radius: 6px;
     cursor: pointer;
@@ -67,19 +84,23 @@
 }
 
 .disconnect-button:hover {
-    background: #718096;
+    background: #718096; /* Your original hover background */
 }
 
-/* --- Error State for Wrong Network --- */
-
+/* --- Error State Styling for the Container (when network is unsupported) --- */
+/* This will apply when the "Unsupported Network" button is shown */
 .wallet-widget-container.error {
-    border-color: #e53e3e; /* Red border */
+    border-color: #e53e3e !important; /* Red border for the whole widget, !important to ensure override if needed */
 }
 
-.wallet-widget-container.error .connection-indicator {
-    background-color: #e53e3e; /* Red dot */
+/* If the "Unsupported Network" button is active, its specific style above takes precedence. */
+/* The .connection-indicator within an error container (if you were to use it) would be red. */
+/* However, with the new JSX, the .connection-indicator-dot for a supported connection won't appear in an error state. */
+.wallet-widget-container.error .connection-indicator { 
+    background-color: #e53e3e; /* Red dot, though likely not used if button changes */
 }
 
+/* If you were to show address text in error state, this would apply */
 .wallet-widget-container.error .wallet-address {
-    color: #fed7d7; /* Light red text */
+    color: #fed7d7; /* Light red text, though likely not used if button changes */
 }
