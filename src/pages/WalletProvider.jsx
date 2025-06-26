@@ -136,35 +136,65 @@ export function WalletProvider({ children }) {
             setWalletAddress(null); setSigner(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); setContract(null);
         }
     }, [initializePredictionMarketContract, getSymbolForChain, defaultTargetChainIdNum]);
+// Inside src/pages/WalletProvider.jsx
 
-    const disconnectWalletAndReset = useCallback(async () => {
-        console.log("WalletProvider: disconnectWalletAndReset called.");
-        try {
-            if (web3Modal?.isOpen?.()) await web3Modal.closeModal();
-            if (provider?.provider?.disconnect) await provider.provider.disconnect();
-        } catch (e) { console.warn("WalletProvider: Error during disconnect attempt:", e); }
+const disconnectWalletAndReset = useCallback(async () => {
+    console.log("WalletProvider: disconnectWalletAndReset called.");
+    try {
+        // For @web3modal/ethers5, the modal usually handles its own closing.
+        // Disconnecting the provider is the main action.
+        const modalProvider = web3Modal?.getWalletProvider(); // Attempt to get the underlying provider
 
-        setWalletAddress(null); setSigner(null);
-        
-        const defaultChainConfig = getConfigForChainId(defaultTargetChainIdNum);
-        if (defaultChainConfig && defaultChainConfig.rpcUrl) {
-            try {
-                const defaultJsonRpcProvider = new ethers.providers.JsonRpcProvider(defaultChainConfig.rpcUrl);
-                setProvider(defaultJsonRpcProvider);
-                const net = await defaultJsonRpcProvider.getNetwork();
-                setCurrentChainId(net.chainId);
-                setNativeTokenSymbol(getSymbolForChain(net.chainId));
-                initializePredictionMarketContract(defaultJsonRpcProvider, net.chainId); // Initialize PM contract
-                 console.log("WalletProvider: Reset to default read-only provider for PM contract on chainId:", net.chainId);
-            } catch (e) {
-                console.error("WalletProvider: Error setting up default provider on disconnect:", e);
-                 setProvider(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); initializePredictionMarketContract(null, null);
-            }
+        if (modalProvider && typeof modalProvider.disconnect === 'function') {
+            await modalProvider.disconnect();
+            console.log("WalletProvider: Called disconnect on Web3Modal's wallet provider.");
+        } else if (provider && provider.provider && typeof provider.provider.disconnect === 'function') {
+            // Fallback for other wrapped EIP-1193 providers that might be in context
+            await provider.provider.disconnect();
+            console.log("WalletProvider: Called disconnect on provider.provider (fallback).");
+        } else if (web3Modal && typeof web3Modal.disconnect === 'function') {
+            // Some Web3Modal versions might have a direct disconnect on the modal instance
+            await web3Modal.disconnect();
+             console.log("WalletProvider: Called disconnect on web3Modal instance itself.");
         } else {
-            console.warn("WalletProvider: No default RPC/Config for disconnect fallback.");
+            console.log("WalletProvider: No standard disconnect method found on provider or Web3Modal instance.");
+        }
+        
+        // If modal is still open after provider disconnect attempts, try to close it
+        // This is more of a UI cleanup.
+        if (web3Modal && typeof web3Modal.closeModal === 'function' && web3Modal.isOpen?.()) {
+             await web3Modal.closeModal();
+             console.log("WalletProvider: Attempted to close Web3Modal.");
+        }
+
+    } catch (e) {
+        console.warn("WalletProvider: Error during disconnect/reset attempt:", e);
+    }
+
+    setWalletAddress(null);
+    setSigner(null);
+    
+    const defaultChainConfig = getConfigForChainId(defaultTargetChainIdNum);
+    if (defaultChainConfig && defaultChainConfig.rpcUrl) {
+        try {
+            const defaultJsonRpcProvider = new ethers.providers.JsonRpcProvider(defaultChainConfig.rpcUrl);
+            setProvider(defaultJsonRpcProvider);
+            const net = await defaultJsonRpcProvider.getNetwork();
+            setCurrentChainId(net.chainId);
+            setNativeTokenSymbol(getSymbolForChain(net.chainId));
+            // Initialize the MAIN (PredictionMarket) contract with this read-only provider
+            initializePredictionMarketContract(defaultJsonRpcProvider, net.chainId); 
+            console.log("WalletProvider: Reset to default read-only provider for PM contract on chainId:", net.chainId);
+        } catch (e) {
+            console.error("WalletProvider: Error setting up default provider on disconnect:", e);
             setProvider(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); initializePredictionMarketContract(null, null);
         }
-    }, [web3Modal, provider, defaultTargetChainIdNum, initializePredictionMarketContract, getSymbolForChain]);
+    } else {
+        console.warn("WalletProvider: No default RPC/Config for disconnect fallback when resetting state.");
+        setProvider(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); initializePredictionMarketContract(null, null);
+    }
+}, [web3Modal, provider, defaultTargetChainIdNum, initializePredictionMarketContract, getSymbolForChain, getConfigForChainId]); // Added getConfigForChainId
+
 
     useEffect(() => {
         const setup = async () => {
