@@ -9,11 +9,12 @@ import React, {
 import { ethers } from 'ethers';
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5';
 
+// --- Import the CORRECT specific ABI getter and other necessary functions ---
 import { 
-    getContractAbi, 
-    getTargetChainIdHex,      // For Web3Modal's defaultChainId
-    getAllSupportedChainsForModal, // For Web3Modal's `chains` array
-    getConfigForChainId         // For dynamic contract address and RPC
+    getPredictionMarketAbi,     // CORRECTED: Was getContractAbi
+    getTargetChainIdHex,
+    getAllSupportedChainsForModal,
+    getConfigForChainId
 } from '../config/contractConfig';
 
 export const WalletContext = createContext(null);
@@ -30,14 +31,13 @@ const metadata = {
 export function WalletProvider({ children }) {
     const [isInitialized, setIsInitialized] = useState(false);
     const [walletAddress, setWalletAddress] = useState(null);
-    const [provider, setProvider] = useState(null); // This will be the ethers.Web3Provider
+    const [provider, setProvider] = useState(null);
     const [signer, setSigner] = useState(null);
-    const [contract, setContract] = useState(null); // This contract instance will be dynamic
-    const [currentChainId, setCurrentChainId] = useState(null); // The actual connected chainId
+    const [contract, setContract] = useState(null); // This will be the PredictionMarket contract
+    const [currentChainId, setCurrentChainId] = useState(null);
     const [web3Modal, setWeb3Modal] = useState(null);
-    const [nativeTokenSymbol, setNativeTokenSymbol] = useState("ETH"); // Default, updates on connection
+    const [nativeTokenSymbol, setNativeTokenSymbol] = useState("ETH");
 
-    // Default chainId based on VITE_NETWORK_TARGET (for Web3Modal default and initial read-only state)
     const defaultTargetChainIdNum = useMemo(() => {
         const hex = getTargetChainIdHex();
         return hex ? parseInt(hex, 16) : null;
@@ -45,67 +45,67 @@ export function WalletProvider({ children }) {
 
     const getSymbolForChain = useCallback((id) => {
         if (!id) return "ETH"; 
-        const numId = Number(id); // Ensure it's a number for comparison
-        if (numId === 56 || numId === 97) return "BNB";    // BNB Mainnet & Testnet
-        if (numId === 137 || numId === 80002) return "MATIC"; // Polygon Mainnet & Amoy
-        return "ETH"; // Fallback
+        const numId = Number(id);
+        if (numId === 56 || numId === 97) return "BNB";
+        if (numId === 137 || numId === 80002) return "MATIC";
+        return "ETH"; 
     }, []);
 
-    // Effect 1: Initialize Web3Modal instance
     useEffect(() => {
         if (WALLETCONNECT_PROJECT_ID) {
             const supportedChains = getAllSupportedChainsForModal();
             if (supportedChains.length === 0) {
-                console.error("WalletProvider: No supported chains configured for Web3Modal.");
+                console.error("WalletProvider: No supported chains for Web3Modal.");
                 return;
             }
-
             const ethersConfig = defaultConfig({
                 metadata,
                 defaultChainId: defaultTargetChainIdNum || supportedChains[0].chainId,
             });
-
             const modal = createWeb3Modal({
                 ethersConfig,
                 chains: supportedChains,
                 projectId: WALLETCONNECT_PROJECT_ID,
                 enableAnalytics: false,
-                // recommendedChains: [137, 56] // Optional: guide user to Polygon or BNB
             });
             setWeb3Modal(modal);
-            console.log("WalletProvider: Web3Modal initialized with chains:", supportedChains);
+            console.log("WalletProvider: Web3Modal initialized.");
         }
-    }, [defaultTargetChainIdNum]); // Only needs to run once based on initial config
+    }, [defaultTargetChainIdNum]);
 
-    // Initialize a contract instance based on the ACTUAL connected network
-    const initializeContractForActualNetwork = useCallback((signerOrProvider, actualChainId) => {
+    // THIS FUNCTION NOW INITIALIZES THE *PREDICTION MARKET* CONTRACT
+    const initializePredictionMarketContract = useCallback((signerOrProvider, actualChainId) => {
         if (!actualChainId) {
             setContract(null);
-            console.log("WalletProvider: No actualChainId provided, contract set to null.");
+            console.log("WalletProvider: No actualChainId, PredictionMarket contract set to null.");
             return;
         }
         const currentNetworkConfig = getConfigForChainId(actualChainId);
         
-        if (signerOrProvider && currentNetworkConfig && currentNetworkConfig.contractAddress) {
+        // --- USE predictionMarketContractAddress and getPredictionMarketAbi ---
+        if (signerOrProvider && currentNetworkConfig && currentNetworkConfig.predictionMarketContractAddress) {
             try {
-                const newContract = new ethers.Contract(currentNetworkConfig.contractAddress, getContractAbi(), signerOrProvider);
+                const newContract = new ethers.Contract(
+                    currentNetworkConfig.predictionMarketContractAddress, // Address for PredictionMarket
+                    getPredictionMarketAbi(),                             // ABI for PredictionMarket
+                    signerOrProvider
+                );
                 setContract(newContract);
-                console.log(`WalletProvider: Contract INITIALIZED for address ${currentNetworkConfig.contractAddress} on chain ${actualChainId}`);
+                console.log(`WalletProvider: PredictionMarket Contract INITIALIZED for address ${currentNetworkConfig.predictionMarketContractAddress} on chain ${actualChainId}`);
             } catch (e) {
-                 console.error(`WalletProvider: Error initializing contract for chain ${actualChainId}`, e);
+                 console.error(`WalletProvider: Error initializing PredictionMarket contract for chain ${actualChainId}`, e);
                  setContract(null);
             }
         } else {
             setContract(null);
-            console.log(`WalletProvider: Contract set to null. Conditions not met. Provider/Signer: ${!!signerOrProvider}, Config: ${!!currentNetworkConfig}, Address: ${currentNetworkConfig?.contractAddress}`);
+            console.log(`WalletProvider: PredictionMarket Contract set to null. Conditions not met. Provider/Signer: ${!!signerOrProvider}, Config: ${!!currentNetworkConfig}, PM Address: ${currentNetworkConfig?.predictionMarketContractAddress}`);
         }
-    }, []); // getContractAbi is stable
+    }, []); // getPredictionMarketAbi is stable
 
-    // Sets provider, signer, address, chainId, symbol, and initializes contract
     const setProviderState = useCallback(async (eip1193Provider) => {
         try {
             const web3Provider = new ethers.providers.Web3Provider(eip1193Provider, 'any');
-            const network = await web3Provider.getNetwork(); // Get network first
+            const network = await web3Provider.getNetwork();
             const accounts = await web3Provider.listAccounts();
             const connectedAddress = accounts.length > 0 ? ethers.utils.getAddress(accounts[0]) : null;
 
@@ -119,52 +119,33 @@ export function WalletProvider({ children }) {
             if (connectedAddress) {
                 const currentSigner = web3Provider.getSigner();
                 setSigner(currentSigner);
-                initializeContractForActualNetwork(currentSigner, network.chainId);
+                initializePredictionMarketContract(currentSigner, network.chainId); // Initialize PM contract
             } else {
                 setSigner(null);
-                // If no account connected, setup read-only provider for the current network (if known)
-                // or fallback to the default target network.
                 const activeChainIdForReadOnly = network.chainId || defaultTargetChainIdNum;
                 const currentNetworkConfig = getConfigForChainId(activeChainIdForReadOnly);
                 if (currentNetworkConfig && currentNetworkConfig.rpcUrl) {
                     const readOnlyProvider = new ethers.providers.JsonRpcProvider(currentNetworkConfig.rpcUrl);
-                    initializeContractForActualNetwork(readOnlyProvider, activeChainIdForReadOnly);
+                    initializePredictionMarketContract(readOnlyProvider, activeChainIdForReadOnly); // Initialize PM contract
                 } else {
-                     initializeContractForActualNetwork(null, null);
+                     initializePredictionMarketContract(null, null);
                 }
             }
         } catch (error) {
             console.error("WalletProvider: Error in setProviderState:", error);
-            // Fallback or error state
-            setWalletAddress(null);
-            setSigner(null);
-            setCurrentChainId(null);
-            setNativeTokenSymbol("ETH");
-            setContract(null);
+            setWalletAddress(null); setSigner(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); setContract(null);
         }
-    }, [initializeContractForActualNetwork, getSymbolForChain, defaultTargetChainIdNum]);
+    }, [initializePredictionMarketContract, getSymbolForChain, defaultTargetChainIdNum]);
 
-    // Handles disconnecting the wallet and resetting to a default read-only state
     const disconnectWalletAndReset = useCallback(async () => {
         console.log("WalletProvider: disconnectWalletAndReset called.");
         try {
-            if (web3Modal?.isOpen?.()) {
-                await web3Modal.closeModal();
-            }
-            // Ethers v5 Web3Provider doesn't have a direct disconnect.
-            // WalletConnect provider (if used via Web3Modal) might be inside `provider.provider`.
-            if (provider && provider.provider && typeof provider.provider.disconnect === 'function') {
-                await provider.provider.disconnect();
-                console.log("WalletProvider: Called disconnect on provider.provider");
-            }
-        } catch (e) {
-            console.warn("WalletProvider: Error during Web3Modal/provider disconnect attempt:", e);
-        }
+            if (web3Modal?.isOpen?.()) await web3Modal.closeModal();
+            if (provider?.provider?.disconnect) await provider.provider.disconnect();
+        } catch (e) { console.warn("WalletProvider: Error during disconnect attempt:", e); }
 
-        setWalletAddress(null);
-        setSigner(null);
+        setWalletAddress(null); setSigner(null);
         
-        // Fallback to a default read-only provider for the VITE_NETWORK_TARGET
         const defaultChainConfig = getConfigForChainId(defaultTargetChainIdNum);
         if (defaultChainConfig && defaultChainConfig.rpcUrl) {
             try {
@@ -173,19 +154,18 @@ export function WalletProvider({ children }) {
                 const net = await defaultJsonRpcProvider.getNetwork();
                 setCurrentChainId(net.chainId);
                 setNativeTokenSymbol(getSymbolForChain(net.chainId));
-                initializeContractForActualNetwork(defaultJsonRpcProvider, net.chainId);
-                 console.log("WalletProvider: Reset to default read-only provider for chainId:", net.chainId);
+                initializePredictionMarketContract(defaultJsonRpcProvider, net.chainId); // Initialize PM contract
+                 console.log("WalletProvider: Reset to default read-only provider for PM contract on chainId:", net.chainId);
             } catch (e) {
                 console.error("WalletProvider: Error setting up default provider on disconnect:", e);
-                 setProvider(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); initializeContractForActualNetwork(null, null);
+                 setProvider(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); initializePredictionMarketContract(null, null);
             }
         } else {
-            console.warn("WalletProvider: No default RPC URL found for disconnect fallback.");
-            setProvider(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); initializeContractForActualNetwork(null, null);
+            console.warn("WalletProvider: No default RPC/Config for disconnect fallback.");
+            setProvider(null); setCurrentChainId(null); setNativeTokenSymbol("ETH"); initializePredictionMarketContract(null, null);
         }
-    }, [web3Modal, provider, defaultTargetChainIdNum, initializeContractForActualNetwork, getSymbolForChain]);
+    }, [web3Modal, provider, defaultTargetChainIdNum, initializePredictionMarketContract, getSymbolForChain]);
 
-    // Initial setup effect to check for existing EIP-1193 provider (like MetaMask)
     useEffect(() => {
         const setup = async () => {
             console.log("WalletProvider: Initial setup effect.");
@@ -193,97 +173,54 @@ export function WalletProvider({ children }) {
                 try {
                     const accounts = await window.ethereum.request({ method: 'eth_accounts' });
                     if (accounts.length > 0) {
-                        console.log("WalletProvider: Found existing EIP-1193 provider session (e.g., MetaMask).");
                         await setProviderState(window.ethereum);
                     } else {
-                        console.log("WalletProvider: No active EIP-1193 session. Setting default read-only state.");
-                        await disconnectWalletAndReset(); // Sets up default provider
+                        await disconnectWalletAndReset();
                     }
-                } catch (e) {
-                    console.error("WalletProvider: Error during window.ethereum initial check:", e);
-                    await disconnectWalletAndReset();
-                }
-            } else {
-                console.log("WalletProvider: No window.ethereum. Setting default read-only state.");
-                await disconnectWalletAndReset(); // Sets up default provider
-            }
+                } catch (e) { await disconnectWalletAndReset(); }
+            } else { await disconnectWalletAndReset(); }
             setIsInitialized(true);
             console.log("WalletProvider: Initialization sequence complete.");
         };
-        
-        if (!isInitialized && web3Modal) { // Run only once after Web3Modal is ready
-            setup();
-        }
+        if (!isInitialized && web3Modal) { setup(); }
     }, [isInitialized, web3Modal, setProviderState, disconnectWalletAndReset]);
     
-    // Event listeners for EIP-1193 provider (MetaMask etc.)
     useEffect(() => {
         if (typeof window.ethereum === 'undefined') return;
-
-        const handleAccountsChanged = (accounts) => {
-            console.log("WalletProvider: window.ethereum accountsChanged", accounts);
-            if (accounts.length === 0) {
-                disconnectWalletAndReset();
-            } else {
-                // This will re-trigger provider state update
-                setProviderState(window.ethereum); 
-            }
-        };
-        const handleChainChanged = (_chainIdHex) => {
-            console.log("WalletProvider: window.ethereum chainChanged", _chainIdHex);
-            // This will re-trigger provider state update
-            setProviderState(window.ethereum); 
-        };
-
+        const handleAccountsChanged = (accounts) => accounts.length === 0 ? disconnectWalletAndReset() : setProviderState(window.ethereum);
+        const handleChainChanged = () => setProviderState(window.ethereum);
         window.ethereum.on('accountsChanged', handleAccountsChanged);
         window.ethereum.on('chainChanged', handleChainChanged);
-
         return () => {
             window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
             window.ethereum.removeListener('chainChanged', handleChainChanged);
         };
-    }, [setProviderState, disconnectWalletAndReset]); // Include all dependencies
+    }, [setProviderState, disconnectWalletAndReset]);
 
-    // Web3Modal provider subscription
     useEffect(() => {
         let unsubscribeModal;
         if (web3Modal) {
             unsubscribeModal = web3Modal.subscribeProvider(async ({ provider: modalProvider, isConnected }) => {
-                console.log("WalletProvider: Web3Modal subscribeProvider update:", { isConnected, modalProviderExists: !!modalProvider });
                 if (isConnected && modalProvider) {
-                    await setProviderState(modalProvider); // modalProvider is an EIP-1193 provider
+                    await setProviderState(modalProvider);
                 } else if (!isConnected && !walletAddress && !signer) { 
-                    // Only fully disconnect if we are not already connected via window.ethereum
-                    // and if Web3Modal signals a true disconnect (no address).
-                    console.log("WalletProvider: Web3Modal signaled disconnect, and no active walletAddress.");
                     await disconnectWalletAndReset();
                 }
             });
         }
         return () => unsubscribeModal?.();
-    }, [web3Modal, setProviderState, disconnectWalletAndReset, walletAddress, signer]); // Added walletAddress and signer to dependencies
+    }, [web3Modal, setProviderState, disconnectWalletAndReset, walletAddress, signer]);
     
     const connectWallet = useCallback(async () => {
-        if (!web3Modal) {
-            console.error("WalletProvider: Web3Modal not initialized. Cannot open.");
-            return;
-        }
-        console.log("WalletProvider: Opening Web3Modal.");
+        if (!web3Modal) return;
         await web3Modal.open();
-        // The subscribeProvider effect will handle the connection state
     }, [web3Modal]);
 
     const contextValue = useMemo(() => ({
-        walletAddress, 
-        signer, 
-        contract, 
-        chainId: currentChainId, 
-        provider,
-        isInitialized, 
-        loadedTargetChainIdNum: defaultTargetChainIdNum,
+        walletAddress, signer, contract, chainId: currentChainId, provider,
+        isInitialized, loadedTargetChainIdNum: defaultTargetChainIdNum,
         web3ModalInstanceExists: !!web3Modal,
-        connectWallet, 
-        disconnectWallet: disconnectWalletAndReset, // Use the renamed function
+        connectWallet, disconnectWallet: disconnectWalletAndReset,
         nativeTokenSymbol
     }), [
         walletAddress, signer, contract, currentChainId, provider, 
@@ -294,7 +231,7 @@ export function WalletProvider({ children }) {
     return (
         <WalletContext.Provider value={contextValue}>
             {isInitialized ? children : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#282c34', color: 'white', fontSize: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', /* ... */ }}>
                     Initializing PiOracle...
                 </div>
             )}
