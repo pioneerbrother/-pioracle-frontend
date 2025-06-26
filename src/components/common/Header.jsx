@@ -4,9 +4,8 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { WalletContext } from '../../pages/WalletProvider';
 import ConnectWalletButton from './ConnectWalletButton';
 
-import './Header.css'; // We will create this CSS file next
+import './Header.css';
 
-// Helper function to keep the NavLink JSX cleaner
 const navLinkClass = ({ isActive }) => isActive ? "nav-item active" : "nav-item";
 const specialNavLinkClass = ({ isActive }) => isActive ? "nav-item special-action active" : "nav-item special-action";
 
@@ -35,12 +34,10 @@ function Header() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isMobileMenuOpen]);
 
-    // This correctly closes the menu when the user navigates to a new page
     useEffect(() => {
         closeMobileMenu();
     }, [location]);
 
-    // The links are now defined in one place for both desktop and mobile
     const navLinks = (
         <>
             <NavLink to="/predictions" className={navLinkClass} onClick={closeMobileMenu}>Open Markets</NavLink>
@@ -49,6 +46,11 @@ function Header() {
                 <NavLink to="/my-predictions" className={navLinkClass} onClick={closeMobileMenu}>My Predictions</NavLink>
             )}
             <NavLink to="/create-market" className={specialNavLinkClass} onClick={closeMobileMenu}>Create Market</NavLink>
+            
+            {/* --- ADDED TIP JAR LINK --- */}
+            <NavLink to="/tip-jar" className={navLinkClass} onClick={closeMobileMenu}>Tip Jar</NavLink>
+            {/* --- END OF ADDED LINK --- */}
+
             <NavLink to="/blog" className={navLinkClass} onClick={closeMobileMenu}>Blog</NavLink>
             <NavLink to="/guide" className={navLinkClass} onClick={closeMobileMenu}>Guide / How It Works</NavLink>
         </>
@@ -81,7 +83,6 @@ function Header() {
                 </div>
             </div>
 
-            {/* This ternary makes the conditional rendering slightly cleaner */}
             {isMobileMenuOpen ? (
                 <nav className="mobile-nav-menu" ref={mobileMenuRef}>
                     {navLinks}
