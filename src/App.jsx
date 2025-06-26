@@ -17,9 +17,10 @@ import MyPredictionsPage from './pages/MyPredictionsPage';
 import BlogPage from './pages/BlogPage';
 import BlogPostPage from './pages/BlogPostPage';
 import GuidePage from './pages/GuidePage';
+import MarketDetailLoader from './pages/MarketDetailLoader'; // Your existing loader for market details
 
-// --- NEWLY IMPORTED LOADER COMPONENT ---
-import MarketDetailLoader from './pages/MarketDetailLoader';
+// --- NEWLY IMPORTED TIPPING PAGE ---
+import TippingPage from './pages/TippingPage'; // Import your new TippingPage
 
 function App() {
   return (
@@ -32,9 +33,6 @@ function App() {
               {/* --- Main application routes --- */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
-
-              {/* --- THIS IS THE CORRECTED ROUTE --- */}
-              {/* It now points to the loader component which will handle data fetching */}
               <Route path="/predictions/:marketId" element={<MarketDetailLoader />} />
 
               {/* --- Other application routes --- */}
@@ -42,6 +40,9 @@ function App() {
               <Route path="/recently-resolved" element={<RecentlyResolvedPage />} />
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/guide" element={<GuidePage />} />
+
+              {/* --- ADDED ROUTE FOR TIPPING PAGE --- */}
+              <Route path="/tip-jar" element={<TippingPage />} />
 
               {/* --- Blog routes --- */}
               <Route path="/blog" element={<BlogPage />} />
