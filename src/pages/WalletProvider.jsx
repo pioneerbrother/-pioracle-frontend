@@ -86,6 +86,10 @@ export function WalletProvider({ children }) {
             return;
         }
         const currentNetworkConfig = getConfigForChainId(actualChainId);
+        console.log(`WalletProvider: initializePredictionMarketContract - For chain ${actualChainId}, Config found:`, currentNetworkConfig); // Log the whole config
+const pmContractAddress = currentNetworkConfig?.predictionMarketContractAddress;
+console.log(`WalletProvider: initializePredictionMarketContract - PM Address to use: ${pmContractAddress}`);
+
         
         if (signerOrProvider && currentNetworkConfig && currentNetworkConfig.predictionMarketContractAddress) {
             try {
