@@ -10,12 +10,12 @@ import IERC20_ABI from '../config/abis/IERC20.json'; // A standard ERC20 ABI
 // and a list of test ERC20 token addresses on BSC Testnet
 // This should ideally come from your contractConfig.js based on connected chain
 const tippingJarAddress_bscTestnet = "0xd6d1A0cCFb89A56C58Aa5A72F92723e584aFcbA8"; // From deployment
-const testUSDCTokenAddress_bscTestnet = "0x64544552ce784d068c36575d565a3de625334145"; // Example BSC Testnet USDC, find a real one or deploy your own mock ERC20
+const testBUSDTokenAddress_bscTestnet = "0xed24fc36d85ae962599d3119035b80a359b315b9"; // Example BSC Testnet USDC, find a real one or deploy your own mock ERC20
 
 function TippingPage() {
     const { walletAddress, signer, provider, chainId, connectWallet } = useContext(WalletContext);
     const [tippingJarContract, setTippingJarContract] = useState(null);
-    const [tokenAddress, setTokenAddress] = useState(testUSDCTokenAddress_bscTestnet); // Default to test USDC
+    const [tokenAddress, setTokenAddress] = useState("0xed24fc36d85ae962599d3119035b80a359b315b9");
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
     const [status, setStatus] = useState(''); // For success/error messages
@@ -53,7 +53,7 @@ function TippingPage() {
 
         try {
             const erc20Token = new ethers.Contract(tokenAddress, IERC20_ABI, signer);
-            const amountInWei = ethers.utils.parseUnits(amount, 6); // Assuming 6 decimals for test USDC
+            const amountInWei = ethers.utils.parseUnits(amount, 18); // CORRECT for tBUSD
 
             // 1. Approve TippingJar to spend tokens
             setStatus("Approving token spend...");
