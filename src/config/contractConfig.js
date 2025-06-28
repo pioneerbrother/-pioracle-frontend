@@ -15,9 +15,10 @@ const chains = {
         name: 'BNB Smart Chain Testnet',
         symbol: 'tBNB',
         explorerUrl: 'https://testnet.bscscan.com',
-        // Add other contract types if needed for other parts of the app, but keep it minimal for now
-        tippingJarContractAddress: import.meta.env.VITE_BSC_TESTNET_TIPPING_JAR_CONTRACT_ADDRESS || null,
-        badgeContractAddress: import.meta.env.VITE_BSC_TESTNET_BADGE_CONTRACT_ADDRESS || null,
+        hostRegistryContractAddress: "0x05991Fe5D580EBC2371A6b3e7a217FF9Fc34C027",
+        founderBadgeContractAddress: "0xEa618568FC44A6fe6A17628d8e98Cab4c4cbe2C0",
+         tippingJarContractAddress: "0x5653FF4fA4b6D557C726E2F939Bf9f9F19f27cCe",
+        badgeContractAddress: "0xe21829A24C455e6e7695eEa01eA264851F2138f5" 
     },
     // Add other essential chains if your app breaks without them, but try to keep minimal
     bnb_mainnet: { // Example minimal bnb_mainnet for Web3Modal
