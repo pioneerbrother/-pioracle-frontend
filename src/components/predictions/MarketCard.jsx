@@ -1,18 +1,27 @@
 // src/components/predictions/MarketCard.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { getMarketIcon } from '../../utils/marketutils'; 
+// NO LONGER import getMarketIcon
 import './MarketCard.css';
 
 function MarketCard({ market }) {
+    // The 'market' object from props already has everything calculated.
     if (!market || !market.exists) return null;
 
-    const getStatusColorClass = (status) => { /* ... (same as before) ... */ };
-    const iconSrc = getMarketIcon(market.assetSymbol);
+    // A helper function for status color can stay here.
+    const getStatusColorClass = (status) => {
+        if (status === 'Open') return 'status-open';
+        if (status === 'Resolved' || status === 'Closed') return 'status-resolved';
+        return 'status-closed'; // Default
+    };
 
-    // Default to 50/50 if probabilities are missing
+    // The icon path comes directly from the 'market' prop.
+    const iconSrc = market.icon || '/images/icons/default-icon.png'; // Use prop, with a fallback.
+
+    // Default to 50/50 if probabilities are missing, which is good practice.
     const yesProb = market.yesProbability || 50;
-    const noProb = market.noProbability || 50;
+    // Calculate noProb from yesProb to always sum to 100
+    const noProb = 100 - yesProb;
 
     return (
         <div className="market-card-v2"> 
@@ -24,19 +33,17 @@ function MarketCard({ market }) {
                     <h3 className="card-title-v2">{market.title}</h3>
                 </div>
 
-                {/* --- THIS IS THE NEW PROBABILITY DISPLAY --- */}
                 <div className="card-probability-section">
                     <div className="outcome-probability yes">
                         <span className="outcome-label">YES</span>
-                        <span className="outcome-percent">{yesProb}%</span>
+                        <span className="outcome-percent">{Math.round(yesProb)}%</span>
                     </div>
                     <div className="probability-bar">
-                        {/* The width of this inner bar is set by the YES probability */}
                         <div className="probability-fill" style={{ width: `${yesProb}%` }}></div>
                     </div>
                     <div className="outcome-probability no">
                         <span className="outcome-label">NO</span>
-                        <span className="outcome-percent">{noProb}%</span>
+                        <span className="outcome-percent">{Math.round(noProb)}%</span>
                     </div>
                 </div>
 
