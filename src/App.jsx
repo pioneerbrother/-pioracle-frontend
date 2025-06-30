@@ -21,6 +21,7 @@ import MarketDetailLoader from './pages/MarketDetailLoader'; // Your existing lo
 
 // --- NEWLY IMPORTED TIPPING PAGE ---
 import TippingPage from './pages/TippingPage'; // Import your new TippingPage
+import BlogPostPaywallPage from './pages/BlogPostPaywallPage';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
               {/* --- Blog routes --- */}
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogPostPage />} />
+               <Route path="/blog/fictional-invasion-scenario-turkey-israel" element={<BlogPostPaywallPage />} />
             </Routes>
           </main>
           <Footer />

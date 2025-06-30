@@ -16,6 +16,7 @@ const chains = {
         tippingJarContractAddress: "0x66fc38263C9D5A3d6eFAe8D0C376DdEC00042648",
         founderBadgeContractAddress: "0x27186F40Eae1329BE3A8928d3587F071fB000C7D",
         supporterBadgeContractAddress: "0x482d84e0520F082D0a46fd96bB52aA12b4a872e8",
+        premiumContentPaywallAddress: "0xED799e84d5275271e7e0224E4AC9d2428c4142c6",
         
         // Core Chain Properties (These are required for Web3Modal)
         rpcUrl: VITE_BSC_TESTNET_RPC_URL_FROM_ENV || "https://data-seed-prebsc-1-s1.binance.org:8545/",
