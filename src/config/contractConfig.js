@@ -33,6 +33,8 @@ const chains = {
         name: 'BNB Smart Chain', 
         symbol: 'BNB', 
         explorerUrl: 'https://bscscan.com',
+         premiumContentPaywallAddress: "0x...YOUR_MAINNET_PAYWALL_ADDRESS", // <-- FIX
+         paymentTokenAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", 
         // You would add your mainnet Host/Tipping addresses here once deployed
         hostRegistryContractAddress: null,
         tippingJarContractAddress: null, 

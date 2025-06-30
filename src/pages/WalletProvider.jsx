@@ -103,7 +103,7 @@ export function WalletProvider({ children }) {
     const contextValue = useMemo(() => ({
         walletAddress, signer, contract, chainId, provider, isInitialized, nativeTokenSymbol,
         connectWallet: () => web3Modal?.open(),
-        disconnectWallet: () => web3Modal?.disconnect(),
+          disconnectWallet: disconnectWalletAndReset,
     }), [walletAddress, signer, contract, chainId, provider, isInitialized, nativeTokenSymbol, web3Modal]);
     
     return (
