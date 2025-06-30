@@ -1,38 +1,52 @@
 // src/components/predictions/MarketCard.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-// NO LONGER import getMarketIcon
+// We no longer import `getMarketIcon` because the icon path will come from the `market` prop.
 import './MarketCard.css';
 
 function MarketCard({ market }) {
-    // The 'market' object from props already has everything calculated.
-    if (!market || !market.exists) return null;
+    // The 'market' object passed as a prop should already have the .icon property
+    // because your PredictionMarketsListPage.jsx now uses getMarketDisplayProperties.
+    
+    if (!market || !market.exists) {
+        // This is a safety net in case a non-existent market is passed.
+        return null; 
+    }
 
-    // A helper function for status color can stay here.
+    // Helper function for status color can stay here.
     const getStatusColorClass = (status) => {
         if (status === 'Open') return 'status-open';
-        if (status === 'Resolved' || status === 'Closed') return 'status-resolved';
-        return 'status-closed'; // Default
+        if (status === 'Resolved') return 'status-resolved';
+        // Add more states if needed
+        return 'status-closed'; 
     };
 
-    // The icon path comes directly from the 'market' prop.
-    const iconSrc = market.icon || '/images/icons/default-icon.png'; // Use prop, with a fallback.
+    // --- THIS IS WHERE YOU USE THE ICON PROP ---
+    // Get the icon source directly from the market object.
+    // Provide a default icon in case the logic in marketutils.js fails for some reason.
+    const iconSrc = market.icon || '/images/icons/default-icon.png';
+    // --- END ---
 
-    // Default to 50/50 if probabilities are missing, which is good practice.
-    const yesProb = market.yesProbability || 50;
-    // Calculate noProb from yesProb to always sum to 100
-    const noProb = 100 - yesProb;
+    // Probabilities also come directly from the market object.
+    const yesProb = market.yesProbability !== undefined ? market.yesProbability : 50;
+    const noProb = market.noProbability !== undefined ? market.noProbability : 50;
 
     return (
+        // The main container div
         <div className="market-card-v2"> 
+            {/* The Link wraps the entire card content, making it all clickable */}
             <Link to={`/predictions/${market.id}`} className="card-link-wrapper-v2">
+                
+                {/* Section for the icon and title */}
                 <div className="card-top-section">
                     <div className="card-icon-container">
-                        <img src={iconSrc} alt={`${market.title} icon`} className="card-icon" />
+                        {/* The new image tag for the icon */}
+                        <img src={iconSrc} alt={`${market.title} category icon`} className="card-icon" />
                     </div>
                     <h3 className="card-title-v2">{market.title}</h3>
                 </div>
 
+                {/* Section for the YES/NO probability display */}
                 <div className="card-probability-section">
                     <div className="outcome-probability yes">
                         <span className="outcome-label">YES</span>
@@ -47,12 +61,14 @@ function MarketCard({ market }) {
                     </div>
                 </div>
 
+                {/* Footer section with status and call to action */}
                 <div className="card-footer-v2">
                     <span className={`card-status-badge ${getStatusColorClass(market.statusString)}`}>
                         {market.statusString}
                     </span>
                     <span className="view-market-prompt">Predict Now →</span>
                 </div>
+
             </Link>
         </div>
     );
