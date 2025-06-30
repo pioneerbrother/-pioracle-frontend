@@ -25,15 +25,23 @@ function ExclusivePostPage() {
     const paywallAddress = currentNetworkConfig?.premiumContentPaywallAddress;
     const usdcAddress = currentNetworkConfig?.paymentTokenAddress;
 
-    const paywallContract = useMemo(() => {
-        if (signer && paywallAddress) return new ethers.Contract(paywallAddress, PAYWALL_ABI, signer);
-        return null;
-    }, [signer, paywallAddress]);
+  const paywallContract = useMemo(() => {
+    if (!signer || !paywallAddress) return null;
+    // --- THIS IS THE FIX ---
+    // The ABI array is often on the .abi property if the JSON is an artifact,
+    // or it might be the imported object itself if it's a pure array.
+    // The 'PAYWALL_ABI.abi || PAYWALL_ABI' handles both cases robustly.
+    const abi = PAYWALL_ABI.abi || PAYWALL_ABI;
+    return new ethers.Contract(paywallAddress, abi, signer);
+    // --- END OF FIX ---
+}, [signer, paywallAddress]);
 
-    const usdcContract = useMemo(() => {
-        if (signer && usdcAddress) return new ethers.Contract(usdcAddress, IERC20_ABI, signer);
-        return null;
-    }, [signer, usdcAddress]);
+// The new, correct block for usdcContract
+const usdcContract = useMemo(() => {
+    if (!signer || !usdcAddress) return null;
+    const abi = IERC20_ABI.abi || IERC20_ABI;
+    return new ethers.Contract(usdcAddress, abi, signer);
+}, [signer, usdcAddress]);
 
     useEffect(() => {
         console.log("Paywall Effect Triggered. State:", { isInitialized, walletAddress, chainId, contractReady: !!paywallContract });
