@@ -1,3 +1,11 @@
+---
+title: "The Barbarossa of the Levant: A Strategic Analysis of Operation Fatih'in Kılıcı"
+date: "2025-06-30"
+author: "Dr. Aris Thorne"
+language: "en"
+---
+
+
 # The Barbarossa of the Levant: A Strategic Analysis of Operation Fatih'in Kılıcı
 
 **A PiOracle Exclusive Intelligence Briefing**
