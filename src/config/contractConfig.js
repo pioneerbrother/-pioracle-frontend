@@ -68,12 +68,9 @@ export const getPredictionMarketContractAddressForChain = (chainId) => {
 export const getAllSupportedChainsForModal = () => {
     // Use the EXACT keys from your 'chains' object.
     // Let's only include the ones you have fully configured for now.
-    const supportedChainKeysInModal = ['bsc_testnet', 'bnb_mainnet', 'polygon_mainnet']; 
-
-    const modalChains = supportedChainKeysInModal.map(key => {
+     const modalChains = supportedChainKeysInModal.map(key => {
         const chain = chains[key];
         
-        // This check is important. If a config is missing, we log it and skip.
         if (!chain || !chain.chainIdHex || !chain.rpcUrl) {
             console.warn(`[contractConfig] Modal config for key '${key}' is incomplete or missing. Skipping.`);
             return null;
@@ -88,6 +85,7 @@ export const getAllSupportedChainsForModal = () => {
         };
     }).filter(chain => chain !== null);
 
-    console.log("[contractConfig] Chains configured for Web3Modal:", modalChains);
+    console.log("[contractConfig] Final chains configured for Web3Modal:", modalChains);
     return modalChains;
 };
+
