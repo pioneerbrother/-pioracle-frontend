@@ -1,90 +1,103 @@
-// src/config/contractConfig.js (TEMPORARY MINIMAL VERSION FOR DEBUGGING)
+// src/config/contractConfig.js
 import PREDICTION_MARKET_P2P_ABI_JSON from './abis/PredictionMarketP2P.json';
 
+// Get values from .env file
 const VITE_BSC_TESTNET_PM_ADDRESS = import.meta.env.VITE_BSC_TESTNET_PREDICTION_MARKET_CONTRACT_ADDRESS;
 const VITE_BSC_TESTNET_RPC_URL_FROM_ENV = import.meta.env.VITE_BSC_TESTNET_RPC_URL;
 
-console.log("[contractConfig] RAW VITE_BSC_TESTNET_PREDICTION_MARKET_CONTRACT_ADDRESS:", VITE_BSC_TESTNET_PM_ADDRESS);
-console.log("[contractConfig] RAW VITE_BSC_TESTNET_RPC_URL:", VITE_BSC_TESTNET_RPC_URL_FROM_ENV);
-
+// --- THIS IS THE MAIN CONFIGURATION OBJECT ---
 const chains = {
-     // In src/config/contractConfig.js, inside the chains.bsc_testnet object:
-
-bsc_testnet: {
-    // ... your other bsc_testnet properties like predictionMarketContractAddress ...
-    hostRegistryContractAddress: "0x634c91dE69d394709de424c7F6C56279E2e4d3B7",
-    tippingJarContractAddress: "0x66fc38263C9D5A3d6eFAe8D0C376DdEC00042648",
-    founderBadgeContractAddress: "0x27186F40Eae1329BE3A8928d3587F071fB000C7D",
-    supporterBadgeContractAddress: "0x482d84e0520F082D0a46fd96bB52aA12b4a872e8" 
-},
+    bsc_testnet: {
+        // Prediction Market
+        predictionMarketContractAddress: VITE_BSC_TESTNET_PM_ADDRESS || "0x810Fbd810D9E563920E4543f95B4D277100a38f8",
+        
+        // Host & Tipping System Contracts
+        hostRegistryContractAddress: "0x634c91dE69d394709de424c7F6C56279E2e4d3B7",
+        tippingJarContractAddress: "0x66fc38263C9D5A3d6eFAe8D0C376DdEC00042648",
+        founderBadgeContractAddress: "0x27186F40Eae1329BE3A8928d3587F071fB000C7D",
+        supporterBadgeContractAddress: "0x482d84e0520F082D0a46fd96bB52aA12b4a872e8",
+        
+        // Core Chain Properties (These are required for Web3Modal)
+        rpcUrl: VITE_BSC_TESTNET_RPC_URL_FROM_ENV || "https://data-seed-prebsc-1-s1.binance.org:8545/",
+        chainIdHex: '0x61', // 97
+        name: 'BNB Smart Chain Testnet',
+        symbol: 'tBNB',
+        explorerUrl: 'https://testnet.bscscan.com'
+    },
     
-    // Add other essential chains if your app breaks without them, but try to keep minimal
-    bnb_mainnet: { // Example minimal bnb_mainnet for Web3Modal
+    bnb_mainnet: {
         predictionMarketContractAddress: import.meta.env.VITE_BNB_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
         rpcUrl: import.meta.env.VITE_BNB_MAINNET_RPC_URL || "https://bsc-dataseed.binance.org/",
-        chainIdHex: '0x38', name: 'BNB Smart Chain', symbol: 'BNB', explorerUrl: 'https://bscscan.com',
+        chainIdHex: '0x38', 
+        name: 'BNB Smart Chain', 
+        symbol: 'BNB', 
+        explorerUrl: 'https://bscscan.com',
+        // You would add your mainnet Host/Tipping addresses here once deployed
+        hostRegistryContractAddress: null,
+        tippingJarContractAddress: null, 
+        founderBadgeContractAddress: null,
+        supporterBadgeContractAddress: null,
     },
-    polygon_mainnet: { // Example minimal polygon_mainnet for Web3Modal
+
+    polygon_mainnet: {
         predictionMarketContractAddress: import.meta.env.VITE_POLYGON_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
         rpcUrl: import.meta.env.VITE_POLYGON_MAINNET_RPC_URL || "https://polygon-rpc.com/",
-        chainIdHex: '0x89', name: 'Polygon Mainnet', symbol: 'MATIC', explorerUrl: 'https://polygonscan.com/',
+        chainIdHex: '0x89', 
+        name: 'Polygon Mainnet', 
+        symbol: 'MATIC', 
+        explorerUrl: 'https://polygonscan.com/',
+         // You would add your mainnet Host/Tipping addresses here once deployed
+        hostRegistryContractAddress: null,
+        tippingJarContractAddress: null, 
+        founderBadgeContractAddress: null,
+        supporterBadgeContractAddress: null,
     }
 };
+
+// --- The rest of your file from before is correct and does not need to change ---
 
 const VITE_NETWORK_TARGET = import.meta.env.VITE_NETWORK_TARGET || 'bsc_testnet';
 const defaultConfig = chains[VITE_NETWORK_TARGET];
 
 if (!defaultConfig) {
-    throw new Error(`[contractConfig] MINIMAL: Default config for "${VITE_NETWORK_TARGET}" not found.`);
+    throw new Error(`[contractConfig] Default config for "${VITE_NETWORK_TARGET}" not found.`);
 }
-console.log(`[contractConfig] MINIMAL: Default config for VITE_NETWORK_TARGET: '${VITE_NETWORK_TARGET}'`, defaultConfig);
-
+console.log(`[contractConfig] Default config for VITE_NETWORK_TARGET: '${VITE_NETWORK_TARGET}'`, defaultConfig);
 
 export const getPredictionMarketAbi = () => PREDICTION_MARKET_P2P_ABI_JSON.abi || PREDICTION_MARKET_P2P_ABI_JSON;
-
 export const getTargetChainIdHex = () => defaultConfig.chainIdHex;
 
 export const getConfigForChainId = (chainId) => {
     if (chainId === null || typeof chainId === 'undefined') return null;
     const numChainId = Number(chainId);
-    console.log(`[contractConfig] MINIMAL: getConfigForChainId called with: ${numChainId}`);
     for (const key in chains) {
         if (parseInt(chains[key].chainIdHex, 16) === numChainId) {
-            console.log(`[contractConfig] MINIMAL: getConfigForChainId - Match for ${key}:`, chains[key]);
             return chains[key];
         }
     }
-    console.warn(`[contractConfig] MINIMAL: No config found for chainId: ${numChainId}.`);
+    console.warn(`[contractConfig] No config found for chainId: ${numChainId}.`);
     return null;
 };
 
 export const getPredictionMarketContractAddressForChain = (chainId) => {
     const config = getConfigForChainId(chainId);
-    const address = config?.predictionMarketContractAddress;
-    console.log(`[contractConfig] MINIMAL: getPredictionMarketContractAddressForChain for ${chainId} is: ${address} (from config: ${JSON.stringify(config)})`);
-    return address || null;
+    return config?.predictionMarketContractAddress || null;
 };
 
 export const getAllSupportedChainsForModal = () => {
-    // 1. Define the base list of chains you want in the modal first.
     let supportedChainKeysInModal = ['bnb_mainnet', 'polygon_mainnet', 'bsc_testnet']; 
 
-    // 2. Now, check if the default target is already in the list. If not, add it.
-    // This 'VITE_NETWORK_TARGET' is accessible here because it's defined at the top of the file.
     if (!supportedChainKeysInModal.includes(VITE_NETWORK_TARGET)) {
         supportedChainKeysInModal.push(VITE_NETWORK_TARGET);
         console.log(`[contractConfig] Added default target '${VITE_NETWORK_TARGET}' to modal chain list.`);
     }
 
-    // 3. Proceed with the rest of the logic as before.
     const modalChains = supportedChainKeysInModal.map(key => {
         const chain = chains[key];
-        
         if (!chain || !chain.chainIdHex || !chain.rpcUrl) {
-            console.warn(`[contractConfig] Modal config for key '${key}' is incomplete or missing. Skipping.`);
+            console.warn(`[contractConfig] Modal config for key '${key}' is incomplete. Skipping.`);
             return null;
         }
-
         return {
             chainId: parseInt(chain.chainIdHex, 16),
             name: chain.name,
