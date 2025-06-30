@@ -1,11 +1,11 @@
 // src/pages/WalletProvider.jsx
 import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5';
+import { createWeb3Modal } from '@web3modal/ethers5'; // Only import createWeb3Modal
 import { 
     getAllSupportedChainsForModal,
     getConfigForChainId,
-    getContractAbi, // Assuming this is now your generic ABI getter
+    getContractAbi,
     getTargetChainIdHex
 } from '../config/contractConfig';
 
@@ -17,6 +17,7 @@ const metadata = {
     name: "Pioracle.online",
     description: "Decentralized Prediction Markets",
     url: "https://pioracle.online",
+    // Add your icons array if you have it
 };
 
 export function WalletProvider({ children }) {
@@ -29,18 +30,26 @@ export function WalletProvider({ children }) {
     const [walletAddress, setWalletAddress] = useState(null);
     const [nativeTokenSymbol, setNativeTokenSymbol] = useState("ETH");
 
+    // This useEffect initializes Web3Modal ONCE on client mount.
     useEffect(() => {
-        // This useEffect initializes Web3Modal once on client mount.
         const supportedChains = getAllSupportedChainsForModal();
-        const ethersConfig = defaultConfig({ metadata });
         
         if (supportedChains.length > 0 && WALLETCONNECT_PROJECT_ID) {
+            // --- NEW MANUAL CONFIGURATION APPROACH ---
             const modal = createWeb3Modal({
-                ethersConfig,
-                chains: supportedChains,
+                ethersConfig: { // Manually define the config object
+                    metadata,
+                    // No default provider needed here, as we handle it
+                },
+                chains: supportedChains, // Pass the chains array
                 projectId: WALLETCONNECT_PROJECT_ID,
+                enableOnramp: true, // Example of another option
             });
+            // --- END OF NEW APPROACH ---
+            
             setWeb3Modal(modal);
+        } else {
+            console.error("[WalletProvider] Cannot initialize Web3Modal: Missing supported chains or Project ID.");
         }
     }, []);
 
@@ -49,7 +58,6 @@ export function WalletProvider({ children }) {
         if (!chainConfig) { return; }
         
         const providerToUse = newProvider || new ethers.providers.JsonRpcProvider(chainConfig.rpcUrl);
-        // Using a generic key name for demonstration. Adjust to your config.
         const contractAddress = chainConfig.predictionMarketContractAddress; 
         
         if (contractAddress) {
@@ -64,14 +72,10 @@ export function WalletProvider({ children }) {
         setSigner(newSigner);
         setNativeTokenSymbol(chainConfig.symbol);
     }, []);
-    
-    // --- THIS FUNCTION MUST BE DEFINED WITH useCallback BEFORE useMemo USES IT ---
+
     const disconnectWalletAndReset = useCallback(async () => {
-        console.log("WalletProvider: disconnectWalletAndReset called.");
         if (web3Modal?.isOpen?.()) { await web3Modal.closeModal(); }
-        if (provider && provider.provider && typeof provider.provider.disconnect === 'function') {
-            await provider.provider.disconnect();
-        }
+        if (provider?.provider?.disconnect) { await provider.provider.disconnect(); }
 
         setWalletAddress(null);
         setSigner(null);
@@ -80,8 +84,8 @@ export function WalletProvider({ children }) {
         if (defaultChainId) {
             await setupProviderForChain(defaultChainId);
         }
-    }, [web3Modal, provider, setupProviderForChain]); // Dependencies for this function
-    
+    }, [web3Modal, provider, setupProviderForChain]);
+
     useEffect(() => {
         if (!web3Modal || isInitialized) return;
 
@@ -106,17 +110,11 @@ export function WalletProvider({ children }) {
         return () => unsubscribe();
     }, [web3Modal, isInitialized, setupProviderForChain, disconnectWalletAndReset]);
 
-
-    // --- THIS IS THE FIX ---
-    // The disconnectWalletAndReset function is now included in the dependency array of useMemo.
     const contextValue = useMemo(() => ({
         walletAddress, signer, contract, chainId, provider, isInitialized, nativeTokenSymbol,
         connectWallet: () => web3Modal?.open(),
-        disconnectWallet: disconnectWalletAndReset, // This is now correctly defined in scope
-    }), [
-        walletAddress, signer, contract, chainId, provider, isInitialized, 
-        nativeTokenSymbol, web3Modal, disconnectWalletAndReset // Added to dependency array
-    ]);
+        disconnectWallet: disconnectWalletAndReset,
+    }), [walletAddress, signer, contract, chainId, provider, isInitialized, nativeTokenSymbol, web3Modal, disconnectWalletAndReset]);
     
     return (
         <WalletContext.Provider value={contextValue}>
