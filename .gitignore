@@ -146,3 +146,4 @@ dist/
 dist-ssr/
 *.local
 ```        The most important ones here for Vite are `node_modules/` and `dist/` and `.env` files.
+netlify/functions/node_modules
