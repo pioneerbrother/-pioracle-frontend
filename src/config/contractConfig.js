@@ -66,9 +66,18 @@ export const getPredictionMarketContractAddressForChain = (chainId) => {
 };
 
 export const getAllSupportedChainsForModal = () => {
-    // Use the EXACT keys from your 'chains' object.
-    // Let's only include the ones you have fully configured for now.
-     const modalChains = supportedChainKeysInModal.map(key => {
+    // 1. Define the base list of chains you want in the modal first.
+    let supportedChainKeysInModal = ['bnb_mainnet', 'polygon_mainnet', 'bsc_testnet']; 
+
+    // 2. Now, check if the default target is already in the list. If not, add it.
+    // This 'VITE_NETWORK_TARGET' is accessible here because it's defined at the top of the file.
+    if (!supportedChainKeysInModal.includes(VITE_NETWORK_TARGET)) {
+        supportedChainKeysInModal.push(VITE_NETWORK_TARGET);
+        console.log(`[contractConfig] Added default target '${VITE_NETWORK_TARGET}' to modal chain list.`);
+    }
+
+    // 3. Proceed with the rest of the logic as before.
+    const modalChains = supportedChainKeysInModal.map(key => {
         const chain = chains[key];
         
         if (!chain || !chain.chainIdHex || !chain.rpcUrl) {
