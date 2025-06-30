@@ -64,7 +64,7 @@ if (!defaultConfig) {
 }
 console.log(`[contractConfig] Default config for VITE_NETWORK_TARGET: '${VITE_NETWORK_TARGET}'`, defaultConfig);
 
-export const getPredictionMarketAbi = () => PREDICTION_MARKET_P2P_ABI_JSON.abi || PREDICTION_MARKET_P2P_ABI_JSON;
+export const getContractAbi = () => PREDICTION_MARKET_P2P_ABI_JSON.abi || PREDICTION_MARKET_P2P_ABI_JSON;
 export const getTargetChainIdHex = () => defaultConfig.chainIdHex;
 
 export const getConfigForChainId = (chainId) => {
