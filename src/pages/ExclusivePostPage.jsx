@@ -8,152 +8,150 @@ import IERC20_ABI from '../config/abis/IERC20.json';
 import { getConfigForChainId } from '../config/contractConfig';
 
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorMessage from '../components/common/ErrorMessage';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
-import ReactMarkdown from 'react-markdown';
 
-const ARTICLE_SLUG = "invasion-plan-of-turkey-en"; // Match the URL slug
-const CONTENT_ID_HASH = ethers.utils.id(ARTICLE_SLUG); 
-const ARTICLE_TEASER = `
-# The Barbarossa of the Levant: A Strategic Analysis of Operation Fatih'in Kılıcı
-**A PiOracle Exclusive Intelligence Briefing**
-For over seventy years, the geopolitical landscape of the Middle East was built upon a set of core assumptions...
-**To read the full, in-depth strategic analysis, please unlock access below.**
-`;
+const ARTICLE_SLUG = "invasion-plan-of-turkey-en";
+const CONTENT_ID_HASH = ethers.utils.id(ARTICLE_SLUG);
+const ARTICLE_TEASER = `# The Barbarossa of the Levant...\n\n**Unlock full access below.**`;
 
 function ExclusivePostPage() {
-    const { walletAddress, signer, chainId, connectWallet, nativeTokenSymbol, 
-        isInitialized} = useContext(WalletContext);
+    const { walletAddress, signer, chainId, isInitialized } = useContext(WalletContext);
     
-    const [isUnlocked, setIsUnlocked] = useState(false);
-    const [needsApproval, setNeedsApproval] = useState(true);
-    const [isLoading, setIsLoading] = useState(true); // Start loading immediately
-    const [status, setStatus] = useState({ text: '', type: '' });
+    const [pageState, setPageState] = useState('initializing'); // 'initializing', 'checking', 'needs_approval', 'ready_to_unlock', 'unlocked', 'error'
+    const [errorMessage, setErrorMessage] = useState('');
     const [fullContent, setFullContent] = useState('');
-    
+
     const currentNetworkConfig = useMemo(() => getConfigForChainId(chainId), [chainId]);
     const paywallAddress = currentNetworkConfig?.premiumContentPaywallAddress;
     const usdcAddress = currentNetworkConfig?.paymentTokenAddress;
 
     const paywallContract = useMemo(() => {
-        if (!signer || !paywallAddress) return null;
-        return new ethers.Contract(paywallAddress, PAYWALL_ABI, signer);
+        if (signer && paywallAddress) return new ethers.Contract(paywallAddress, PAYWALL_ABI, signer);
+        return null;
     }, [signer, paywallAddress]);
 
     const usdcContract = useMemo(() => {
-        if (!signer || !usdcAddress) return null;
-        return new ethers.Contract(usdcAddress, IERC20_ABI, signer);
+        if (signer && usdcAddress) return new ethers.Contract(usdcAddress, IERC20_ABI, signer);
+        return null;
     }, [signer, usdcAddress]);
 
-
     useEffect(() => {
-        // This effect now only checks access and allowance
-        if (!paywallContract || !usdcContract || !walletAddress) {
-            // If we don't have what we need, stop loading but don't show an error yet.
-            // The user will be prompted to connect their wallet.
-            setIsLoading(false);
+        console.log("Paywall Effect Triggered. State:", { isInitialized, walletAddress, chainId, contractReady: !!paywallContract });
+
+        if (!isInitialized) {
+            setPageState('initializing');
+            return;
+        }
+        if (!walletAddress) {
+            setPageState('prompt_connect'); // New state for clarity
+            return;
+        }
+        if (!paywallContract || !usdcContract) {
+            setPageState('error');
+            setErrorMessage(`App is not configured for this chain (ID: ${chainId}). Please switch to Polygon or BNB Chain.`);
             return;
         }
 
-        const checkAccessAndAllowance = async () => {
-            setIsLoading(true); // Set loading true for this async operation
-            setStatus({text: 'Verifying access on-chain...', type: 'info'});
+        const checkAccess = async () => {
+            setPageState('checking');
+            setErrorMessage('');
             try {
-                const userHasAccess = await paywallContract.hasAccess(CONTENT_ID_HASH, walletAddress);
-                setIsUnlocked(userHasAccess);
+                console.log("Checking on-chain access...");
+                const hasPaid = await paywallContract.hasAccess(CONTENT_ID_HASH, walletAddress);
+                console.log("Result of hasAccess check:", hasPaid);
 
-                if (!userHasAccess) {
+                if (hasPaid) {
+                    setIsUnlocked(true); // You had this state, let's keep it for content fetching
+                    setPageState('unlocked');
+                } else {
+                    console.log("Checking allowance...");
                     const requiredPrice = await paywallContract.contentPrice();
                     const currentAllowance = await usdcContract.allowance(walletAddress, paywallContract.address);
-                    setNeedsApproval(currentAllowance.lt(requiredPrice));
-                    setStatus({text: '', type: ''}); // Clear status after check
-                } else {
-                    setNeedsApproval(false);
-                    setStatus({text: 'Access previously granted.', type: 'success'});
+                    console.log("Required Price:", requiredPrice.toString(), "Current Allowance:", currentAllowance.toString());
+                    if (currentAllowance.lt(requiredPrice)) {
+                        setPageState('needs_approval');
+                    } else {
+                        setPageState('ready_to_unlock');
+                    }
                 }
             } catch (e) {
-                console.error("Error checking access/allowance:", e);
-                setStatus({ text: "Could not verify access status. Please ensure you're on a supported network (BNB or Polygon) and refresh.", type: 'error' });
-            } finally {
-                setIsLoading(false); // IMPORTANT: Ensure loading is set to false in all paths
+                console.error("Error in checkAccess effect:", e);
+                setPageState('error');
+                setErrorMessage("Failed to check access on-chain. Please refresh.");
             }
         };
+        checkAccess();
+    }, [isInitialized, walletAddress, chainId, paywallContract, usdcContract]);
 
-        checkAccessAndAllowance();
-    }, [paywallContract, usdcContract, walletAddress]);
-    
+    // This effect for fetching content is likely fine, but we'll keep it separate
+    const [isUnlocked, setIsUnlocked] = useState(false); // Keep this state to trigger fetch
     useEffect(() => {
-        // This effect ONLY fetches content WHEN unlocked
-        if (!isUnlocked || !signer || !walletAddress) return;
+        if (!isUnlocked || !signer) return;
+        // ... your secure content fetching logic ...
+    }, [isUnlocked, signer]);
 
-        const fetchContent = async () => {
-            setIsLoading(true);
-            setStatus({ text: 'Access verified. Fetching secure content...', type: 'info' });
-            try {
-                // ... (the fetch logic with signed message remains the same) ...
-                const message = `I am proving ownership of my address to read article: ${ARTICLE_SLUG}`;
-                const signature = await signer.signMessage(message);
-                const response = await fetch('/.netlify/functions/get-premium-content', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ walletAddress, signature, chainId }),
-                });
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Failed to fetch content.');
-                setFullContent(data.content);
-                setStatus({ text: '', type: '' });
-            } catch (err) {
-                setStatus({ text: `Error fetching content: ${err.message}`, type: 'error' });
-            } finally {
-                setIsLoading(false);
-            }
-        };
 
-        fetchContent();
-    }, [isUnlocked, signer, walletAddress, chainId]);
+    const handleApprove = async () => {
+        if (!usdcContract || !paywallAddress) return;
+        setPageState('checking'); // Show loading state
+        setErrorMessage('');
+        try {
+            const requiredPrice = await paywallContract.contentPrice();
+            const tx = await usdcContract.approve(paywallAddress, requiredPrice);
+            await tx.wait(1);
+            setPageState('ready_to_unlock'); // Move to next state on success
+        } catch (err) {
+            setErrorMessage(err.reason || "Approval failed.");
+            setPageState('needs_approval'); // Go back to approval state on error
+        }
+    };
 
-    const handleApprove = async () => { /* ... same as before ... */ };
-    const handleUnlock = async () => { /* ... same as before ... */ };
-
-    // --- RENDER LOGIC ---
-
-    if (!isInitialized && !walletAddress) { // A check from WalletContext might be useful
-         return <div className="page-container"><LoadingSpinner message="Initializing..." /></div>;
-    }
+    const handleUnlock = async () => {
+        if (!paywallContract) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await paywallContract.unlockContent(CONTENT_ID_HASH);
+            await tx.wait(1);
+            setIsUnlocked(true); // This will trigger the fetch
+            setPageState('unlocked');
+        } catch (err) {
+            setErrorMessage(err.reason || "Payment failed.");
+            setPageState('ready_to_unlock');
+        }
+    };
     
-    // The rest of the return statement from the previous message is correct.
-    // The key part to check is the button's disabled state:
-    // <button onClick={handleApprove} disabled={isLoading}>
-    // ...
-    // This is correct. The problem was that `setIsLoading(false)` was not being called in all code paths.
-    
-    if (isUnlocked) { /* ... return full content ... */ }
+    const renderContent = () => {
+        switch (pageState) {
+            case 'initializing':
+                return <LoadingSpinner message="Initializing..." />;
+            case 'prompt_connect':
+                return <ConnectWalletButton />;
+            case 'checking':
+                return <LoadingSpinner message="Verifying with blockchain..." />;
+            case 'needs_approval':
+                return <button onClick={handleApprove}>1. Approve USDC</button>;
+            case 'ready_to_unlock':
+                return <button onClick={handleUnlock}>2. Unlock Content for 1,000,000 USDC</button>;
+            case 'unlocked':
+                return fullContent ? <ReactMarkdown>{fullContent}</ReactMarkdown> : <LoadingSpinner message="Fetching secure content..." />;
+            case 'error':
+                return <p style={{color: 'red'}}>{errorMessage}</p>;
+            default:
+                return <p>Something went wrong.</p>;
+        }
+    };
 
-    // Render the Paywall
+
     return (
-         <div className="page-container blog-post-page">
-            <article className="blog-content teaser">
-                <ReactMarkdown>{ARTICLE_TEASER}</ReactMarkdown>
-            </article>
-
+        <div className="page-container blog-post-page">
+            <article className="blog-content teaser">{/* ... teaser ... */}</article>
             <div className="paywall-card">
                 <h2>Unlock Full Access</h2>
-                <p>Gain permanent access to this exclusive analysis for **1,000,000 USDC** on the {currentNetworkConfig?.name || 'supported network'}.</p>
-                
-                {!walletAddress ? (
-                    <ConnectWalletButton />
-                ) : (
-                    <div className="button-group">
-                        {isLoading ? (
-                             <LoadingSpinner message={status.text || "Verifying..."} />
-                        ) : needsApproval ? (
-                            <button onClick={handleApprove}>1. Approve USDC</button>
-                        ) : (
-                            <button onClick={handleUnlock}>2. Unlock Content</button>
-                        )}
-                    </div>
-                )}
-                {status.text && !isLoading && <p className={`message ${status.type}`}>{status.text}</p>}
+                <div className="button-group">
+                    {renderContent()}
+                </div>
+                {pageState !== 'error' && errorMessage && <p style={{color: 'red'}}>{errorMessage}</p>}
             </div>
         </div>
     );
