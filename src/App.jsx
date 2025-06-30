@@ -15,13 +15,11 @@ import CreateMarketPage from './pages/CreateMarketPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
 import BlogPage from './pages/BlogPage';
-import BlogPostPage from './pages/BlogPostPage';
+import BlogPostPage from './pages/BlogPostPage'; // For regular, free posts
 import GuidePage from './pages/GuidePage';
-import MarketDetailLoader from './pages/MarketDetailLoader'; // Your existing loader for market details
-
-// --- NEWLY IMPORTED TIPPING PAGE ---
-import TippingPage from './pages/TippingPage'; // Import your new TippingPage
-import BlogPostPaywallPage from './pages/BlogPostPaywallPage';
+import MarketDetailLoader from './pages/MarketDetailLoader';
+import TippingPage from './pages/TippingPage'; // For the Tip Jar / Host Hub
+import ExclusivePostPage from './pages/ExclusivePostPage'; // The paywall component
 
 function App() {
   return (
@@ -31,24 +29,36 @@ function App() {
           <Header />
           <main>
             <Routes>
-              {/* --- Main application routes --- */}
+              {/* --- Core App Routes --- */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailLoader />} />
-
-              {/* --- Other application routes --- */}
               <Route path="/create-market" element={<CreateMarketPage />} />
               <Route path="/recently-resolved" element={<RecentlyResolvedPage />} />
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/guide" element={<GuidePage />} />
-
-              {/* --- ADDED ROUTE FOR TIPPING PAGE --- */}
               <Route path="/tip-jar" element={<TippingPage />} />
+              {/* Note: /hosts might be a better name for the Tip Jar page route */}
+              {/* <Route path="/hosts" element={<HostPage />} /> */}
 
-              {/* --- Blog routes --- */}
+
+              {/* --- BLOG ROUTES (Order is Important!) --- */}
               <Route path="/blog" element={<BlogPage />} />
+
+              {/* 1. Specific, Paywalled Routes (handled by ExclusivePostPage) */}
+              <Route 
+                path="/blog/invasion-plan-of-turkey-en" 
+                element={<ExclusivePostPage />} 
+              />
+              <Route 
+                path="/blog/tochnit-plisha-turkiya" 
+                element={<ExclusivePostPage />} 
+              />
+
+              {/* 2. General Route for all other free posts (handled by BlogPostPage) */}
+              {/* This MUST come AFTER the specific routes */}
               <Route path="/blog/:slug" element={<BlogPostPage />} />
-               <Route path="/blog/fictional-invasion-scenario-turkey-israel" element={<BlogPostPaywallPage />} />
+
             </Routes>
           </main>
           <Footer />
