@@ -8,18 +8,16 @@ console.log("[contractConfig] RAW VITE_BSC_TESTNET_PREDICTION_MARKET_CONTRACT_AD
 console.log("[contractConfig] RAW VITE_BSC_TESTNET_RPC_URL:", VITE_BSC_TESTNET_RPC_URL_FROM_ENV);
 
 const chains = {
-    bsc_testnet: {
-        predictionMarketContractAddress: VITE_BSC_TESTNET_PM_ADDRESS || "0x810Fbd810D9E563920E4543f95B4D277100a38f8", // Fallback
-        rpcUrl: VITE_BSC_TESTNET_RPC_URL_FROM_ENV || "https://data-seed-prebsc-1-s1.binance.org:8545/", // Fallback
-        chainIdHex: '0x61', // 97
-        name: 'BNB Smart Chain Testnet',
-        symbol: 'tBNB',
-        explorerUrl: 'https://testnet.bscscan.com',
-        hostRegistryContractAddress: "0x05991Fe5D580EBC2371A6b3e7a217FF9Fc34C027",
-        founderBadgeContractAddress: "0xEa618568FC44A6fe6A17628d8e98Cab4c4cbe2C0",
-         tippingJarContractAddress: "0x5653FF4fA4b6D557C726E2F939Bf9f9F19f27cCe",
-        badgeContractAddress: "0xe21829A24C455e6e7695eEa01eA264851F2138f5" 
-    },
+     // In src/config/contractConfig.js, inside the chains.bsc_testnet object:
+
+bsc_testnet: {
+    // ... your other bsc_testnet properties like predictionMarketContractAddress ...
+    hostRegistryContractAddress: "0x634c91dE69d394709de424c7F6C56279E2e4d3B7",
+    tippingJarContractAddress: "0x66fc38263C9D5A3d6eFAe8D0C376DdEC00042648",
+    founderBadgeContractAddress: "0x27186F40Eae1329BE3A8928d3587F071fB000C7D",
+    supporterBadgeContractAddress: "0x482d84e0520F082D0a46fd96bB52aA12b4a872e8" 
+},
+    
     // Add other essential chains if your app breaks without them, but try to keep minimal
     bnb_mainnet: { // Example minimal bnb_mainnet for Web3Modal
         predictionMarketContractAddress: import.meta.env.VITE_BNB_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,

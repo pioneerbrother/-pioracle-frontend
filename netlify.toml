@@ -3,6 +3,7 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions/"
   environment = { NODE_VERSION = "20" } # Or your preferred Node version
 
 [[redirects]]
