@@ -95,6 +95,48 @@ export function WalletProvider({ children }) {
         } else {
             setIsInitialized(true);
         }
+        useEffect(() => {
+        // This function will check for an existing provider like MetaMask
+        const initializeConnection = async () => {
+            // EIP-6963 compatible wallets announce themselves. We also check window.ethereum for MetaMask.
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    // Check if we are already connected by seeing if accounts are available
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+
+                    if (accounts.length > 0) {
+                        console.log("WalletProvider: Found existing connected session via window.ethereum.");
+                        // If accounts are found, it means the user is already connected.
+                        // We call setProviderState to update our entire app context.
+                        await setProviderState(window.ethereum);
+                    } else {
+                        console.log("WalletProvider: No active session found. Setting default read-only provider.");
+                        const defaultChainId = parseInt(getTargetChainIdHex(), 16);
+                        if (defaultChainId) {
+                            await setupProviderForChain(defaultChainId);
+                        }
+                    }
+                } catch (error) {
+                    console.error("WalletProvider: Error checking for existing connection:", error);
+                    // Fallback to default state on error
+                    const defaultChainId = parseInt(getTargetChainIdHex(), 16);
+                    if (defaultChainId) await setupProviderForChain(defaultChainId);
+                }
+            } else {
+                 console.log("WalletProvider: No window.ethereum provider found. Setting default read-only provider.");
+                 const defaultChainId = parseInt(getTargetChainIdHex(), 16);
+                 if (defaultChainId) await setupProviderForChain(defaultChainId);
+            }
+            setIsInitialized(true); // Mark initialization as complete
+        };
+
+        // We only run this initialization logic once, after Web3Modal is ready.
+        if (web3Modal && !isInitialized) {
+            initializeConnection();
+        }
+    }, [web3Modal, isInitialized, setProviderState, setupProviderForChain]);
+    // --- END OF CORRECTED LOGIC ---
+
 
         const unsubscribe = web3Modal.subscribeProvider(async ({ provider, address, chainId, isConnected }) => {
             if (isConnected && provider && address && chainId) {
