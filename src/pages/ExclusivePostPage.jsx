@@ -22,7 +22,8 @@ For over seventy years, the geopolitical landscape of the Middle East was built 
 `;
 
 function ExclusivePostPage() {
-    const { walletAddress, signer, chainId, connectWallet, nativeTokenSymbol } = useContext(WalletContext);
+    const { walletAddress, signer, chainId, connectWallet, nativeTokenSymbol, 
+        isInitialized} = useContext(WalletContext);
     
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [needsApproval, setNeedsApproval] = useState(true);
