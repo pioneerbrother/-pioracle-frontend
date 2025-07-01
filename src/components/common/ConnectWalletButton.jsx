@@ -1,38 +1,39 @@
 // src/components/common/ConnectWalletButton.jsx
+
 import React, { useContext } from 'react';
 import { WalletContext } from '../../pages/WalletProvider'; 
+import { getConfigForChainId } from '../../config/contractConfig'; // Import this helper
 import './ConnectWalletButton.css'; 
 
 function ConnectWalletButton() {
     const context = useContext(WalletContext);
 
+    // Initial loading state check
     if (!context || !context.isInitialized) {
         return <button className="connect-wallet-button pioracle-button" disabled>Loading...</button>;
     }
 
     const {
         walletAddress,
-        chainId,              // Actual connected chain from MetaMask
-        nativeTokenSymbol,    // Symbol of the connected chain (e.g., MATIC, BNB)
+        chainId,
+        nativeTokenSymbol,
         connectWallet,
         disconnectWallet,
-        contract,             // The contract instance from WalletContext (null if unsupported network)
-        web3Modal             // To open network switcher
+        web3Modal
     } = context;
 
-    // A network is considered "unsupported" by the dApp if a wallet is connected,
-    // a chainId is present, BUT we failed to get a contract instance for it.
-    const isUnsupportedByDApp = walletAddress && chainId && !contract;
+    // --- THIS IS THE COMBINED, ROBUST LOGIC ---
+    // We use the direct config check which is more reliable than checking for the contract instance.
+    const isUnsupportedByDApp = walletAddress && chainId && !getConfigForChainId(chainId);
+    // --- END OF COMBINED LOGIC ---
 
     const handleInteraction = () => {
         if (!walletAddress) {
             connectWallet();
         } else if (isUnsupportedByDApp && web3Modal) {
-            // If on an unsupported chain, open Web3Modal's network switcher
+            // Your excellent UX feature to open the network switcher
             web3Modal.open({ view: 'Networks' });
         }
-        // If connected and supported, clicking the address part might do nothing,
-        // or you could add other functionality (e.g., link to block explorer).
     };
 
     if (walletAddress) {
@@ -46,7 +47,7 @@ function ConnectWalletButton() {
                     </button>
                 ) : (
                     <span className="wallet-address" title={`Connected to Chain ID: ${chainId} (${nativeTokenSymbol})`}>
-                        <span className="connection-indicator-dot"></span> {/* Green dot */}
+                        <span className="connection-indicator-dot"></span>
                         {truncatedAddress}
                     </span>
                 )}
@@ -57,7 +58,6 @@ function ConnectWalletButton() {
         );
     }
 
-    // Case 2: No wallet is connected.
     return (
         <button onClick={connectWallet} className="connect-wallet-button pioracle-button">
             Connect Wallet
@@ -66,4 +66,5 @@ function ConnectWalletButton() {
 }
 
 export default ConnectWalletButton;
+
 
