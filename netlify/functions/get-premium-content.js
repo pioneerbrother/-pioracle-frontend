@@ -9,13 +9,9 @@ const PAYWALL_BSC_TESTNET_ADDRESS = process.env.BSC_TESTNET_PREMIUM_CONTENT_ADDR
 const BSC_TESTNET_RPC_URL = process.env.BSC_TESTNET_RPC_URL;
 
 const PAYWALL_ABI = ["function hasAccess(bytes32 contentId, address user) view returns (bool)"];
-
-// --- THIS IS THE FINAL FIX ---
-// We change to the ethers v5 syntax, which is more compatible with your project.
 const provider = new ethers.providers.JsonRpcProvider(BSC_TESTNET_RPC_URL);
-// --- END OF FIX ---
-
 const premiumContentContract = new ethers.Contract(PAYWALL_BSC_TESTNET_ADDRESS, PAYWALL_ABI, provider);
+// --- End Configuration ---
 
 exports.handler = async function (event) {
     if (event.httpMethod !== "POST") {
@@ -34,13 +30,19 @@ exports.handler = async function (event) {
         }
 
         const message = `I am proving ownership of my address to read article: ${slug}`;
+        // --- FIX FOR SIGNATURE VERIFICATION ---
+        // Use the ethers v5 syntax for verifyMessage as well for consistency
         const recoveredAddress = ethers.utils.verifyMessage(message, signature);
 
         if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
             return { statusCode: 401, body: 'Unauthorized: Invalid signature.' };
         }
         
-        const contentId = ethers.id(slug);
+        // --- THIS IS THE FINAL FIX ---
+        // We change to the ethers v5 syntax for id as well.
+        const contentId = ethers.utils.id(slug);
+        // --- END OF FIX ---
+
         const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
 
         if (!hasPaid) {
