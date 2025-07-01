@@ -1,19 +1,17 @@
 # The corrected and final netlify.toml
 
-# This section configures the build process for your frontend.
 [build]
   command = "npm run build"
   publish = "dist"
 
-# This section tells Netlify where to find your backend serverless functions.
-# This is the modern, correct way to declare the functions directory.
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  # --- THIS IS THE FINAL FIX ---
+  # This line tells Netlify to include your secure articles in the deployment.
+  included_files = ["_secure_content/**"]
 
-# This "catch-all" redirect is for your React app. Netlify is smart enough
-# to NOT apply this rule to requests for functions in the directory defined above.
-# This rule is essential for direct navigation and page refreshes to work correctly.
+# This "catch-all" redirect is for your React app.
 [[redirects]]
   from = "/*"
   to = "/index.html"
