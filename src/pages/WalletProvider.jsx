@@ -11,11 +11,8 @@ import {
     getTargetChainIdHex,
 } from '../config/contractConfig';
 
-// --- THIS IS THE FIX: Import ABIs directly ---
-// Make sure these paths are correct for your project structure.
+// --- Import ONLY the ABI that is needed for this provider's core function ---
 import PremiumContentABI from '../config/abis/PremiumContent.json';
-import PredictionMarketABI from '../config/abis/PredictionMarket.json'; // Adjust if you have a different name/path
-// --- END OF FIX ---
 
 export const WalletContext = createContext(null);
 
@@ -36,8 +33,7 @@ const initialState = {
     walletAddress: null,
     chainId: null,
     nativeTokenSymbol: null,
-    predictionMarketContract: null,
-    premiumContentContract: null,
+    premiumContentContract: null, // Only managing the premium content contract here
 };
 
 export function WalletProvider({ children }) {
@@ -48,9 +44,7 @@ export function WalletProvider({ children }) {
         if (provider.getNetwork) {
             try {
                 const network = await provider.getNetwork();
-                if (network.chainId !== 1) {
-                    network.ensAddress = null;
-                }
+                if (network.chainId !== 1) { network.ensAddress = null; }
             } catch (e) { console.error("Could not get network from provider", e); }
         }
 
@@ -64,19 +58,12 @@ export function WalletProvider({ children }) {
 
         const effectiveSignerOrProvider = signer || provider;
 
-        // --- THIS IS THE FIX: Use the imported ABI objects ---
+        // Instantiate ONLY the premium content contract
         const premiumContentAddr = chainConfig.premiumContentContractAddress;
         const premiumContentAbi = PremiumContentABI.abi || PremiumContentABI;
         const premiumContentContract = premiumContentAddr
             ? new ethers.Contract(premiumContentAddr, premiumContentAbi, effectiveSignerOrProvider)
             : null;
-        
-        const predMarketAddr = chainConfig.predictionMarketContractAddress;
-        const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI;
-        const predictionMarketContract = predMarketAddr
-            ? new ethers.Contract(predMarketAddr, predictionMarketAbi, effectiveSignerOrProvider)
-            : null;
-        // --- END OF FIX ---
 
         setConnectionState({
             provider,
@@ -84,8 +71,7 @@ export function WalletProvider({ children }) {
             walletAddress: address,
             chainId,
             nativeTokenSymbol: chainConfig.symbol,
-            premiumContentContract,
-            predictionMarketContract,
+            premiumContentContract, // Set the contract in the state
         });
         setIsInitialized(true);
     }, []);
