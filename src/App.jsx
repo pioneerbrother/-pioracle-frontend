@@ -42,18 +42,7 @@ function App() {
               {/* <Route path="/hosts" element={<HostPage />} /> */}
 
 
-              {/* --- BLOG ROUTES (Order is Important!) --- */}
-              <Route path="/blog" element={<BlogPage />} />
-
-              {/* 1. Specific, Paywalled Routes (handled by ExclusivePostPage) */}
-              <Route 
-                path="/blog/invasion-plan-of-turkey-en" 
-                element={<ExclusivePostPage />} 
-              />
-              <Route 
-                path="/blog/tochnit-plisha-turkiya" 
-                element={<ExclusivePostPage />} 
-              />
+             
 
               {/* 2. General Route for all other free posts (handled by BlogPostPage) */}
               {/* This MUST come AFTER the specific routes */}
