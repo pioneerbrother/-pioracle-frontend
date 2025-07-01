@@ -26,7 +26,7 @@ const chains = {
         
         // --- FIX #2: Added a placeholder for the testnet payment token ---
         // Find a testnet USDC or BUSD faucet, or deploy your own mock ERC20 and use its address here.
-        usdcTokenAddress: "0x6454455254455254455254455254455254455254", // IMPORTANT: REPLACE WITH A REAL TESTNET USDC ADDRESS
+        usdcTokenAddress:"0x2e35b93D8E2ffc0ba2416767a0315cd82c462C93", // IMPORTANT: REPLACE WITH A REAL TESTNET USDC ADDRESS
     },
     
     bnb_mainnet: {
