@@ -40,22 +40,20 @@ function App() {
               <Route path="/tip-jar" element={<TippingPage />} />
               {/* Note: /hosts might be a better name for the Tip Jar page route */}
               {/* <Route path="/hosts" element={<HostPage />} /> */}
+               {/* ======================================================== */}
+              {/* --- THIS IS THE CORRECTED BLOG ROUTING LOGIC --- */}
+              {/* Route 1: Shows the list of all posts. */}
+              <Route path="/blog" element={<BlogPage />} />
 
+              {/* Route 2: Shows the detail page for ANY post. */}
+              {/* It renders our smart BlogPostDetail component, which will */}
+              {/* check for the 'premium' flag and handle the paywall. */}
+              <Route path="/blog/:slug" element={<BlogPostDetail />} />
+              {/* ======================================================== */}
 
              
 
-              {/* 2. General Route for all other free posts (handled by BlogPostPage) */}
-              {/* This MUST come AFTER the specific routes */}
-              <Route path="/blog/:slug" element={<BlogPostPage />} />
-               {/* --- NEW, SIMPLIFIED BLOG ROUTES --- */}
-              {/* This route shows the list of all blog posts */}
-              <Route path="/blog" element={<BlogPage />} />
-
-              {/* This SINGLE route handles ALL individual posts. */}
-              {/* It will render our smart BlogPostDetail component, */}
-              {/* which decides whether to show a paywall or the content. */}
-              <Route path="/blog/:slug" element={<BlogPostDetail />} />
-              {/* ========================================================== */}
+        
 
 
 
