@@ -22,7 +22,7 @@ const chains = {
         supporterBadgeContractAddress: "0x482d84e0520F082D0a46fd96bB52aA12b4a872e8",
         
         // --- FIX #1: Renamed for consistency with WalletProvider ---
-        premiumContentContractAddress: "0xED799e84d5275271e7e0224E4AC9d2428c4142c6",
+        premiumContentContractAddress: "0x9f08fbF4f91c0AB1E66D6384c86563cb3C159742",
         
         // --- FIX #2: Added a placeholder for the testnet payment token ---
         // Find a testnet USDC or BUSD faucet, or deploy your own mock ERC20 and use its address here.
