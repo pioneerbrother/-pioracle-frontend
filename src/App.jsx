@@ -19,7 +19,7 @@ import BlogPostPage from './pages/BlogPostPage'; // For regular, free posts
 import GuidePage from './pages/GuidePage';
 import MarketDetailLoader from './pages/MarketDetailLoader';
 import TippingPage from './pages/TippingPage'; // For the Tip Jar / Host Hub
-import ExclusivePostPage from './pages/ExclusivePostPage'; // The paywall component
+import BlogPostDetail from './pages/BlogPostDetail'; // Your NEW detail/paywall page
 
 function App() {
   return (
@@ -58,6 +58,17 @@ function App() {
               {/* 2. General Route for all other free posts (handled by BlogPostPage) */}
               {/* This MUST come AFTER the specific routes */}
               <Route path="/blog/:slug" element={<BlogPostPage />} />
+               {/* --- NEW, SIMPLIFIED BLOG ROUTES --- */}
+              {/* This route shows the list of all blog posts */}
+              <Route path="/blog" element={<BlogPage />} />
+
+              {/* This SINGLE route handles ALL individual posts. */}
+              {/* It will render our smart BlogPostDetail component, */}
+              {/* which decides whether to show a paywall or the content. */}
+              <Route path="/blog/:slug" element={<BlogPostDetail />} />
+              {/* ========================================================== */}
+
+
 
             </Routes>
           </main>

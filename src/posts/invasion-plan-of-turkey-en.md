@@ -2,6 +2,7 @@
 title: "The Barbarossa of the Levant: A Strategic Analysis of Operation Fatih'in Kılıcı"
 date: "2025-06-30"
 author: "Dr. Aris Thorne"
+premium: true 
 language: "en"
 ---
 
