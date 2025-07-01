@@ -1,64 +1,52 @@
-// src/pages/BlogPostDetail.jsx  (This is the final, recommended component)
+// src/pages/BlogPostDetail.jsx
 
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { useParams } from 'react-router-dom'; // To read the slug from the URL
+import { useParams } from 'react-router-dom';
 import { ethers } from 'ethers';
 import matter from 'gray-matter';
 import ReactMarkdown from 'react-markdown';
 
-import { WalletContext } from './WalletProvider'; // Your existing context
+import { WalletContext } from './WalletProvider';
 import { getConfigForChainId } from '../config/contractConfig';
 
-// ABIs - assuming they are in the correct path
-import PAYWALL_ABI from '../config/abis/PremiumContent.json'; 
+// Import ABIs directly
+import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
 
-// Reusable components
-import LoadingSpinner from '../components/common/LoadingSpinner';
+// Import your UI components
+import LoadingSpinner from '../components/common/LoadingSpinner'; 
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
 
 function BlogPostDetail() {
-    // 1. Get the article slug dynamically from the URL (e.g., 'invasion-plan-of-turkey-en')
-    const { slug } = useParams(); 
-
-    // 2. Use your excellent state management logic
+    const { slug } = useParams();
+    const { walletAddress, signer, chainId, isInitialized } = useContext(WalletContext);
+    
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
     const [post, setPost] = useState({ frontmatter: null, content: null });
 
-    // 3. Consume the wallet context
-    const { walletAddress, signer, chainId, isInitialized } = useContext(WalletContext);
-    
-    // 4. Derive config and contracts using useMemo for efficiency
+    // Derive config and contracts
     const currentNetworkConfig = useMemo(() => getConfigForChainId(chainId), [chainId]);
-    const paywallAddress = currentNetworkConfig?.premiumContentContractAddress; // Make sure this name matches your config
-    const usdcAddress = currentNetworkConfig?.usdcTokenAddress; // Make sure this name matches your config
+    const paywallAddress = currentNetworkConfig?.premiumContentContractAddress;
+    const usdcAddress = currentNetworkConfig?.usdcTokenAddress;
 
     const paywallContract = useMemo(() => {
         if (!signer || !paywallAddress) return null;
-        const abi = PAYWALL_ABI.abi || PAYWALL_ABI;
-        return new ethers.Contract(paywallAddress, abi, signer);
+        return new ethers.Contract(paywallAddress, (PremiumContentABI.abi || PremiumContentABI), signer);
     }, [signer, paywallAddress]);
 
     const usdcContract = useMemo(() => {
         if (!signer || !usdcAddress) return null;
-        const abi = IERC20_ABI.abi || IERC20_ABI;
-        return new ethers.Contract(usdcAddress, abi, signer);
+        return new ethers.Contract(usdcAddress, (IERC20_ABI.abi || IERC20_ABI), signer);
     }, [signer, usdcAddress]);
 
-    // 5. Generate the content ID dynamically from the slug
-    const contentId = useMemo(() => {
-        if (!slug) return null;
-        return ethers.utils.id(slug);
-    }, [slug]);
+    const contentId = useMemo(() => slug ? ethers.utils.id(slug) : null, [slug]);
 
-    // Effect 1: Load the post's content and frontmatter based on the slug
+    // Effect to load post content
     useEffect(() => {
         if (!slug) return;
-        
         const fetchPost = async () => {
             try {
-                // Dynamically import the markdown file
                 const rawContentModule = await import(`../posts/${slug}.md?raw`);
                 const { data, content } = matter(rawContentModule.default);
                 setPost({ frontmatter: data, content: content });
@@ -70,46 +58,25 @@ function BlogPostDetail() {
         fetchPost();
     }, [slug]);
 
-    // Effect 2: Run the access check logic once everything is ready
+    // Effect to check access
     useEffect(() => {
-        // Wait for all dependencies to be ready
-        if (!isInitialized || !post.frontmatter || !contentId) {
-            return;
-        }
-
-        // If the post is NOT premium, unlock it immediately and stop.
-        if (!post.frontmatter.premium) {
-            setPageState('unlocked');
-            return;
-        }
-
-        // --- If it IS a premium post, run your paywall logic ---
-        if (!walletAddress) {
-            setPageState('prompt_connect');
-            return;
-        }
-        if (!paywallContract || !usdcContract) {
-            setPageState('error');
-            setErrorMessage(`App is not configured for this chain (ID: ${chainId}). Please switch network.`);
-            return;
-        }
+        if (!isInitialized || !post.frontmatter || !contentId) return;
+        if (!post.frontmatter.premium) { setPageState('unlocked'); return; }
+        if (!walletAddress) { setPageState('prompt_connect'); return; }
+        if (!paywallContract || !usdcContract) { setPageState('error'); setErrorMessage(`App is not configured for this chain (ID: ${chainId}).`); return; }
 
         const checkAccess = async () => {
             setPageState('checking');
-            setErrorMessage('');
             try {
                 const hasPaid = await paywallContract.hasAccess(contentId, walletAddress);
-
-                if (hasPaid) {
-                    setPageState('unlocked');
+                if (hasPaid) { setPageState('unlocked'); return; }
+                
+                const requiredPrice = await paywallContract.contentPrice();
+                const currentAllowance = await usdcContract.allowance(walletAddress, paywallContract.address);
+                if (currentAllowance.lt(requiredPrice)) {
+                    setPageState('needs_approval');
                 } else {
-                    const requiredPrice = await paywallContract.contentPrice();
-                    const currentAllowance = await usdcContract.allowance(walletAddress, paywallContract.address);
-                    if (currentAllowance.lt(requiredPrice)) {
-                        setPageState('needs_approval');
-                    } else {
-                        setPageState('ready_to_unlock');
-                    }
+                    setPageState('ready_to_unlock');
                 }
             } catch (e) {
                 console.error("Error in checkAccess effect:", e);
@@ -117,35 +84,53 @@ function BlogPostDetail() {
                 setErrorMessage("Failed to check access on-chain. Please refresh.");
             }
         };
-        
         checkAccess();
+    }, [isInitialized, walletAddress, chainId, post.frontmatter, contentId, paywallContract, usdcContract]);
 
-    }, [isInitialized, walletAddress, chainId, paywallContract, usdcContract, post.frontmatter, contentId]);
+    // --- THIS IS THE CRITICAL FUNCTION FOR THE BUTTON ---
+    const handleApprove = async () => {
+        if (!usdcContract || !paywallContract) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const requiredPrice = await paywallContract.contentPrice();
+            const tx = await usdcContract.approve(paywallContract.address, requiredPrice);
+            await tx.wait(1); // Wait for 1 confirmation
+            setPageState('ready_to_unlock');
+        } catch (err) {
+            console.error("Approval failed:", err);
+            setErrorMessage(err.reason || "Approval transaction failed.");
+            setPageState('needs_approval');
+        }
+    };
 
-
-    // --- Your Handler Functions (Approve & Unlock) ---
-    // These are great as they are, just using the dynamic 'contentId'
-    const handleApprove = async () => { /* ... your existing handleApprove logic ... */ };
-    const handleUnlock = async () => { /* ... your existing handleUnlock logic ... */ };
+    const handleUnlock = async () => {
+        if (!paywallContract || !contentId) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await paywallContract.unlockContent(contentId);
+            await tx.wait(1);
+            setPageState('unlocked');
+        } catch (err) {
+            console.error("Unlock failed:", err);
+            setErrorMessage(err.reason || "Unlock transaction failed.");
+            setPageState('ready_to_unlock');
+        }
+    };
 
     // --- RENDER LOGIC ---
-
-    if (!post.frontmatter && pageState !== 'error') {
-        return <LoadingSpinner message="Loading post..." />;
-    }
-
     if (pageState === 'unlocked') {
         return (
             <div className="page-container blog-post">
-                <h1>{post.frontmatter.title}</h1>
-                <p className="post-meta">Published on {post.frontmatter.date}</p>
+                <h1>{post.frontmatter?.title}</h1>
+                <p className="post-meta">Published on {post.frontmatter?.date}</p>
                 <hr />
                 <ReactMarkdown className="post-content">{post.content}</ReactMarkdown>
             </div>
         );
     }
-
-    // Paywall UI
+    
     const renderPaywallActions = () => {
         switch (pageState) {
             case 'initializing': return <LoadingSpinner message="Initializing..." />;
@@ -154,26 +139,23 @@ function BlogPostDetail() {
             case 'needs_approval':
                 return <button className="unlock-btn" onClick={handleApprove}>1. Approve USDC</button>;
             case 'ready_to_unlock':
-                return <button className="unlock-btn" onClick={handleUnlock}>2. Unlock Content for 1,000,000 USDC</button>;
+                return <button className="unlock-btn" onClick={handleUnlock}>2. Unlock Content</button>;
             case 'error':
                 return <p className="error-message">{errorMessage}</p>;
             default:
+                if (!post.frontmatter) return <LoadingSpinner message="Loading post..." />;
                 return <p>Something went wrong.</p>;
         }
     };
 
     return (
         <div className="page-container blog-post">
+            <h1>{post.frontmatter?.title || "Premium Content"}</h1>
+            <p>This is a premium article.</p>
             <div className="paywall">
-                <h1>{post.frontmatter.title}</h1>
-                <p className="paywall-subtitle">This is a premium article.</p>
-                <div className="paywall-action">
-                    <h3>Unlock Full Access</h3>
-                    <div className="button-group">
-                        {renderPaywallActions()}
-                    </div>
-                    {pageState !== 'error' && errorMessage && <p className="error-message">{errorMessage}</p>}
-                </div>
+                <h3>Unlock Full Access</h3>
+                <div className="button-group">{renderPaywallActions()}</div>
+                {pageState !== 'error' && errorMessage && <p className="error-message">{errorMessage}</p>}
             </div>
         </div>
     );
