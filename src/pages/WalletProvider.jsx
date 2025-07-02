@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal } from '@web3modal/ethers5';
+import { createWeb3Modal } from '@web3modal/ethers5'; // Ensure this is ethers5
 
 // --- Configuration Imports ---
 import {
@@ -13,8 +13,7 @@ import {
 
 // --- Import ALL ABIs needed by the provider ---
 import PremiumContentABI from '../config/abis/PremiumContent.json';
-import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; // <--- ADD THIS IMPORT
-
+import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; // Ensure this exact path and name
 
 export const WalletContext = createContext(null);
 
@@ -36,7 +35,7 @@ const initialState = {
     chainId: null,
     nativeTokenSymbol: null,
     premiumContentContract: null,
-    predictionMarketContract: null, // Ensure this is part of initial state
+    predictionMarketContract: null, // Ensure this is in initial state
     web3Modal: null, 
 };
 
@@ -62,9 +61,11 @@ export function WalletProvider({ children }) {
             ? new ethers.Contract(premiumContentAddr, premiumContentAbi, effectiveSignerOrProvider)
             : null;
 
-        // --- FINAL FIX: Instantiate PredictionMarketP2P contract ---
-        const predictionMarketAddr = chainConfig?.predictionMarketContractAddress;
+        // --- THE FINAL, FINAL, FINAL FIX: Instantiate PredictionMarketP2P contract ---
+        const predictionMarketAddr = chainConfig?.predictionMarketContractAddress; // Get address from config
         const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI; // Use imported ABI
+        
+        // Ensure effectiveSignerOrProvider is not null before creating contract
         const predictionMarketContract = (predictionMarketAddr && effectiveSignerOrProvider)
             ? new ethers.Contract(predictionMarketAddr, predictionMarketAbi, effectiveSignerOrProvider)
             : null;
@@ -77,7 +78,7 @@ export function WalletProvider({ children }) {
             chainId,
             nativeTokenSymbol: chainConfig?.symbol || 'Unknown',
             premiumContentContract,
-            predictionMarketContract, // Make sure this is set
+            predictionMarketContract, // Make sure this is set in state
             web3Modal: web3Modal,
         });
         setIsInitialized(true);
@@ -102,10 +103,10 @@ export function WalletProvider({ children }) {
                 const currentSigner = web3Provider.getSigner();
                 await setupState(web3Provider, chainId, currentSigner, address);
             } else if (!isConnected) {
-                setupReadOnlyState(); // Revert to read-only state on disconnect
+                setupReadOnlyState();
             }
         });
-        setupReadOnlyState(); // Set initial state on mount
+        setupReadOnlyState();
         return () => unsubscribe();
     }, [setupReadOnlyState, setupState]);
 
