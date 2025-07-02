@@ -11,10 +11,10 @@ import {
     getTargetChainIdHex,
 } from '../config/contractConfig';
 
-// --- Import ABIs directly ---
+// --- Import ALL ABIs needed by the provider ---
 import PremiumContentABI from '../config/abis/PremiumContent.json';
-// You might have other ABIs here for other contracts handled by the provider
-// import PredictionMarketABI from '../config/abis/PredictionMarket.json'; // Example
+import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; // <--- ADD THIS IMPORT
+
 
 export const WalletContext = createContext(null);
 
@@ -23,7 +23,6 @@ if (!WALLETCONNECT_PROJECT_ID) {
     throw new Error("VITE_WALLETCONNECT_PROJECT_ID is not set in your .env file");
 }
 
-// Ensure web3Modal is created ONCE at the top-level scope.
 const web3Modal = createWeb3Modal({
     ethersConfig: { metadata: { name: "PiOracle", description: "Decentralized Prediction Markets", url: "https://pioracle.online" } },
     chains: getAllSupportedChainsForModal(),
@@ -37,9 +36,8 @@ const initialState = {
     chainId: null,
     nativeTokenSymbol: null,
     premiumContentContract: null,
-    predictionMarketContract: null, // Assuming you also manage this here
-    // web3Modal is now directly used by connectWallet/disconnectWallet,
-    // so it doesn't need to be part of connectionState.
+    predictionMarketContract: null, // Ensure this is part of initial state
+    web3Modal: null, 
 };
 
 export function WalletProvider({ children }) {
@@ -57,18 +55,20 @@ export function WalletProvider({ children }) {
         const chainConfig = getConfigForChainId(chainId);
         const effectiveSignerOrProvider = signer || provider;
 
+        // Instantiate PremiumContent contract
         const premiumContentAddr = chainConfig?.premiumContentContractAddress;
         const premiumContentAbi = PremiumContentABI.abi || PremiumContentABI;
         const premiumContentContract = (premiumContentAddr && effectiveSignerOrProvider)
             ? new ethers.Contract(premiumContentAddr, premiumContentAbi, effectiveSignerOrProvider)
             : null;
 
-        // If you're managing PredictionMarketContract here, add its instantiation:
-        // const predictionMarketAddr = chainConfig?.predictionMarketContractAddress;
-        // const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI; // Make sure PredictionMarketABI is imported
-        // const predictionMarketContract = (predictionMarketAddr && effectiveSignerOrProvider)
-        //     ? new ethers.Contract(predictionMarketAddr, predictionMarketAbi, effectiveSignerOrProvider)
-        //     : null;
+        // --- FINAL FIX: Instantiate PredictionMarketP2P contract ---
+        const predictionMarketAddr = chainConfig?.predictionMarketContractAddress;
+        const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI; // Use imported ABI
+        const predictionMarketContract = (predictionMarketAddr && effectiveSignerOrProvider)
+            ? new ethers.Contract(predictionMarketAddr, predictionMarketAbi, effectiveSignerOrProvider)
+            : null;
+        // --- END OF FIX ---
 
         setConnectionState({
             provider,
@@ -77,7 +77,8 @@ export function WalletProvider({ children }) {
             chainId,
             nativeTokenSymbol: chainConfig?.symbol || 'Unknown',
             premiumContentContract,
-            // predictionMarketContract, // Add if managed here
+            predictionMarketContract, // Make sure this is set
+            web3Modal: web3Modal,
         });
         setIsInitialized(true);
     }, []);
@@ -89,9 +90,7 @@ export function WalletProvider({ children }) {
             const readOnlyProvider = new ethers.providers.StaticJsonRpcProvider(chainConfig.rpcUrl, defaultChainId);
             setupState(readOnlyProvider, defaultChainId);
         } else {
-            // If no RPC URL, set a minimal state.
-            // Still ensures isInitialized is true to prevent infinite loading.
-            setConnectionState({ ...initialState, chainId: defaultChainId });
+            setConnectionState({ ...initialState, chainId: defaultChainId, web3Modal: web3Modal });
             setIsInitialized(true);
         }
     }, [setupState]);
@@ -103,32 +102,21 @@ export function WalletProvider({ children }) {
                 const currentSigner = web3Provider.getSigner();
                 await setupState(web3Provider, chainId, currentSigner, address);
             } else if (!isConnected) {
-                // When disconnecting, return to initial (read-only) state.
-                setupReadOnlyState();
+                setupReadOnlyState(); // Revert to read-only state on disconnect
             }
         });
-        setupReadOnlyState(); // Set initial state on component mount.
+        setupReadOnlyState(); // Set initial state on mount
         return () => unsubscribe();
     }, [setupReadOnlyState, setupState]);
 
-    // --- FINAL FIX FOR DISCONNECT BUTTON ---
-    // These functions directly access the globally created `web3Modal` instance.
-    // They are stable because `web3Modal` itself is stable (created once outside).
-    const connectWallet = useCallback(() => {
-        web3Modal.open();
-    }, []);
-
-    const disconnectWallet = useCallback(() => {
-        web3Modal.disconnect();
-    }, []);
-    // --- END OF FIX ---
+    const connectWallet = useCallback(() => { web3Modal.open(); }, []);
+    const disconnectWallet = useCallback(() => { web3Modal.disconnect(); }, []);
 
     const contextValue = useMemo(() => ({
         ...connectionState,
         isInitialized,
         connectWallet,
         disconnectWallet,
-        web3Modal: web3Modal, // Ensure web3Modal itself is passed via context if needed by ConnectWalletButton
     }), [connectionState, isInitialized, connectWallet, disconnectWallet]);
 
     return (
