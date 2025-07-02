@@ -4,13 +4,17 @@ import React, { createContext, useState, useEffect, useCallback, useMemo } from 
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 
+// --- Configuration Imports ---
 import {
     getAllSupportedChainsForModal,
     getConfigForChainId,
     getTargetChainIdHex,
 } from '../config/contractConfig';
 
+// --- Import ABIs directly ---
 import PremiumContentABI from '../config/abis/PremiumContent.json';
+// You might have other ABIs here for other contracts handled by the provider
+// import PredictionMarketABI from '../config/abis/PredictionMarket.json'; // Example
 
 export const WalletContext = createContext(null);
 
@@ -25,6 +29,7 @@ const web3Modal = createWeb3Modal({
     projectId: WALLETCONNECT_PROJECT_ID,
 });
 
+// --- Define the initial, empty state for the context ---
 const initialState = {
     provider: null,
     signer: null,
@@ -32,7 +37,9 @@ const initialState = {
     chainId: null,
     nativeTokenSymbol: null,
     premiumContentContract: null,
-    web3Modal: null,
+    // --- THIS IS THE FIX ---
+    web3Modal: null, // Add web3Modal to initial state
+    // --- END OF FIX ---
 };
 
 export function WalletProvider({ children }) {
@@ -40,17 +47,12 @@ export function WalletProvider({ children }) {
     const [connectionState, setConnectionState] = useState(initialState);
 
     const setupState = useCallback(async (provider, chainId, signer = null, address = null) => {
-        // --- THIS IS THE FINAL FIX ---
-        // We only try to call .getNetwork if the provider actually exists.
         if (provider && provider.getNetwork) {
             try {
                 const network = await provider.getNetwork();
-                if (network.chainId !== 1) {
-                    network.ensAddress = null;
-                }
+                if (network.chainId !== 1) { network.ensAddress = null; }
             } catch (e) { console.error("Could not get network from provider", e); }
         }
-        // --- END OF FIX ---
 
         const chainConfig = getConfigForChainId(chainId);
         const effectiveSignerOrProvider = signer || provider;
@@ -61,6 +63,7 @@ export function WalletProvider({ children }) {
             ? new ethers.Contract(premiumContentAddr, premiumContentAbi, effectiveSignerOrProvider)
             : null;
 
+        // --- THIS IS THE FIX ---
         setConnectionState({
             provider,
             signer,
@@ -68,8 +71,9 @@ export function WalletProvider({ children }) {
             chainId,
             nativeTokenSymbol: chainConfig?.symbol || 'Unknown',
             premiumContentContract,
-            web3Modal: web3Modal,
+            web3Modal: web3Modal, // Ensure web3Modal is set here
         });
+        // --- END OF FIX ---
         setIsInitialized(true);
     }, []);
 
@@ -80,7 +84,7 @@ export function WalletProvider({ children }) {
             const readOnlyProvider = new ethers.providers.StaticJsonRpcProvider(chainConfig.rpcUrl, defaultChainId);
             setupState(readOnlyProvider, defaultChainId);
         } else {
-            // If there's no RPC URL, we set a minimal state without a provider
+            // Ensure web3Modal is still passed even in this fallback case
             setConnectionState({ ...initialState, chainId: defaultChainId, isInitialized: true, web3Modal: web3Modal });
             setIsInitialized(true);
         }
@@ -93,7 +97,9 @@ export function WalletProvider({ children }) {
                 const currentSigner = web3Provider.getSigner();
                 await setupState(web3Provider, chainId, currentSigner, address);
             } else if (!isConnected) {
-                setupReadOnlyState();
+                // On disconnect, ensure we reset to a state that still includes web3Modal for re-connection
+                setConnectionState({ ...initialState, web3Modal: web3Modal });
+                setIsInitialized(true);
             }
         });
         setupReadOnlyState();
