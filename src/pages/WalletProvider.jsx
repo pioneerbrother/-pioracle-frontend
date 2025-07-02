@@ -23,13 +23,13 @@ if (!WALLETCONNECT_PROJECT_ID) {
     throw new Error("VITE_WALLETCONNECT_PROJECT_ID is not set in your .env file");
 }
 
+// Ensure web3Modal is created ONCE at the top-level scope.
 const web3Modal = createWeb3Modal({
     ethersConfig: { metadata: { name: "PiOracle", description: "Decentralized Prediction Markets", url: "https://pioracle.online" } },
     chains: getAllSupportedChainsForModal(),
     projectId: WALLETCONNECT_PROJECT_ID,
 });
 
-// --- Define the initial, empty state for the context ---
 const initialState = {
     provider: null,
     signer: null,
@@ -37,9 +37,9 @@ const initialState = {
     chainId: null,
     nativeTokenSymbol: null,
     premiumContentContract: null,
-    // --- THIS IS THE FIX ---
-    web3Modal: null, // Add web3Modal to initial state
-    // --- END OF FIX ---
+    predictionMarketContract: null, // Assuming you also manage this here
+    // web3Modal is now directly used by connectWallet/disconnectWallet,
+    // so it doesn't need to be part of connectionState.
 };
 
 export function WalletProvider({ children }) {
@@ -63,7 +63,13 @@ export function WalletProvider({ children }) {
             ? new ethers.Contract(premiumContentAddr, premiumContentAbi, effectiveSignerOrProvider)
             : null;
 
-        // --- THIS IS THE FIX ---
+        // If you're managing PredictionMarketContract here, add its instantiation:
+        // const predictionMarketAddr = chainConfig?.predictionMarketContractAddress;
+        // const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI; // Make sure PredictionMarketABI is imported
+        // const predictionMarketContract = (predictionMarketAddr && effectiveSignerOrProvider)
+        //     ? new ethers.Contract(predictionMarketAddr, predictionMarketAbi, effectiveSignerOrProvider)
+        //     : null;
+
         setConnectionState({
             provider,
             signer,
@@ -71,9 +77,8 @@ export function WalletProvider({ children }) {
             chainId,
             nativeTokenSymbol: chainConfig?.symbol || 'Unknown',
             premiumContentContract,
-            web3Modal: web3Modal, // Ensure web3Modal is set here
+            // predictionMarketContract, // Add if managed here
         });
-        // --- END OF FIX ---
         setIsInitialized(true);
     }, []);
 
@@ -84,8 +89,9 @@ export function WalletProvider({ children }) {
             const readOnlyProvider = new ethers.providers.StaticJsonRpcProvider(chainConfig.rpcUrl, defaultChainId);
             setupState(readOnlyProvider, defaultChainId);
         } else {
-            // Ensure web3Modal is still passed even in this fallback case
-            setConnectionState({ ...initialState, chainId: defaultChainId, isInitialized: true, web3Modal: web3Modal });
+            // If no RPC URL, set a minimal state.
+            // Still ensures isInitialized is true to prevent infinite loading.
+            setConnectionState({ ...initialState, chainId: defaultChainId });
             setIsInitialized(true);
         }
     }, [setupState]);
@@ -97,23 +103,32 @@ export function WalletProvider({ children }) {
                 const currentSigner = web3Provider.getSigner();
                 await setupState(web3Provider, chainId, currentSigner, address);
             } else if (!isConnected) {
-                // On disconnect, ensure we reset to a state that still includes web3Modal for re-connection
-                setConnectionState({ ...initialState, web3Modal: web3Modal });
-                setIsInitialized(true);
+                // When disconnecting, return to initial (read-only) state.
+                setupReadOnlyState();
             }
         });
-        setupReadOnlyState();
+        setupReadOnlyState(); // Set initial state on component mount.
         return () => unsubscribe();
     }, [setupReadOnlyState, setupState]);
 
-    const connectWallet = useCallback(() => web3Modal.open(), []);
-    const disconnectWallet = useCallback(() => web3Modal.disconnect(), []);
+    // --- FINAL FIX FOR DISCONNECT BUTTON ---
+    // These functions directly access the globally created `web3Modal` instance.
+    // They are stable because `web3Modal` itself is stable (created once outside).
+    const connectWallet = useCallback(() => {
+        web3Modal.open();
+    }, []);
+
+    const disconnectWallet = useCallback(() => {
+        web3Modal.disconnect();
+    }, []);
+    // --- END OF FIX ---
 
     const contextValue = useMemo(() => ({
         ...connectionState,
         isInitialized,
         connectWallet,
         disconnectWallet,
+        web3Modal: web3Modal, // Ensure web3Modal itself is passed via context if needed by ConnectWalletButton
     }), [connectionState, isInitialized, connectWallet, disconnectWallet]);
 
     return (
