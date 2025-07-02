@@ -21,17 +21,22 @@ const chains = {
         symbol: 'tBNB',
         explorerUrl: 'https://testnet.bscscan.com'
     },
-    
-    bnb_mainnet: {
-        // --- LIVE MAINNET CONFIGURATION ---
-        predictionMarketContractAddress: import.meta.env.VITE_BNB_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
-        premiumContentContractAddress: "0xa7fb3617f2be63e22b7d842ac04f44f0454a021a57c96bf84e6e4597e8aaf7b6", // <-- PASTE BNB ADDRESS HERE
-        usdcTokenAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", 
+       bnb_mainnet: {
+        // --- VERIFY THIS SECTION ---
         rpcUrl: import.meta.env.VITE_BNB_MAINNET_RPC_URL || "https://bsc-dataseed.binance.org/",
         chainIdHex: '0x38', 
         name: 'BNB Smart Chain', 
         symbol: 'BNB', 
         explorerUrl: 'https://bscscan.com',
+
+        // This is the address you found on BscScan for your BNB deployment
+        premiumContentContractAddress: "0x92a43093ee203aa55e5e1538f4a7567e84d0ba64", // <-- PASTE THE CORRECT ADDRESS HERE
+
+        // This is the official USDC token on BNB Mainnet. Make sure it's correct.
+        usdcTokenAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", 
+        
+        // Your other addresses
+        predictionMarketContractAddress: import.meta.env.VITE_BNB_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
         hostRegistryContractAddress: null,
         tippingJarContractAddress: null,
     },
