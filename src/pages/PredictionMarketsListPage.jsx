@@ -8,7 +8,11 @@ import { getMarketDisplayProperties, MarketState } from '../utils/marketutils.js
 import './PredictionMarketsListPage.css';
 
 function PredictionMarketsListPage() {
-    const { contract, chainId } = useContext(WalletContext); // Added chainId for context
+    // --- THIS IS THE FIX ---
+    // Correctly destructure 'predictionMarketContract' from the WalletContext
+    const { predictionMarketContract, chainId } = useContext(WalletContext);
+    // --- END OF FIX ---
+
     const [allMarkets, setAllMarkets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -17,19 +21,25 @@ function PredictionMarketsListPage() {
         // Log current chainId to confirm we are on Polygon (137)
         console.log("PMLP: Current effective chainId from WalletContext:", chainId);
         
-        if (!contract) {
+        // --- THIS IS THE FIX ---
+        // Now checking for the correctly named 'predictionMarketContract'
+        if (!predictionMarketContract) {
             setIsLoading(true);
-            console.log("PMLP: Waiting for contract from context...");
+            console.log("PMLP: Waiting for predictionMarketContract from context...");
             return;
         }
-        console.log("PMLP: Contract object received. Attempting to fetch markets for chainId:", chainId);
+        console.log("PMLP: predictionMarketContract received. Attempting to fetch markets for chainId:", chainId);
+        // --- END OF FIX ---
 
         const fetchAndProcessData = async () => {
             setIsLoading(true);
             setError(null);
             try {
-                const nextMarketIdBN = await contract.nextMarketId();
+                // --- THIS IS THE FIX ---
+                // Call nextMarketId() on the correctly named contract instance
+                const nextMarketIdBN = await predictionMarketContract.nextMarketId();
                 console.log(`PMLP (Chain ${chainId}): nextMarketId from contract:`, nextMarketIdBN.toString());
+                // --- END OF FIX ---
 
                 if (nextMarketIdBN.eq(0)) {
                     console.log(`PMLP (Chain ${chainId}): nextMarketId is 0. No markets to fetch via this counter.`);
@@ -40,43 +50,37 @@ function PredictionMarketsListPage() {
                 
                 const marketCountNum = Number(nextMarketIdBN.toString());
                 console.log(`PMLP (Chain ${chainId}): Market count to fetch:`, marketCountNum);
-                const marketPromises = [];
 
-                for (let id = 0; id < marketCountNum; id++) {
-                    marketPromises.push(contract.getMarketStaticDetails(id));
-                }
-                const allRawDetails = await Promise.all(marketPromises);
-                console.log(`PMLP (Chain ${chainId}): Raw details fetched for all markets:`, JSON.parse(JSON.stringify(allRawDetails))); // Deep copy for logging
+                // --- THIS IS THE FIX ---
+                // Call getPaginatedMarketDetails on the correctly named contract instance
+                const [
+                    ids, assetSymbols, priceFeedAddresses, targetPrices, expiryTimestamps,
+                    resolutionTimestamps, totalStakedYesArray, totalStakedNoArray, states,
+                    actualOutcomeValues, existsArray, isEventMarkets, creationTimestamps
+                ] = await predictionMarketContract.getPaginatedMarketDetails(0, marketCountNum);
+                // --- END OF FIX ---
 
-                const processedMarkets = allRawDetails.map((rawDetails, index) => {
-                    if (!rawDetails || rawDetails.exists !== true) {
-                        console.log(`PMLP (Chain ${chainId}): Market at index ${index} (potential ID ${rawDetails ? rawDetails[0] : 'N/A'}) does not exist or is invalid.`);
-                        return null; 
+                const formattedMarkets = [];
+                for (let i = 0; i < ids.length; i++) {
+                    if (existsArray[i] === true) {
+                        formattedMarkets.push({
+                            id: ids[i].toNumber(),
+                            assetSymbol: assetSymbols[i],
+                            priceFeedAddress: priceFeedAddresses[i],
+                            targetPrice: targetPrices[i].toString(),
+                            expiryTimestamp: expiryTimestamps[i].toNumber(),
+                            resolutionTimestamp: resolutionTimestamps[i].toNumber(),
+                            totalStakedYes: totalStakedYesArray[i].toString(),
+                            totalStakedNo: totalStakedNoArray[i].toString(),
+                            state: states[i],
+                            actualOutcomeValue: actualOutcomeValues[i].toString(),
+                            exists: existsArray[i],
+                            isEventMarket: isEventMarkets[i],
+                            creationTimestamp: creationTimestamps[i].toNumber()
+                        });
                     }
-                    
-                    const intermediateMarket = {
-                        id: rawDetails[0].toString(),
-                        assetSymbol: rawDetails[1],
-                        priceFeedAddress: rawDetails[2],
-                        targetPrice: rawDetails[3].toString(),
-                        expiryTimestamp: Number(rawDetails[4]),
-                        resolutionTimestamp: Number(rawDetails[5]),
-                        totalStakedYes: rawDetails[6].toString(),
-                        totalStakedNo: rawDetails[7].toString(), 
-                        state: Number(rawDetails[8]), // <-- What is this value for your OPEN Polygon markets?
-                        actualOutcomeValue: rawDetails[9].toString(),
-                        exists: rawDetails[10],
-                        isEventMarket: rawDetails[11],
-                        creationTimestamp: Number(rawDetails[12]),
-                    };
-                    console.log(`PMLP (Chain ${chainId}): Intermediate data for market ID ${intermediateMarket.id}:`, intermediateMarket);
-                    const displayMarket = getMarketDisplayProperties(intermediateMarket);
-                     console.log(`PMLP (Chain ${chainId}): Display data for market ID ${intermediateMarket.id} (state: ${displayMarket.state}):`, displayMarket);
-                    return displayMarket;
-                }).filter(market => market !== null);
-
-                console.log(`PMLP (Chain ${chainId}): All Processed Markets (before reverse):`, processedMarkets);
-                setAllMarkets(processedMarkets.reverse());
+                }
+                setAllMarkets(formattedMarkets.reverse());
 
             } catch (err) {
                 console.error(`PMLP (Chain ${chainId}): Failed to fetch markets:`, err);
@@ -87,18 +91,16 @@ function PredictionMarketsListPage() {
         };
 
         fetchAndProcessData();
-    }, [contract, chainId]); // Added chainId to re-fetch if network changes via context
+    }, [predictionMarketContract, chainId]); // --- THIS IS THE FIX --- Depend on predictionMarketContract
 
     const openMarketsToDisplay = useMemo(() => {
-        // Assuming MarketState.Open is 0 from your marketutils.js
-        // If your old contract had a different enum order, this '0' is the problem.
-        const currentOpenStateValue = MarketState.Open; // This should be 0
+        const currentOpenStateValue = MarketState.Open;
         console.log(`PMLP (Chain ${chainId}): Filtering 'allMarkets' (count: ${allMarkets.length}) using state === ${currentOpenStateValue}`);
         
         const filtered = allMarkets.filter(m => m.state === currentOpenStateValue); 
         console.log(`PMLP (Chain ${chainId}): Markets after state === ${currentOpenStateValue} filter (openMarketsToDisplay count: ${filtered.length}):`, filtered);
         return filtered;
-    }, [allMarkets, chainId]); // Added chainId for context in logs
+    }, [allMarkets, chainId]);
     
     return (
         <div className="page-container prediction-list-page">
