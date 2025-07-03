@@ -4,13 +4,15 @@ import React, { createContext, useState, useEffect, useCallback, useMemo } from 
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 
+// --- Configuration Imports ---
 import {
     getAllSupportedChainsForModal,
     getConfigForChainId,
     getTargetChainIdHex,
 } from '../config/contractConfig';
 
-import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; // Ensure this ABI is up-to-date
+// --- Import ONLY the Prediction Market ABI ---
+import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
 
 export const WalletContext = createContext(null);
 
@@ -19,20 +21,19 @@ if (!WALLETCONNECT_PROJECT_ID) {
     throw new Error("VITE_WALLETCONNECT_PROJECT_ID is not set in your .env file");
 }
 
-// --- THIS IS THE FIX: Restore the full, correct configuration ---
 const web3Modal = createWeb3Modal({
     ethersConfig: { metadata: { name: "PiOracle", description: "Decentralized Prediction Markets", url: "https://pioracle.online" } },
     chains: getAllSupportedChainsForModal(),
     projectId: WALLETCONNECT_PROJECT_ID,
 });
-// --- END OF FIX ---
 
 const initialState = {
     provider: null,
     signer: null,
     walletAddress: null,
     chainId: null,
-    predictionMarketContract: null,
+    nativeTokenSymbol: null,
+    predictionMarketContract: null, // The ONLY contract we will manage here
 };
 
 export function WalletProvider({ children }) {
@@ -49,28 +50,21 @@ export function WalletProvider({ children }) {
 
         const chainConfig = getConfigForChainId(chainId);
         const effectiveSignerOrProvider = signer || provider;
-        let predictionMarketContract = null;
 
-        const contractAddress = chainConfig?.predictionMarketContractAddress;
-
-        if (contractAddress && effectiveSignerOrProvider) {
-            try {
-                const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI;
-                predictionMarketContract = new ethers.Contract(contractAddress, predictionMarketAbi, effectiveSignerOrProvider);
-                console.log(`Successfully created contract instance for chain ${chainId} at address ${contractAddress}`);
-            } catch (e) {
-                console.error(`Failed to create contract instance for chain ${chainId}`, e);
-            }
-        } else {
-            console.log(`No PredictionMarket contract address configured for chain ${chainId}`);
-        }
+        // --- Instantiate ONLY the PredictionMarketP2P contract ---
+        const predictionMarketAddr = chainConfig?.predictionMarketContractAddress;
+        const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI;
+        const predictionMarketContract = (predictionMarketAddr && effectiveSignerOrProvider)
+            ? new ethers.Contract(predictionMarketAddr, predictionMarketAbi, effectiveSignerOrProvider)
+            : null;
 
         setConnectionState({
             provider,
             signer,
             walletAddress: address,
             chainId,
-            predictionMarketContract,
+            nativeTokenSymbol: chainConfig?.symbol || 'Unknown',
+            predictionMarketContract, // Set the one and only contract
         });
         setIsInitialized(true);
     }, []);
