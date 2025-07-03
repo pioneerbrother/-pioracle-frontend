@@ -10,7 +10,8 @@ const VITE_BSC_TESTNET_RPC_URL_FROM_ENV = import.meta.env.VITE_BSC_TESTNET_RPC_U
 const chains = {
     bsc_testnet: {
         // Your existing, correct testnet configuration
-        predictionMarketContractAddress: VITE_BSC_TESTNET_PM_ADDRESS || "0x810Fbd810D9E563920E4543f95B4D277100a38f8",
+        // Inside the bsc_testnet object
+        predictionMarketContractAddress: import.meta.env.VITE_BSC_TESTNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
         hostRegistryContractAddress: "0x634c91dE69d394709de424c7F6C56279E2e4d3B7",
         tippingJarContractAddress: "0x66fc38263C9D5A3d6eFAe8D0C376DdEC00042648",
         premiumContentContractAddress: "0x9f08fbF4f91c0AB1E66D6384c86563cb3C159742",
