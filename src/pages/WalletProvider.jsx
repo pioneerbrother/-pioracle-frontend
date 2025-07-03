@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal } from '@web3modal/ethers5';
+import { createWeb3Modal } from '@web3modal/ethers5'; // Ensure this is ethers5
 
 // --- Configuration Imports ---
 import {
@@ -11,8 +11,9 @@ import {
     getTargetChainIdHex,
 } from '../config/contractConfig';
 
-// --- Import ONLY the Prediction Market ABI ---
-import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
+// --- Import ALL ABIs needed by the provider ---
+import PremiumContentABI from '../config/abis/PremiumContent.json';
+import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; // Ensure this is the correct, updated ABI file
 
 export const WalletContext = createContext(null);
 
@@ -33,7 +34,9 @@ const initialState = {
     walletAddress: null,
     chainId: null,
     nativeTokenSymbol: null,
-    predictionMarketContract: null, // The ONLY contract we will manage here
+    premiumContentContract: null,
+    predictionMarketContract: null, // Ensure this is in initial state
+    web3Modal: null, 
 };
 
 export function WalletProvider({ children }) {
@@ -51,12 +54,22 @@ export function WalletProvider({ children }) {
         const chainConfig = getConfigForChainId(chainId);
         const effectiveSignerOrProvider = signer || provider;
 
-        // --- Instantiate ONLY the PredictionMarketP2P contract ---
+        // Instantiate PremiumContent contract
+        const premiumContentAddr = chainConfig?.premiumContentContractAddress;
+        const premiumContentAbi = PremiumContentABI.abi || PremiumContentABI;
+        const premiumContentContract = (premiumContentAddr && effectiveSignerOrProvider)
+            ? new ethers.Contract(premiumContentAddr, premiumContentAbi, effectiveSignerOrProvider)
+            : null;
+
+        // --- FINAL FIX: Instantiate PredictionMarketP2P contract ---
         const predictionMarketAddr = chainConfig?.predictionMarketContractAddress;
-        const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI;
+        const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI; // Use imported ABI
+        
+        // Ensure effectiveSignerOrProvider is not null before creating contract
         const predictionMarketContract = (predictionMarketAddr && effectiveSignerOrProvider)
             ? new ethers.Contract(predictionMarketAddr, predictionMarketAbi, effectiveSignerOrProvider)
             : null;
+        // --- END OF FIX ---
 
         setConnectionState({
             provider,
@@ -64,7 +77,9 @@ export function WalletProvider({ children }) {
             walletAddress: address,
             chainId,
             nativeTokenSymbol: chainConfig?.symbol || 'Unknown',
-            predictionMarketContract, // Set the one and only contract
+            premiumContentContract,
+            predictionMarketContract, // Make sure this is set in state
+            web3Modal: web3Modal,
         });
         setIsInitialized(true);
     }, []);
@@ -76,7 +91,7 @@ export function WalletProvider({ children }) {
             const readOnlyProvider = new ethers.providers.StaticJsonRpcProvider(chainConfig.rpcUrl, defaultChainId);
             setupState(readOnlyProvider, defaultChainId);
         } else {
-            setConnectionState({ ...initialState, chainId: defaultChainId });
+            setConnectionState({ ...initialState, chainId: defaultChainId, web3Modal: web3Modal });
             setIsInitialized(true);
         }
     }, [setupState]);
