@@ -12,7 +12,7 @@ import {
 } from '../config/contractConfig';
 
 // --- Import ONLY the Prediction Market ABI ---
-import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
+import PredictionMarketABI from '../config/abis/PMP2P_ABI_v2.json';
 
 export const WalletContext = createContext(null);
 
