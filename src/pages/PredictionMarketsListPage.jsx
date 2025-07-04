@@ -9,101 +9,88 @@ import { getMarketDisplayProperties } from '../utils/marketutils.js';
 import './PredictionMarketsListPage.css';
 
 function PredictionMarketsListPage() {
-    // Destructure the contract instance and chainId from our central WalletContext
-    const { predictionMarketContract, chainId } = useContext(WalletContext);
-    
-    // State for managing the list of markets, loading status, and any errors
+    const { predictionMarketContract, chainId, isInitialized } = useContext(WalletContext);
     const [allMarkets, setAllMarkets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // This effect will run whenever the connected chain changes or the contract becomes available.
-        if (!predictionMarketContract) {
-            setIsLoading(true); // Keep showing the loader if the contract isn't ready
-            return;
-        }
+        const fetchMarkets = async () => {
+            // --- NEW, MORE ROBUST GUARD CLAUSE ---
+            // Don't do anything until the entire WalletProvider is initialized AND we have a contract.
+            if (!isInitialized) {
+                console.log("PMLP: WalletProvider not initialized yet. Waiting...");
+                return;
+            }
+            if (!predictionMarketContract) {
+                console.error("PMLP: CRITICAL ERROR - predictionMarketContract is null or undefined even after initialization. Check WalletProvider and contract addresses.");
+                setError("Application is not configured correctly for this network. Contract not found.");
+                setIsLoading(false);
+                return;
+            }
+            // --- END OF GUARD CLAUSE ---
 
-        // --- NEW, EFFICIENT, AND ROBUST FETCHING LOGIC ---
-        const fetchAllMarkets = async () => {
             setIsLoading(true);
             setError(null);
-            console.log(`PMLP (Chain ${chainId}): Starting market fetch...`);
+            console.log(`PMLP (Chain ${chainId}): Contract found. Starting market fetch...`);
 
             try {
-                // STEP 1: Fetch ALL existing market IDs. This is a cheap and simple call.
-                const marketIds = await predictionMarketContract.getMarketIds(100); // Fetch up to 100 of the newest
-                console.log(`PMLP (Chain ${chainId}): Found ${marketIds.length} existing market IDs.`);
+                // Now we are certain predictionMarketContract exists.
+                const marketIds = await predictionMarketContract.getMarketIds(100);
 
                 if (marketIds.length === 0) {
-                    setAllMarkets([]); // No markets to display, clear any old ones
+                    setAllMarkets([]);
                     setIsLoading(false);
-                    return; // We are done
+                    return;
                 }
 
-                // STEP 2: For the list view, we only need the basic info.
-                // This is much more gas-efficient than fetching all 13 fields for every market.
-                const marketPromises = marketIds.map(id =>
-                    predictionMarketContract.getMarketBasicInfo(id)
-                );
+                const marketPromises = marketIds.map(async (id) => {
+                    // We can be more efficient by fetching basic info first
+                    const info = await predictionMarketContract.getMarketInfo(id);
+                    // In a real app, you'd fetch stakes/extended info on demand, but this is fine for now
+                    return { id, ...info }; 
+                });
                 
-                // Wait for all the parallel fetches to complete.
-                const basicInfos = await Promise.all(marketPromises);
+                const rawMarkets = await Promise.all(marketPromises);
 
-                // STEP 3: Process the array of basic info into usable JavaScript objects.
-                const formattedMarkets = basicInfos
-                    .map((info, index) => {
-                        // Combine the ID (from the original array) with the fetched basic info.
-                        const combinedMarket = {
-                            id: marketIds[index].toString(),
-                            assetSymbol: info.assetSymbol,
-                            targetPrice: info.targetPrice.toString(),
-                            expiryTimestamp: Number(info.expiryTimestamp),
-                            state: Number(info.state),
-                            // We can add default values for fields not fetched on this page
-                            totalStakedYes: "0",
-                            totalStakedNo: "0"
+                const formattedMarkets = rawMarkets
+                    .map(raw => {
+                        const market = {
+                            id: raw.id.toString(),
+                            assetSymbol: raw.assetSymbol,
+                            state: Number(raw.state),
+                            expiryTimestamp: Number(raw.expiryTimestamp),
                         };
-                        // Use your utility function to get final display properties (like titles, descriptions, etc.)
-                        return getMarketDisplayProperties(combinedMarket);
+                        return getMarketDisplayProperties(market);
                     })
-                    // No need to filter for 'exists' here as getMarketIds should only return existing ones.
-                    .sort((a, b) => b.id - a.id); // Sort by newest ID
+                    .sort((a, b) => b.id - a.id);
 
-                console.log(`PMLP (Chain ${chainId}): Successfully processed ${formattedMarkets.length} markets.`);
-                setAllMarkets(formattedMarkets); // Update our component's state with the final list of markets
+                setAllMarkets(formattedMarkets);
 
             } catch (err) {
-                console.error(`PMLP (Chain ${chainId}): Failed to fetch markets:`, err);
-                setError("Failed to load market data. The contract may have been updated or there's a network issue. Please refresh.");
+                console.error("PMLP: Failed to fetch markets with error:", err);
+                setError(err.message || "A contract error occurred. It may not be verified or is misconfigured.");
             } finally {
-                setIsLoading(false); // Stop the loading spinner
+                setIsLoading(false);
             }
         };
 
-        fetchAllMarkets();
-    }, [predictionMarketContract, chainId]); // The dependencies are correct
+        fetchMarkets();
+    }, [predictionMarketContract, chainId, isInitialized]); // Add isInitialized as a dependency
 
-
-    // --- The rendering part of your component ---
     
-    // Now your filtering logic for 'open' markets is done on the frontend
-    const openMarketsToDisplay = allMarkets.filter(m => m.state === 0); // MarketState.Open is 0
+    const openMarketsToDisplay = allMarkets.filter(m => m.state === 0);
 
     return (
         <div className="page-container prediction-list-page">
             <h1>Open Markets (Chain ID: {chainId || 'Connecting...'})</h1>
-            {isLoading ? (
-                <LoadingSpinner message="Fetching markets..." />
-            ) : error ? (
-                <ErrorMessage title="Error Loading Markets" message={error} />
-            ) : (
+            {isLoading ? ( <LoadingSpinner message="Fetching markets..." /> ) : 
+             error ? ( <ErrorMessage title="Error Loading Markets" message={error} /> ) : 
+            (
                  <div className="market-grid">
                     {openMarketsToDisplay.length > 0 ? (
-                        // If we have open markets, map over them and display a card for each one
                         openMarketsToDisplay.map(market => <MarketCard key={market.id} market={market} />)
                     ) : (
-                        // If the array is empty after fetching and filtering, show this message
                         <p>No open markets found on this network. Create one!</p>
                     )}
                 </div>
