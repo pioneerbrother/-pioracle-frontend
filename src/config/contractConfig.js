@@ -1,6 +1,6 @@
 // src/config/contractConfig.js
 
-import PREDICTION_MARKET_P2P_ABI_JSON from './abis/PredictionMarketP2P.json';
+import PREDICTION_MARKET_P2P_ABI_JSON from './abis/PMP2P_ABI_v2.json';
 
 // Get values from .env file
 const VITE_BSC_TESTNET_PM_ADDRESS = import.meta.env.VITE_BSC_TESTNET_PREDICTION_MARKET_CONTRACT_ADDRESS;
