@@ -1,22 +1,18 @@
-// src/pages/WalletProvider.jsx
-
+// FINAL "SCORCHED EARTH" WalletProvider.jsx
 import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 
-import {
-    getAllSupportedChainsForModal,
-    getConfigForChainId,
-    getTargetChainIdHex,
-} from '../config/contractConfig';
+import { getAllSupportedChainsForModal, getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
 
-// --- THIS IS THE FINAL FIX ---
-// Import the RENAMED ABI file to force a cache break.
-import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
+// --- THIS IS THE FINAL FIX: ABI is Hardcoded Here ---
+// We no longer import any JSON file. The ABI is now part of the code.
+const PREDICTION_MARKET_ABI = [
+  "function getExistingMarketIds() public view returns (uint256[] memory)",
+  "function getMarketInfo(uint256 _marketId) public view returns (string memory assetSymbol, uint8 state, uint256 expiryTimestamp, uint256 creationTimestamp)",
+  "function getMarketStakes(uint256 _marketId) public view returns (uint256 totalStakedYes, uint256 totalStakedNo)"
+];
 // --- END OF FIX ---
-
-// ... (The rest of the WalletProvider.jsx code is IDENTICAL to the robust version from the previous step) ...
-// ... It will correctly instantiate the contract using this new ABI file ...
 
 export const WalletContext = createContext(null);
 
@@ -35,31 +31,44 @@ const initialState = {
 export function WalletProvider({ children }) {
     const [connectionState, setConnectionState] = useState(initialState);
 
+    const setupState = useCallback(async (provider, chainId, signer = null, address = null) => {
+        const chainConfig = getConfigForChainId(chainId);
+        const effectiveSignerOrProvider = signer || provider;
+        let contractInstance = null;
+
+        if (chainConfig && chainConfig.predictionMarketContractAddress && effectiveSignerOrProvider) {
+            try {
+                // Now we use the hardcoded ABI from above.
+                contractInstance = new ethers.Contract(chainConfig.predictionMarketContractAddress, PREDICTION_MARKET_ABI, effectiveSignerOrProvider);
+                console.log(`PMLP: Contract instance created for chain ${chainId} using HARDCODED ABI.`);
+            } catch (e) {
+                console.error(`PMLP: Failed to create contract with hardcoded ABI for chain ${chainId}`, e);
+            }
+        }
+        
+        setConnectionState({
+            provider, signer, walletAddress: address, chainId,
+            predictionMarketContract: contractInstance,
+            isInitialized: true,
+        });
+    }, []);
+
     useEffect(() => {
         const handleStateChange = ({ provider, address, chainId, isConnected }) => {
             if (isConnected && provider && address && chainId) {
                 const web3Provider = new ethers.providers.Web3Provider(provider, 'any');
                 const currentSigner = web3Provider.getSigner();
-                const chainConfig = getConfigForChainId(chainId);
-                let contractInstance = null;
-                if (chainConfig && chainConfig.predictionMarketContractAddress) {
-                    try {
-                        if (chainId !== 1) { web3Provider.getNetwork().then(network => network.ensAddress = null); }
-                        const abi = PredictionMarketABI.abi || PredictionMarketABI;
-                        contractInstance = new ethers.Contract(chainConfig.predictionMarketContractAddress, abi, currentSigner);
-                        console.log(`PMLP: Successfully created contract instance for chain ${chainId}`);
-                    } catch (e) { console.error(`PMLP: Failed to create contract for chain ${chainId}`, e); }
-                } else { console.warn(`PMLP: No contract address configured for chain ${chainId}`); }
-                setConnectionState({ provider: web3Provider, signer: currentSigner, walletAddress: address, chainId: chainId, predictionMarketContract: contractInstance, isInitialized: true });
+                setupState(web3Provider, chainId, currentSigner, address);
             } else {
-                setConnectionState({ ...initialState, isInitialized: true });
+                setupState(null, getTargetChainIdHex(), null, null); // Revert to a clean state
             }
         };
         const unsubscribe = web3Modal.subscribeProvider(handleStateChange);
         handleStateChange(web3Modal.getState());
-        return () => { unsubscribe(); };
-    }, []);
-
+        return () => unsubscribe();
+    }, [setupState]);
+    
+    // ... connectWallet, disconnectWallet, and useMemo are the same ...
     const connectWallet = useCallback(() => web3Modal.open(), []);
     const disconnectWallet = useCallback(() => web3Modal.disconnect(), []);
 
@@ -71,7 +80,7 @@ export function WalletProvider({ children }) {
 
     return (
         <WalletContext.Provider value={contextValue}>
-            {connectionState.isInitialized ? children : <div>Initializing Application...</div>}
+            {connectionState.isInitialized ? children : <div>Initializing...</div>}
         </WalletContext.Provider>
     );
 }
