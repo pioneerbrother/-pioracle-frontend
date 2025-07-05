@@ -12,7 +12,7 @@ import {
 
 // --- THIS IS THE FINAL FIX ---
 // Import the RENAMED ABI file to force a cache break.
-import PredictionMarketABI from '../config/abis/PMP2P_ABI_v2.json';
+import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
 // --- END OF FIX ---
 
 // ... (The rest of the WalletProvider.jsx code is IDENTICAL to the robust version from the previous step) ...
