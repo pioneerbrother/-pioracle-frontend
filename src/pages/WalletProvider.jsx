@@ -1,17 +1,11 @@
 // src/pages/WalletProvider.jsx
 
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 
 import { getAllSupportedChainsForModal, getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
-
-// --- HARDCODED ABI to bypass all caching issues ---
-const PREDICTION_MARKET_ABI = [
-  "function getExistingMarketIds() view returns (uint256[])",
-  "function getMarketInfo(uint256 _marketId) view returns (string memory assetSymbol, uint8 state, uint256 expiryTimestamp, uint256 creationTimestamp)",
-  "function getMarketStakes(uint256 _marketId) view returns (uint256 totalStakedYes, uint256 totalStakedNo)"
-];
+import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; // The single, correct, up-to-date ABI
 
 export const WalletContext = createContext(null);
 
@@ -23,70 +17,82 @@ const web3Modal = createWeb3Modal({
 });
 
 const initialState = {
-    provider: null, signer: null, walletAddress: null, chainId: null,
-    predictionMarketContract: null, isInitialized: false,
+    provider: null,
+    signer: null,
+    walletAddress: null,
+    chainId: null,
+    predictionMarketContract: null,
+    isInitialized: false, // Start as not initialized
 };
 
 export function WalletProvider({ children }) {
     const [connectionState, setConnectionState] = useState(initialState);
 
+    // --- THIS IS THE NEW, ROBUST LOGIC YOU DESCRIBED ---
     useEffect(() => {
-        const setupState = async (provider, chainId, signer = null, address = null) => {
-            const chainConfig = getConfigForChainId(chainId);
-            const effectiveSignerOrProvider = signer || provider;
-            let contractInstance = null;
-
-            if (chainConfig && chainConfig.predictionMarketContractAddress && effectiveSignerOrProvider) {
-                try {
-                    contractInstance = new ethers.Contract(chainConfig.predictionMarketContractAddress, PREDICTION_MARKET_ABI, effectiveSignerOrProvider);
-                    console.log(`PMLP: Contract instance created for chain ${chainId}.`);
-                } catch (e) {
-                    console.error(`PMLP: Failed to create contract for chain ${chainId}`, e);
-                }
-            } else {
-                console.warn(`PMLP: No contract address configured for chain ${chainId}`);
-            }
-            
-            setConnectionState({
-                provider, signer, walletAddress: address, chainId,
-                predictionMarketContract: contractInstance,
-                isInitialized: true,
-            });
-        };
-
-        const handleStateChange = async ({ provider, address, chainId, isConnected }) => {
+        const handleStateChange = ({ provider, address, chainId, isConnected }) => {
             if (isConnected && provider && address && chainId) {
                 const web3Provider = new ethers.providers.Web3Provider(provider, 'any');
                 const currentSigner = web3Provider.getSigner();
-                await setupState(web3Provider, chainId, currentSigner, address);
-            } else {
-                // Set up a read-only provider for the default chain when disconnected
-                const defaultChainId = parseInt(getTargetChainIdHex(), 16);
-                const chainConfig = getConfigForChainId(defaultChainId);
-                if (chainConfig?.rpcUrl) {
-                    const readOnlyProvider = new ethers.providers.StaticJsonRpcProvider(chainConfig.rpcUrl, defaultChainId);
-                    await setupState(readOnlyProvider, defaultChainId);
+                const chainConfig = getConfigForChainId(chainId);
+
+                let contractInstance = null;
+                if (chainConfig && chainConfig.predictionMarketContractAddress) {
+                    try {
+                        // Ensure ENS is disabled on non-mainnet chains
+                        if (chainId !== 1) {
+                            web3Provider.getNetwork().then(network => network.ensAddress = null);
+                        }
+                        const abi = PredictionMarketABI.abi || PredictionMarketABI;
+                        contractInstance = new ethers.Contract(chainConfig.predictionMarketContractAddress, abi, currentSigner);
+                        console.log(`PMLP: Successfully created contract instance for chain ${chainId} at address ${chainConfig.predictionMarketContractAddress}`);
+                    } catch (e) {
+                        console.error(`PMLP: Failed to create contract for chain ${chainId}`, e);
+                    }
                 } else {
-                    setConnectionState({ ...initialState, isInitialized: true });
+                    console.warn(`PMLP: No contract address configured for chain ${chainId}`);
                 }
+                
+                setConnectionState({
+                    provider: web3Provider,
+                    signer: currentSigner,
+                    walletAddress: address,
+                    chainId: chainId,
+                    predictionMarketContract: contractInstance, // This will be null if config is missing
+                    isInitialized: true,
+                });
+            } else {
+                // Not connected or disconnecting, revert to a clean, initialized state
+                setConnectionState({ ...initialState, isInitialized: true });
             }
         };
 
         const unsubscribe = web3Modal.subscribeProvider(handleStateChange);
-        handleStateChange(web3Modal.getState()); // Initial check
+        
+        // Initial check on load
+        handleStateChange(web3Modal.getState());
 
-        return () => unsubscribe();
-    }, []); // Run only once
+        return () => {
+            unsubscribe();
+        };
+    }, []); // Run only once on mount
 
-    const contextValue = {
+    const connectWallet = useCallback(() => web3Modal.open(), []);
+    const disconnectWallet = useCallback(() => web3Modal.disconnect(), []);
+
+    const contextValue = useMemo(() => ({
         ...connectionState,
-        connectWallet: () => web3Modal.open(),
-        disconnectWallet: () => web3Modal.disconnect(),
-    };
+        connectWallet,
+        disconnectWallet,
+    }), [connectionState, connectWallet, disconnectWallet]);
 
     return (
         <WalletContext.Provider value={contextValue}>
-            {connectionState.isInitialized ? children : <div>Initializing Application...</div>}
+            {connectionState.isInitialized ? children : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                    Initializing Application...
+                </div>
+            )}
         </WalletContext.Provider>
     );
 }
