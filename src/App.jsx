@@ -20,6 +20,7 @@ import GuidePage from './pages/GuidePage';
 import MarketDetailLoader from './pages/MarketDetailLoader';
 import TippingPage from './pages/TippingPage'; // For the Tip Jar / Host Hub
 import BlogPostDetail from './pages/BlogPostDetail'; // Your NEW detail/paywall page
+import MarketDetailPage from './pages/MarketDetailPage';
 
 function App() {
   return (
@@ -32,7 +33,7 @@ function App() {
               {/* --- Core App Routes --- */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
-              <Route path="/predictions/:marketId" element={<MarketDetailLoader />} />
+              <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
               <Route path="/create-market" element={<CreateMarketPage />} />
               <Route path="/recently-resolved" element={<RecentlyResolvedPage />} />
               <Route path="/my-predictions" element={<MyPredictionsPage />} />

@@ -15,86 +15,71 @@ function PredictionMarketsListPage() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Create a separate, async function inside useEffect to handle fetching.
         const fetchMarkets = async () => {
-            // --- Defensive Guard Clauses ---
-            // 1. Wait for the wallet provider to be fully initialized.
-            if (!isInitialized) {
-                console.log("PMLP: Waiting for provider initialization...");
-                setIsLoading(true);
-                return;
-            }
-            // 2. A wallet must be connected.
-            if (!walletAddress) {
-                console.log("PMLP: Wallet not connected.");
-                setIsLoading(false);
-                setError("Please connect your wallet to view markets.");
-                setAllMarkets([]); // Clear any old data
-                return;
-            }
-            // 3. The contract object must exist for the current chain.
-            if (!predictionMarketContract) {
-                console.log(`PMLP: Contract not found for chain ${chainId}.`);
-                setIsLoading(false);
-                setError(`This application is not configured for the current network (Chain ID: ${chainId}).`);
-                setAllMarkets([]); // Clear any old data
-                return;
-            }
+            if (!isInitialized) { setIsLoading(true); return; }
+            if (!walletAddress) { setIsLoading(false); setError("Please connect your wallet to view markets."); setAllMarkets([]); return; }
+            if (!predictionMarketContract) { setIsLoading(false); setError(`App not configured for Chain ID: ${chainId}.`); setAllMarkets([]); return; }
 
-            // If we pass all guards, we can proceed.
             setIsLoading(true);
             setError(null);
-            console.log(`PMLP (Chain ${chainId}): Contract instance is valid. Attempting to fetch market IDs...`);
+            console.log(`PMLP (Chain ${chainId}): Contract is valid. Using nextMarketId fetch logic...`);
 
             try {
-                // --- Using the function name you correctly identified ---
-                const marketIds = await predictionMarketContract.getExistingMarketIds();
-                
-                if (!marketIds || marketIds.length === 0) {
-                    console.log("PMLP: No market IDs found.");
+                const nextId = await predictionMarketContract.nextMarketId();
+                const totalMarkets = nextId.toNumber();
+
+                if (totalMarkets === 0) {
+                    console.log("PMLP: No markets created on this contract.");
                     setAllMarkets([]);
-                } else {
-                    console.log(`PMLP: Found ${marketIds.length} market IDs. Fetching details...`);
-                    // Fetch details for each market ID
-                    const marketPromises = marketIds.map(async (id) => {
-                        const info = await predictionMarketContract.getMarketInfo(id);
-                        return { 
-                            id: id.toString(),
-                            assetSymbol: info.assetSymbol,
-                            state: Number(info.state),
-                            expiryTimestamp: Number(info.expiryTimestamp),
-                        }; 
-                    });
-                    const rawMarkets = await Promise.all(marketPromises);
-                    const formattedMarkets = rawMarkets
-                        .map(getMarketDisplayProperties)
-                        .sort((a, b) => parseInt(b.id) - parseInt(a.id));
-                    
-                    setAllMarkets(formattedMarkets);
-                    console.log("PMLP: Successfully fetched and formatted all markets.");
+                    setIsLoading(false);
+                    return;
                 }
+
+                const marketPromises = [];
+                for (let i = 0; i < totalMarkets; i++) {
+                    marketPromises.push(predictionMarketContract.getMarketStaticDetails(i));
+                }
+                
+                const rawMarkets = await Promise.all(marketPromises);
+
+                // --- MODIFICATION: The filter for `market.exists` is removed for this test ---
+                const formattedMarkets = rawMarkets
+                    // .filter(market => market.exists === true) // Temporarily disabled to see all data
+                    .map(raw => {
+                        const baseMarket = {
+                            id: raw.id.toString(),
+                            assetSymbol: raw.assetSymbol,
+                            state: Number(raw.state),
+                            expiryTimestamp: Number(raw.expiryTimestamp),
+                            totalStakedYes: raw.totalStakedYes.toString(),
+                            totalStakedNo: raw.totalStakedNo.toString(),
+                            exists: raw.exists, // Pass the 'exists' flag through
+                        };
+                        return getMarketDisplayProperties(baseMarket);
+                    })
+                    .sort((a, b) => parseInt(b.id) - parseInt(a.id));
+
+                setAllMarkets(formattedMarkets);
+                console.log("PMLP: Successfully fetched and formatted all markets.", formattedMarkets);
+
             } catch (err) {
-                // This will catch the 'is not a function' error and give a clear message.
                 console.error("PMLP: CRITICAL ERROR during market fetch:", err);
-                if (err instanceof TypeError && err.message.includes("is not a function")) {
-                     setError("A critical mismatch exists between the App and the Smart Contract (ABI). Please contact support.");
-                } else {
-                     setError("A contract error occurred. The network may be busy or the contract has an issue.");
-                }
+                setError("A contract error occurred. Please check the network or contract configuration.");
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchMarkets();
-    // This effect hook will re-run whenever any of these critical properties change.
     }, [predictionMarketContract, chainId, isInitialized, walletAddress]);
     
-    const openMarketsToDisplay = allMarkets.filter(m => m.state === 0);
+    // --- MODIFICATION: Display ALL markets, not just open ones ---
+    const marketsToDisplay = allMarkets;
 
     return (
         <div className="page-container prediction-list-page">
-            <h1>Open Markets (Chain ID: {chainId || 'Not Connected'})</h1>
+            {/* The title is updated to be more accurate for this test */}
+            <h1>All Existing Markets (Chain ID: {chainId || 'Not Connected'})</h1>
             
             {isLoading && <LoadingSpinner message="Fetching markets..." />}
             
@@ -102,10 +87,10 @@ function PredictionMarketsListPage() {
             
             {!isLoading && !error && (
                  <div className="market-grid">
-                    {openMarketsToDisplay.length > 0 ? (
-                        openMarketsToDisplay.map(market => <MarketCard key={market.id} market={market} />)
+                    {marketsToDisplay.length > 0 ? (
+                        marketsToDisplay.map(market => <MarketCard key={market.id} market={market} />)
                     ) : (
-                        <p>No open markets found on this network. Create one!</p>
+                        <p>No markets found on this network. Create one!</p>
                     )}
                 </div>
             )}
