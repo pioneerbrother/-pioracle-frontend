@@ -17,6 +17,7 @@ const chains = {
         explorerUrl: 'https://testnet.bscscan.com'
     },
        
+ // --- START REPLACEMENT HERE ---
     bnb_mainnet: {
         rpcUrl: import.meta.env.VITE_BNB_MAINNET_RPC_URL || "https://bsc-dataseed.binance.org/",
         chainIdHex: '0x38', 
@@ -24,8 +25,10 @@ const chains = {
         symbol: 'BNB', 
         explorerUrl: 'https://bscscan.com',
         
-        // --- CORRECTED ADDRESSES ---
+        // This is the FIX: It now correctly points to your live contract address
         predictionMarketContractAddress: import.meta.env.VITE_BNB_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
+        
+        // These are other addresses for your app, ensure they are correct
         premiumContentContractAddress: "0x92a43093ee203aa55e5e1538f4a7567e84d0ba64",
         usdcTokenAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
         
@@ -40,14 +43,16 @@ const chains = {
         symbol: 'MATIC', 
         explorerUrl: 'https://polygonscan.com/',
 
-        // --- CORRECTED ADDRESSES (NO DUPLICATES) ---
+        // This is the FIX: It now correctly points to your live contract address
         predictionMarketContractAddress: import.meta.env.VITE_POLYGON_MAINNET_PREDICTION_MARKET_CONTRACT_ADDRESS,
+
+        // These are other addresses for your app, ensure they are correct
         premiumContentContractAddress: "0x7EF0D2c97E28f6f91F17BD406CAf8ab4C01051DD",
         usdcTokenAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
 
         hostRegistryContractAddress: null,
         tippingJarContractAddress: null,
-    },
+    }, 
 
 
 // --- The rest of your file is correct and does not need to change ---

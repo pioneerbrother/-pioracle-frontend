@@ -4,8 +4,9 @@ import React, { createContext, useState, useEffect, useCallback, useMemo } from 
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 
-import { getAllSupportedChainsForModal, getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
-import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; // The single, correct, up-to-date ABI
+import { getAllSupportedChainsForModal, getConfigForChainId } from '../config/contractConfig';
+// Use a single, reliable ABI import
+import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; 
 
 export const WalletContext = createContext(null);
 
@@ -28,7 +29,7 @@ const initialState = {
 export function WalletProvider({ children }) {
     const [connectionState, setConnectionState] = useState(initialState);
 
-    // --- THIS IS THE NEW, ROBUST LOGIC YOU DESCRIBED ---
+    // This new robust logic handles all connection state changes reliably
     useEffect(() => {
         const handleStateChange = ({ provider, address, chainId, isConnected }) => {
             if (isConnected && provider && address && chainId) {
@@ -39,13 +40,9 @@ export function WalletProvider({ children }) {
                 let contractInstance = null;
                 if (chainConfig && chainConfig.predictionMarketContractAddress) {
                     try {
-                        // Ensure ENS is disabled on non-mainnet chains
-                        if (chainId !== 1) {
-                            web3Provider.getNetwork().then(network => network.ensAddress = null);
-                        }
                         const abi = PredictionMarketABI.abi || PredictionMarketABI;
                         contractInstance = new ethers.Contract(chainConfig.predictionMarketContractAddress, abi, currentSigner);
-                        console.log(`PMLP: Successfully created contract instance for chain ${chainId} at address ${chainConfig.predictionMarketContractAddress}`);
+                        console.log(`PMLP: Successfully created contract instance for chain ${chainId}`);
                     } catch (e) {
                         console.error(`PMLP: Failed to create contract for chain ${chainId}`, e);
                     }
@@ -58,24 +55,20 @@ export function WalletProvider({ children }) {
                     signer: currentSigner,
                     walletAddress: address,
                     chainId: chainId,
-                    predictionMarketContract: contractInstance, // This will be null if config is missing
-                    isInitialized: true,
+                    predictionMarketContract: contractInstance,
+                    isInitialized: true, // Mark as initialized AFTER setting everything up
                 });
             } else {
-                // Not connected or disconnecting, revert to a clean, initialized state
+                // If not connected, revert to a clean but initialized state
                 setConnectionState({ ...initialState, isInitialized: true });
             }
         };
 
         const unsubscribe = web3Modal.subscribeProvider(handleStateChange);
-        
-        // Initial check on load
-        handleStateChange(web3Modal.getState());
+        handleStateChange(web3Modal.getState()); // Initial check
 
-        return () => {
-            unsubscribe();
-        };
-    }, []); // Run only once on mount
+        return () => unsubscribe();
+    }, []); // Run only once
 
     const connectWallet = useCallback(() => web3Modal.open(), []);
     const disconnectWallet = useCallback(() => web3Modal.disconnect(), []);
@@ -88,6 +81,7 @@ export function WalletProvider({ children }) {
 
     return (
         <WalletContext.Provider value={contextValue}>
+            {/* Show a loading screen until the provider is initialized */}
             {connectionState.isInitialized ? children : (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                     Initializing Application...
