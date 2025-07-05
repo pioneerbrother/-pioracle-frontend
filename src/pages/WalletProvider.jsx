@@ -8,9 +8,9 @@ import { getAllSupportedChainsForModal, getConfigForChainId, getTargetChainIdHex
 // --- THIS IS THE FINAL FIX: ABI is Hardcoded Here ---
 // We no longer import any JSON file. The ABI is now part of the code.
 const PREDICTION_MARKET_ABI = [
-  "function getExistingMarketIds() public view returns (uint256[] memory)",
-  "function getMarketInfo(uint256 _marketId) public view returns (string memory assetSymbol, uint8 state, uint256 expiryTimestamp, uint256 creationTimestamp)",
-  "function getMarketStakes(uint256 _marketId) public view returns (uint256 totalStakedYes, uint256 totalStakedNo)"
+  "function getExistingMarketIds() view returns (uint256[])",
+  "function getMarketInfo(uint256 _marketId) view returns (string memory assetSymbol, uint8 state, uint256 expiryTimestamp, uint256 creationTimestamp)",
+  "function getMarketStakes(uint256 _marketId) view returns (uint256 totalStakedYes, uint256 totalStakedNo)"
 ];
 // --- END OF FIX ---
 
@@ -60,7 +60,7 @@ export function WalletProvider({ children }) {
                 const currentSigner = web3Provider.getSigner();
                 setupState(web3Provider, chainId, currentSigner, address);
             } else {
-                setupState(null, getTargetChainIdHex(), null, null); // Revert to a clean state
+                setupState(null, parseInt(getTargetChainIdHex(), 16), null, null);
             }
         };
         const unsubscribe = web3Modal.subscribeProvider(handleStateChange);
@@ -80,7 +80,7 @@ export function WalletProvider({ children }) {
 
     return (
         <WalletContext.Provider value={contextValue}>
-            {connectionState.isInitialized ? children : <div>Initializing...</div>}
+            {connectionState.isInitialized ? children : <div>Initializing Application...</div>}
         </WalletContext.Provider>
     );
 }
