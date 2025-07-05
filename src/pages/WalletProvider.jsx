@@ -1,18 +1,17 @@
-// FINAL "SCORCHED EARTH" WalletProvider.jsx
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+// src/pages/WalletProvider.jsx
+
+import React, { createContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 
 import { getAllSupportedChainsForModal, getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
 
-// --- THIS IS THE FINAL FIX: ABI is Hardcoded Here ---
-// We no longer import any JSON file. The ABI is now part of the code.
+// --- HARDCODED ABI to bypass all caching issues ---
 const PREDICTION_MARKET_ABI = [
   "function getExistingMarketIds() view returns (uint256[])",
   "function getMarketInfo(uint256 _marketId) view returns (string memory assetSymbol, uint8 state, uint256 expiryTimestamp, uint256 creationTimestamp)",
   "function getMarketStakes(uint256 _marketId) view returns (uint256 totalStakedYes, uint256 totalStakedNo)"
 ];
-// --- END OF FIX ---
 
 export const WalletContext = createContext(null);
 
@@ -31,52 +30,59 @@ const initialState = {
 export function WalletProvider({ children }) {
     const [connectionState, setConnectionState] = useState(initialState);
 
-    const setupState = useCallback(async (provider, chainId, signer = null, address = null) => {
-        const chainConfig = getConfigForChainId(chainId);
-        const effectiveSignerOrProvider = signer || provider;
-        let contractInstance = null;
-
-        if (chainConfig && chainConfig.predictionMarketContractAddress && effectiveSignerOrProvider) {
-            try {
-                // Now we use the hardcoded ABI from above.
-                contractInstance = new ethers.Contract(chainConfig.predictionMarketContractAddress, PREDICTION_MARKET_ABI, effectiveSignerOrProvider);
-                console.log(`PMLP: Contract instance created for chain ${chainId} using HARDCODED ABI.`);
-            } catch (e) {
-                console.error(`PMLP: Failed to create contract with hardcoded ABI for chain ${chainId}`, e);
-            }
-        }
-        
-        setConnectionState({
-            provider, signer, walletAddress: address, chainId,
-            predictionMarketContract: contractInstance,
-            isInitialized: true,
-        });
-    }, []);
-
     useEffect(() => {
-        const handleStateChange = ({ provider, address, chainId, isConnected }) => {
+        const setupState = async (provider, chainId, signer = null, address = null) => {
+            const chainConfig = getConfigForChainId(chainId);
+            const effectiveSignerOrProvider = signer || provider;
+            let contractInstance = null;
+
+            if (chainConfig && chainConfig.predictionMarketContractAddress && effectiveSignerOrProvider) {
+                try {
+                    contractInstance = new ethers.Contract(chainConfig.predictionMarketContractAddress, PREDICTION_MARKET_ABI, effectiveSignerOrProvider);
+                    console.log(`PMLP: Contract instance created for chain ${chainId}.`);
+                } catch (e) {
+                    console.error(`PMLP: Failed to create contract for chain ${chainId}`, e);
+                }
+            } else {
+                console.warn(`PMLP: No contract address configured for chain ${chainId}`);
+            }
+            
+            setConnectionState({
+                provider, signer, walletAddress: address, chainId,
+                predictionMarketContract: contractInstance,
+                isInitialized: true,
+            });
+        };
+
+        const handleStateChange = async ({ provider, address, chainId, isConnected }) => {
             if (isConnected && provider && address && chainId) {
                 const web3Provider = new ethers.providers.Web3Provider(provider, 'any');
                 const currentSigner = web3Provider.getSigner();
-                setupState(web3Provider, chainId, currentSigner, address);
+                await setupState(web3Provider, chainId, currentSigner, address);
             } else {
-                setupState(null, parseInt(getTargetChainIdHex(), 16), null, null);
+                // Set up a read-only provider for the default chain when disconnected
+                const defaultChainId = parseInt(getTargetChainIdHex(), 16);
+                const chainConfig = getConfigForChainId(defaultChainId);
+                if (chainConfig?.rpcUrl) {
+                    const readOnlyProvider = new ethers.providers.StaticJsonRpcProvider(chainConfig.rpcUrl, defaultChainId);
+                    await setupState(readOnlyProvider, defaultChainId);
+                } else {
+                    setConnectionState({ ...initialState, isInitialized: true });
+                }
             }
         };
-        const unsubscribe = web3Modal.subscribeProvider(handleStateChange);
-        handleStateChange(web3Modal.getState());
-        return () => unsubscribe();
-    }, [setupState]);
-    
-    // ... connectWallet, disconnectWallet, and useMemo are the same ...
-    const connectWallet = useCallback(() => web3Modal.open(), []);
-    const disconnectWallet = useCallback(() => web3Modal.disconnect(), []);
 
-    const contextValue = useMemo(() => ({
+        const unsubscribe = web3Modal.subscribeProvider(handleStateChange);
+        handleStateChange(web3Modal.getState()); // Initial check
+
+        return () => unsubscribe();
+    }, []); // Run only once
+
+    const contextValue = {
         ...connectionState,
-        connectWallet,
-        disconnectWallet,
-    }), [connectionState, connectWallet, disconnectWallet]);
+        connectWallet: () => web3Modal.open(),
+        disconnectWallet: () => web3Modal.disconnect(),
+    };
 
     return (
         <WalletContext.Provider value={contextValue}>
