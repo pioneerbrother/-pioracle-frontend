@@ -36,7 +36,8 @@ function PredictionMarketsListPage() {
 
             try {
                 // Now we are certain predictionMarketContract exists.
-                const marketIds = await predictionMarketContract.getMarketIds(100);
+                const marketIds = await predictionMarketContract.getExistingMarketIds();
+
 
                 if (marketIds.length === 0) {
                     setAllMarkets([]);
