@@ -1,7 +1,7 @@
 // src/pages/PredictionMarketsListPage.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
-import { WalletContext } from './WalletProvider'; // Ensure this path is correct
+import { WalletContext } from './WalletProvider';
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -16,31 +16,22 @@ function PredictionMarketsListPage() {
 
     useEffect(() => {
         const fetchMarkets = async () => {
-            if (!isInitialized) {
-                setIsLoading(true); return;
-            }
-            if (!walletAddress) {
-                setIsLoading(false); setError("Please connect your wallet to view markets."); setAllMarkets([]); return;
-            }
-            if (!predictionMarketContract) {
-                setIsLoading(false); setError(`This application is not configured for the current network (Chain ID: ${chainId}).`); setAllMarkets([]); return;
-            }
+            if (!isInitialized) { setIsLoading(true); return; }
+            if (!walletAddress) { setIsLoading(false); setError("Please connect your wallet to view markets."); setAllMarkets([]); return; }
+            if (!predictionMarketContract) { setIsLoading(false); setError(`This application is not configured for the current network (Chain ID: ${chainId}).`); setAllMarkets([]); return; }
 
             setIsLoading(true);
             setError(null);
-            console.log(`PMLP (Chain ${chainId}): Contract is valid. Fetching markets using getAllMarkets()...`);
+            console.log(`PMLP (Chain ${chainId}): Contract is valid. Fetching markets using get_all_markets()...`);
 
             try {
-                // --- THIS IS THE FIX ---
-                // The contract function is named `getAllMarkets`, not `getExistingMarketIds`.
-                // This one function returns all market data at once, which is more efficient.
-                const rawMarketsFromContract = await predictionMarketContract.getAllMarkets();
+                // --- THIS IS THE CORRECTED FIX ---
+                // The contract function is named `get_all_markets`.
+                const rawMarketsFromContract = await predictionMarketContract.get_all_markets();
                 
                 if (rawMarketsFromContract.length === 0) {
                     setAllMarkets([]);
                 } else {
-                    // The rest of the logic is now much simpler.
-                    // We just need to format the data we already received.
                     const formattedMarkets = rawMarketsFromContract
                         .map(raw => {
                             const market = {
@@ -51,7 +42,7 @@ function PredictionMarketsListPage() {
                             };
                             return getMarketDisplayProperties(market);
                         })
-                        .sort((a, b) => parseInt(b.id) - parseInt(a.id)); // Sort by newest first
+                        .sort((a, b) => parseInt(b.id) - parseInt(a.id));
 
                     setAllMarkets(formattedMarkets);
                 }
