@@ -25,7 +25,6 @@ function BlogPostDetail() {
     const [premiumContentContract, setPremiumContentContract] = useState(null);
     const [usdcContract, setUsdcContract] = useState(null);
 
-    // Effect to create contract instances
     useEffect(() => {
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
@@ -43,7 +42,6 @@ function BlogPostDetail() {
 
     const contentId = useMemo(() => slug ? ethers.utils.id(slug) : null, [slug]);
 
-    // Main effect to load post and check access
     useEffect(() => {
         if (!slug) return;
         
@@ -75,11 +73,12 @@ function BlogPostDetail() {
         };
         loadPost();
         return () => { isMounted = false; };
-    }, [slug, walletAddress, isInitialized]); // Depend on walletAddress change
+    }, [slug, walletAddress, isInitialized]);
 
-    // Second effect for on-chain checks
     useEffect(() => {
-        if (pageState !== 'checking_access' || !premiumContentContract || !usdcContract) return;
+        if (pageState !== 'checking_access' || !premiumContentContract || !usdcContract) {
+            return;
+        }
 
         let isMounted = true;
         const checkAccess = async () => {
@@ -107,13 +106,60 @@ function BlogPostDetail() {
         };
         checkAccess();
         return () => { isMounted = false; };
-    }, [pageState, premiumContentContract, usdcContract]);
+    }, [pageState, walletAddress, premiumContentContract, usdcContract]);
 
-    const secureFetchContent = async () => { /* ... same as before ... */ };
-    const handleApprove = async () => { /* ... same as before ... */ };
-    const handleUnlock = async () => { /* ... same as before ... */ };
+    const secureFetchContent = async () => {
+        if (!signer || !walletAddress || !slug || !chainId) return;
+        setPageState('fetching_secure');
+        try {
+            const message = `I am proving ownership of my address to read article: ${slug}`;
+            const signature = await signer.signMessage(message);
 
-    // --- RENDER LOGIC ---
+            const response = await fetch('/.netlify/functions/get-premium-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slug, walletAddress, signature, chainId })
+            });
+
+            const data = await response.json();
+            if (!response.ok) { throw new Error(data.error || 'Failed to fetch content.'); }
+
+            setPostData(prev => ({ ...prev, content: data.content }));
+            setPageState('unlocked');
+        } catch (error) {
+            setPageState('error');
+            setErrorMessage(error.message);
+        }
+    };
+
+    const handleApprove = async () => {
+        if (!usdcContract || !premiumContentContract) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const requiredPrice = await premiumContentContract.contentPrice();
+            const tx = await usdcContract.approve(premiumContentContract.address, requiredPrice);
+            await tx.wait(1);
+            setPageState('ready_to_unlock');
+        } catch (err) {
+            setErrorMessage(err.reason || "Approval transaction failed.");
+            setPageState('needs_approval');
+        }
+    };
+    
+    const handleUnlock = async () => {
+        if (!premiumContentContract || !contentId) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await premiumContentContract.unlockContent(contentId);
+            await tx.wait(1);
+            await secureFetchContent();
+        } catch (err) {
+            setErrorMessage(err.reason || "Unlock transaction failed.");
+            setPageState('ready_to_unlock');
+        }
+    };
 
     const renderPaywallActions = () => {
         switch (pageState) {
@@ -124,11 +170,20 @@ function BlogPostDetail() {
             case 'needs_approval':
                 return <button onClick={handleApprove} className="action-button">1. Approve USDC</button>;
             case 'ready_to_unlock':
-                return <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>;
-            case 'checking_access':
-                return <LoadingSpinner message="Verifying access on-chain..." />;
+                return (
+                    <div>
+                        <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>
+                        <button 
+                            onClick={() => setPageState('needs_approval')} 
+                            style={{fontSize: '0.8rem', marginTop: '1rem', background: 'none', border: 'none', color: '#666', cursor: 'pointer', textDecoration: 'underline', display: 'block', width: '100%', textAlign: 'center'}}
+                        >
+                            Wrong step? Click to re-approve.
+                        </button>
+                    </div>
+                );
+            case 'checking':
             case 'fetching_secure':
-                return <LoadingSpinner message="Decrypting secure content..." />;
+                return <LoadingSpinner message="Verifying..." />;
             case 'error':
                 return <p className="error-message">{errorMessage}</p>;
             default:
@@ -137,7 +192,7 @@ function BlogPostDetail() {
     };
 
     if (pageState === 'initializing' || pageState === 'loading' || !postData.frontmatter) {
-        return <div className="blog-post-page"><LoadingSpinner message="Loading Post..." /></div>;
+        return <div className="blog-post-page"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
     }
 
     if (pageState === 'unlocked') {
