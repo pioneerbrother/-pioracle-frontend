@@ -54,7 +54,7 @@ function BlogPostDetail() {
                         setPageState('prompt_connect');
                         return;
                     }
-                    if (!premiumContentContract) {
+                    if (!premiumContentContract || !usdcContract) {
                         setPageState('unsupported_network');
                         return;
                     }
@@ -63,33 +63,37 @@ function BlogPostDetail() {
                     if (hasPaid) {
                         await secureFetchContent();
                     } else {
+                        // --- THIS IS THE CRITICAL FIX ---
+                        // If user hasn't paid, we MUST check their allowance now.
                         const fee = await premiumContentContract.contentPrice();
                         const allowance = await usdcContract.allowance(walletAddress, premiumContentContract.address);
                         if (allowance.lt(fee)) {
-                            setPageState('needs_approval');
+                            setPageState('needs_approval'); // Show "Approve" button
                         } else {
-                            setPageState('ready_to_unlock');
+                            setPageState('ready_to_unlock'); // Show "Unlock" button
                         }
+                        // --- END OF FIX ---
                     }
                 } else {
                     setPageState('unlocked');
                 }
             } catch (e) {
                 setPageState('error');
-                setErrorMessage("Post not found.");
+                setErrorMessage("Post not found or failed to load.");
             }
         };
 
         loadPostAndCheckAccess();
-    }, [isInitialized, walletAddress, chainId]); // Rerunning on chainId change is important
+    }, [isInitialized, walletAddress, chainId]); // Re-run when wallet or network changes
+
 
     const secureFetchContent = async () => { /* ... same as before ... */ };
     const handleApprove = async () => { /* ... same as before ... */ };
     const handleUnlock = async () => { /* ... same as before ... */ };
 
-    // --- RENDER LOGIC ---
 
-    const renderPaywallOrActions = () => {
+    // --- RENDER LOGIC ---
+    const renderPaywallActions = () => {
         switch (pageState) {
             case 'prompt_connect':
                 return <div><p>Please connect your wallet to unlock this premium article.</p><ConnectWalletButton /></div>;
@@ -105,36 +109,47 @@ function BlogPostDetail() {
             case 'error':
                 return <p className="error-message">{errorMessage}</p>;
             default:
-                return null;
+                return <LoadingSpinner message="Loading..." />;
         }
     };
 
+    // Main render function
     if (pageState === 'initializing' || !postData.frontmatter) {
         return <div className="blog-post-page"><LoadingSpinner message="Loading Post..." /></div>;
     }
 
+    // Unlocked view for both free and paid content
+    if (pageState === 'unlocked') {
+        return (
+            <div className="blog-post-page">
+                <div className="blog-post-content-wrapper">
+                    <h1 className="post-title">{postData.frontmatter.title}</h1>
+                    <p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p>
+                    <div className="post-body-content">
+                        <ReactMarkdown>{postData.content}</ReactMarkdown>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Paywall view for premium content that is not yet unlocked
     return (
         <div className="blog-post-page">
             <div className="blog-post-content-wrapper">
                 <h1 className="post-title">{postData.frontmatter.title}</h1>
                 <p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p>
+                <div className="post-body-content">
+                    {/* Shows the teaser content */}
+                    <ReactMarkdown>{postData.content}</ReactMarkdown>
+                </div>
                 
-                {pageState === 'unlocked' ? (
-                    <div className="post-body-content">
-                        <ReactMarkdown>{postData.content}</ReactMarkdown>
-                    </div>
-                ) : (
-                    <>
-                        <div className="post-body-content">
-                            {/* This shows the teaser content for premium posts */}
-                            <ReactMarkdown>{postData.content}</ReactMarkdown>
-                        </div>
-                        <div className="paywall">
-                            <h3>Unlock Full Access</h3>
-                            {renderPaywallOrActions()}
-                        </div>
-                    </>
-                )}
+                <hr style={{margin: "3rem 0"}} />
+
+                <div className="paywall">
+                    <h3>Unlock Full Access</h3>
+                    {renderPaywallActions()}
+                </div>
             </div>
         </div>
     );
