@@ -1,10 +1,10 @@
 // src/pages/BlogPostDetail.jsx
 
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import ReactMarkdown from 'react-markdown';
-import matter from 'gray-matter'; // We need this again to read frontmatter
+import matter from 'gray-matter';
 
 import { WalletContext } from './WalletProvider';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -15,12 +15,12 @@ import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
 
 import { getConfigForChainId } from '../config/contractConfig';
+import './BlogPostPage.css'; // Make sure you import your CSS file
 
 function BlogPostDetail() {
     const { slug } = useParams();
     const { walletAddress, chainId, signer, isInitialized } = useContext(WalletContext);
     
-    // This state now holds all post data, including frontmatter
     const [postData, setPostData] = useState({ content: '', frontmatter: null });
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
@@ -41,57 +41,42 @@ function BlogPostDetail() {
 
     const contentId = useMemo(() => slug ? ethers.utils.id(slug) : null, [slug]);
 
-    // --- MAIN useEffect: Handles BOTH Free and Premium Posts ---
     useEffect(() => {
         if (!isInitialized || !slug) return;
 
         const loadPost = async () => {
             setPageState('checking');
             try {
-                // First, always fetch the local markdown file. For premium posts, this acts as a "teaser".
                 const rawContentModule = await import(`../posts/${slug}.md?raw`);
                 const { data: frontmatter, content: localContent } = matter(rawContentModule.default);
                 
-                setPostData({ content: localContent, frontmatter: frontmatter }); // Initially set local content
+                setPostData({ content: localContent, frontmatter: frontmatter });
 
-                // --- THIS IS THE CRITICAL LOGIC ---
-                // Now, check if the post is marked as premium.
                 if (frontmatter.premium === true) {
-                    // --- PREMIUM POST LOGIC ---
                     if (!walletAddress) {
                         setPageState('needs_payment');
                         return;
                     }
-
                     if (!premiumContentContract) {
                         setPageState('unsupported_network');
                         return;
                     }
-                    
                     const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
                     if (hasPaid) {
-                        // User has access, fetch the secure, full content from the backend
                         await secureFetchContent();
                     } else {
-                        // User needs to pay, show the paywall buttons
                         setPageState('needs_payment');
                     }
                 } else {
-                    // --- FREE POST LOGIC ---
-                    // If not premium, the local content is all we need. Unlock the page.
                     setPageState('unlocked');
                 }
             } catch (e) {
-                console.error("Failed to load post:", e);
                 setPageState('error');
                 setErrorMessage("Post not found or failed to load.");
             }
         };
-
         loadPost();
-
     }, [isInitialized, walletAddress, premiumContentContract, slug, contentId]);
-
 
     const secureFetchContent = async () => {
         if (!signer || !walletAddress || !slug || !chainId) return;
@@ -109,7 +94,6 @@ function BlogPostDetail() {
             const data = await response.json();
             if (!response.ok) { throw new Error(data.error || 'Failed to fetch content.'); }
 
-            // On success, UPDATE the post content with the secure version
             setPostData(prev => ({ ...prev, content: data.content }));
             setPageState('unlocked');
         } catch (error) {
@@ -118,41 +102,53 @@ function BlogPostDetail() {
         }
     };
     
-    // --- handleApprove and handleUnlock functions remain the same ---
-    const handleApprove = async () => { /* ... */ };
-    const handleUnlock = async () => { /* ... */ };
-
+    const handleApprove = async () => { /* ... Your approve logic ... */ };
+    const handleUnlock = async () => { /* ... Your unlock logic ... */ };
 
     // --- RENDER LOGIC ---
-    const renderPageContent = () => {
-        // If state is unlocked, always show the full content
-        if (pageState === 'unlocked') {
-            return <ReactMarkdown className="post-content">{postData.content}</ReactMarkdown>;
-        }
 
-        // If it's a premium post that's not yet unlocked, show the paywall
-        if (postData.frontmatter?.premium === true) {
-            return (
-                <div className="paywall">
-                    <h1>{postData.frontmatter.title}</h1>
-                    <p>This is a premium article secured on the blockchain.</p>
-                    {/* Render the teaser content from the local file */}
-                    <ReactMarkdown className="post-teaser">{postData.content}</ReactMarkdown> 
-                    <div className="paywall-action">
-                        <h3>Unlock Full Access</h3>
-                        {/* ... your rendering logic for buttons, spinners, errors ... */}
+    // Loading State
+    if (pageState === 'initializing' || pageState === 'checking' || !postData.frontmatter) {
+        return (
+            <div className="blog-post-page">
+                <div className="blog-post-content-wrapper">
+                    <LoadingSpinner message="Loading Post..." />
+                </div>
+            </div>
+        );
+    }
+
+    // Unlocked State (for both free and paid articles)
+    if (pageState === 'unlocked') {
+        return (
+            <div className="blog-post-page">
+                <div className="blog-post-content-wrapper">
+                    <h1 className="post-title">{postData.frontmatter.title}</h1>
+                    <p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p>
+                    <div className="post-body-content">
+                        <ReactMarkdown>{postData.content}</ReactMarkdown>
                     </div>
                 </div>
-            );
-        }
+            </div>
+        );
+    }
 
-        // Default loading state
-        return <LoadingSpinner message="Loading post..." />;
-    };
-
+    // Paywall State (for premium articles not yet unlocked)
     return (
         <div className="blog-post-page">
-            {renderPageContent()}
+            <div className="blog-post-content-wrapper">
+                <h1 className="post-title">{postData.frontmatter.title}</h1>
+                <p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p>
+                <div className="post-body-content">
+                    <ReactMarkdown>{postData.content}</ReactMarkdown>
+                </div>
+                
+                <div className="paywall">
+                    <h3>Unlock Full Access</h3>
+                    <p>This is a premium article secured on the blockchain. Please connect your wallet to continue.</p>
+                    {/* Your logic for buttons, spinners, errors would go here */}
+                </div>
+            </div>
         </div>
     );
 }

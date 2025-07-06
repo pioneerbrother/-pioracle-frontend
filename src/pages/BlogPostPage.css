@@ -1,98 +1,113 @@
 /* src/pages/BlogPostPage.css */
+
+/* This is the main container for the entire post page. It provides edge padding. */
 .blog-post-page {
-    max-width: 800px;
-    margin: 0 auto;
     padding: 2rem 1rem;
+    box-sizing: border-box;
 }
 
-.back-to-blog-link {
-    display: inline-block;
-    margin-bottom: 2rem;
-    color: #4a5568;
-    text-decoration: none;
+/* This is the inner wrapper that controls the width and centers the content. */
+.blog-post-content-wrapper {
+    max-width: 750px; /* An ideal width for long-form text */
+    margin: 0 auto;   /* This centers the block horizontally */
 }
 
-.blog-content h1 {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
+/* Main title of the article */
+.blog-post-content-wrapper .post-title {
+    font-size: 2.8rem;
+    font-weight: 800;
     line-height: 1.2;
+    margin: 0 0 0.5rem 0;
+    color: #1a202c;
 }
 
-.blog-content .post-meta {
+/* Meta information (author, date) below the title */
+.blog-post-content-wrapper .post-meta {
+    font-size: 1rem;
     color: #718096;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 1.5rem;
 }
 
-/* Styles for the markdown content */
-.blog-content {
-    line-height: 1.7;
+/* This class applies to the div that renders the actual markdown content */
+.post-body-content {
+    font-size: 1.125rem; /* ~18px, great for reading */
+    line-height: 1.8;   /* Generous spacing between lines */
     color: #2d3748;
 }
 
-.blog-content h2 {
-    font-size: 1.75rem;
-    margin-top: 2.5rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 0.5rem;
+/* Styling for elements within the markdown */
+.post-body-content h2,
+.post-body-content h3 {
+    margin-top: 2.5em;
+    margin-bottom: 1em;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #1a202c;
+    border-bottom: 1px solid #edf2f7;
+    padding-bottom: 0.4em;
 }
 
-.blog-content p {
-    margin-bottom: 1rem;
+.post-body-content h2 {
+    font-size: 2rem;
 }
 
-.blog-content a {
-    color: #3182ce;
-    text-decoration: underline;
+.post-body-content h3 {
+    font-size: 1.5rem;
 }
 
-.blog-content strong {
-    font-weight: bold;
+.post-body-content p {
+    margin-bottom: 1.25em;
 }
 
-.blog-content ul, .blog-content ol {
-    margin-bottom: 1rem;
-    padding-left: 1.5rem;
+.post-body-content a {
+    color: #2b6cb0;
+    text-decoration: none;
+    border-bottom: 1px solid #bee3f8;
+    transition: background-color 0.2s ease-in-out;
 }
 
-/* src/pages/BlogPostPage.css */
-
-/* Add this new block at the end of the file */
-
-/* --- STYLING FOR IMAGES WITHIN THE BLOG POST --- */
-.blog-content img {
-    /* Control the size - it will take up 80% of its container's width */
-    max-width: 80%; 
-    
-    /* Center the image horizontally */
-    display: block;
-    margin: 2rem auto; /* Adds space above/below and centers it */
-
-    /* Add some professional polish */
-    border-radius: 8px; /* Slightly rounded corners */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* A subtle shadow for depth */
+.post-body-content a:hover {
+    background-color: #bee3f8;
 }
-/* --- NEW: Styles for the "Call to Action" section --- */
+
+.post-body-content ul, 
+.post-body-content ol {
+    margin-bottom: 1.25em;
+    padding-left: 1.5em;
+}
+
+.post-body-content blockquote {
+    border-left: 4px solid #a0aec0;
+    padding-left: 1em;
+    margin-left: 0;
+    font-style: italic;
+    color: #4a5568;
+}
+
+.post-body-content hr {
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    margin: 3em 0;
+}
+
+/* Call to Action Box */
 .what-do-you-think {
-    margin: 3rem 0; /* Add space above and below */
-    padding: 1.5rem 2rem;
-    background-color: #f7fafc; /* A very light grey/blue background */
-    border: 1px solid #e2e8f0; /* A subtle border */
-    border-left: 5px solid #4299e1; /* A more prominent blue accent on the left */
+    margin: 4rem 0 3rem 0;
+    padding: 2rem;
+    background-color: #f7fafc;
+    border-left: 5px solid #4299e1;
     border-radius: 8px;
 }
 
 .what-do-you-think h3 {
     margin-top: 0;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     color: #2d3748;
 }
 
 .what-do-you-think p {
     font-size: 1.1rem;
-    margin-bottom: 1.5rem;
-}
-
-.what-do-you-think a {
-    font-weight: bold;
+    margin-bottom: 1rem;
 }
