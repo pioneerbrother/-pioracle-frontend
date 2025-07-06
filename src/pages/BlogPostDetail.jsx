@@ -25,6 +25,7 @@ function BlogPostDetail() {
     const [premiumContentContract, setPremiumContentContract] = useState(null);
     const [usdcContract, setUsdcContract] = useState(null);
 
+    // Effect 1: Create contract instances ONLY when the signer is ready.
     useEffect(() => {
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
@@ -42,6 +43,7 @@ function BlogPostDetail() {
 
     const contentId = useMemo(() => slug ? ethers.utils.id(slug) : null, [slug]);
 
+    // Effect 2: Load the post's frontmatter. This is the first step.
     useEffect(() => {
         if (!slug) return;
         
@@ -58,59 +60,93 @@ function BlogPostDetail() {
                 if (frontmatter.premium !== true) {
                     setPageState('unlocked');
                 } else {
-                    if (!walletAddress) {
-                        setPageState('prompt_connect');
-                    } else {
-                        setPageState('checking_access');
-                    }
+                    setPageState(walletAddress ? 'checking_access' : 'prompt_connect');
                 }
             } catch (e) {
-                if (isMounted) {
-                    setPageState('error');
-                    setErrorMessage("Post not found.");
-                }
+                if (isMounted) setPageState('error');
             }
         };
         loadPost();
         return () => { isMounted = false; };
     }, [slug, walletAddress, isInitialized]);
 
+    // Effect 3: The on-chain check. This ONLY runs when the state is correct.
     useEffect(() => {
-        if (pageState !== 'checking_access' || !premiumContentContract || !usdcContract) {
-            return;
-        }
+        if (pageState !== 'checking_access' || !premiumContentContract || !usdcContract) return;
 
         let isMounted = true;
         const checkAccess = async () => {
-                 try {
-                    const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
+            try {
+                const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
+                if (!isMounted) return;
+                if (hasPaid) {
+                    await secureFetchContent();
+                } else {
+                    const fee = await premiumContentContract.contentPrice();
+                    const allowance = await usdcContract.allowance(walletAddress, premiumContentContract.address);
                     if (!isMounted) return;
-                    if (hasPaid) {
-                        await secureFetchContent();
-                    } else {
-                        const fee = await premiumContentContract.contentPrice();
-                        const allowance = await usdcContract.allowance(walletAddress, premiumContentContract.address);
-                        if (!isMounted) return;
-                        if (allowance.lt(fee)) {
-                            setPageState('needs_approval');
-                        } else {
-                            setPageState('ready_to_unlock');
-                        }
-                    }
-                } catch (e) {
-                    if (isMounted) {
-                        setPageState('error');
-                        setErrorMessage("Failed to check on-chain access.");
-                    }
+                    setPageState(allowance.lt(fee) ? 'needs_approval' : 'ready_to_unlock');
                 }
+            } catch (e) {
+                if (isMounted) setPageState('error');
+            }
         };
         checkAccess();
         return () => { isMounted = false; };
-    }, [pageState, walletAddress, premiumContentContract, usdcContract]);
+    }, [pageState, premiumContentContract, usdcContract]);
 
-    const secureFetchContent = async () => { /* ... same as before ... */ };
-    const handleApprove = async () => { /* ... same as before ... */ };
-    const handleUnlock = async () => { /* ... same as before ... */ };
+    const secureFetchContent = async () => {
+        if (!signer || !walletAddress || !slug || !chainId) return;
+        setPageState('fetching_secure');
+        try {
+            const message = `I am proving ownership of my address to read article: ${slug}`;
+            const signature = await signer.signMessage(message);
+
+            const response = await fetch('/.netlify/functions/get-premium-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slug, walletAddress, signature, chainId })
+            });
+
+            const data = await response.json();
+            if (!response.ok) { throw new Error(data.error || 'Failed to fetch content.'); }
+
+            setPostData(prev => ({ ...prev, content: data.content }));
+            setPageState('unlocked');
+        } catch (error) {
+            setPageState('error');
+            setErrorMessage(error.message);
+        }
+    };
+
+    const handleApprove = async () => {
+        if (!usdcContract || !premiumContentContract) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const requiredPrice = await premiumContentContract.contentPrice();
+            const tx = await usdcContract.approve(premiumContentContract.address, requiredPrice);
+            await tx.wait(1);
+            setPageState('ready_to_unlock');
+        } catch (err) {
+            setErrorMessage(err.reason || "Approval transaction failed.");
+            setPageState('needs_approval');
+        }
+    };
+    
+    const handleUnlock = async () => {
+        if (!premiumContentContract || !contentId) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await premiumContentContract.unlockContent(contentId);
+            await tx.wait(1);
+            await secureFetchContent();
+        } catch (err) {
+            setErrorMessage(err.reason || "Unlock transaction failed.");
+            setPageState('ready_to_unlock');
+        }
+    };
 
     const renderPaywallActions = () => {
         switch (pageState) {
@@ -120,23 +156,9 @@ function BlogPostDetail() {
                  return <p className="error-message">Please switch to a supported network to continue.</p>;
             case 'needs_approval':
                 return <button onClick={handleApprove} className="action-button">1. Approve USDC</button>;
-            
-            // --- THIS IS THE FIX ---
             case 'ready_to_unlock':
-                return (
-                    <div>
-                        <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>
-                        {/* Add a manual reset button for debugging and fixing stuck states */}
-                        <button 
-                            onClick={() => setPageState('needs_approval')} 
-                            style={{fontSize: '0.8rem', marginTop: '1rem', background: 'none', border: 'none', color: '#666', cursor: 'pointer', textDecoration: 'underline', display: 'block', width: '100%', textAlign: 'center'}}
-                        >
-                            Wrong step? Click to re-approve.
-                        </button>
-                    </div>
-                );
-            // --- END OF FIX ---
-
+                return <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>;
+            case 'checking_access':
             case 'checking':
             case 'fetching_secure':
                 return <LoadingSpinner message="Verifying..." />;
