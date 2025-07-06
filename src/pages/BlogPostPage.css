@@ -72,3 +72,27 @@
     border-radius: 8px; /* Slightly rounded corners */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* A subtle shadow for depth */
 }
+/* --- NEW: Styles for the "Call to Action" section --- */
+.what-do-you-think {
+    margin: 3rem 0; /* Add space above and below */
+    padding: 1.5rem 2rem;
+    background-color: #f7fafc; /* A very light grey/blue background */
+    border: 1px solid #e2e8f0; /* A subtle border */
+    border-left: 5px solid #4299e1; /* A more prominent blue accent on the left */
+    border-radius: 8px;
+}
+
+.what-do-you-think h3 {
+    margin-top: 0;
+    font-size: 1.5rem;
+    color: #2d3748;
+}
+
+.what-do-you-think p {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+}
+
+.what-do-you-think a {
+    font-weight: bold;
+}

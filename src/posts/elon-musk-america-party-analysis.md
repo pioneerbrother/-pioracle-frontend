@@ -46,13 +46,16 @@ The emergence of the America Party, spearheaded by Elon Musk, marks an intriguin
 
 ---
 
-### **What Do You Think? Test Your Foresight.**
+
+
+### What Do You Think? Test Your Foresight.
 
 The future of the America Party is unwritten. Will it gain traction, or will it fade into obscurity like so many third parties before it? This is not just a topic for discussion—it's a forecast.
 
 At PiOracle, we believe in the power of collective intelligence to predict the future. We invite you to put your own analysis to the test.
 
 **[Click here to view our live prediction markets.]**
+
 
 ---
 

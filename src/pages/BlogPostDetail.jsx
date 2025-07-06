@@ -151,7 +151,7 @@ function BlogPostDetail() {
     };
 
     return (
-        <div className="page-container blog-post">
+        <div className="blog-post-page">
             {renderPageContent()}
         </div>
     );
