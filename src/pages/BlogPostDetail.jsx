@@ -1,6 +1,6 @@
 // src/pages/BlogPostDetail.jsx
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react'; // <-- I HAVE CORRECTED THIS LINE
 import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import ReactMarkdown from 'react-markdown';
@@ -22,10 +22,8 @@ function BlogPostDetail() {
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
 
-    // --- THIS IS THE FINAL FIX: Use useState for contracts ---
     const [premiumContentContract, setPremiumContentContract] = useState(null);
     const [usdcContract, setUsdcContract] = useState(null);
-    // --- END OF FIX ---
 
     // Effect to create contract instances when signer/chain changes
     useEffect(() => {
@@ -40,7 +38,6 @@ function BlogPostDetail() {
                 setUsdcContract(usdc);
             }
         } else {
-            // If signer disconnects, clear the contracts
             setPremiumContentContract(null);
             setUsdcContract(null);
         }
@@ -51,18 +48,28 @@ function BlogPostDetail() {
     // Main effect to check access
     useEffect(() => {
         if (!isInitialized || !slug) return;
+        if (!postData.frontmatter) { // Only run if frontmatter is loaded
+             const loadFrontmatter = async () => {
+                 try {
+                     const rawContentModule = await import(`../posts/${slug}.md?raw`);
+                     const { data: frontmatter, content: localContent } = matter(rawContentModule.default);
+                     setPostData({ content: localContent, frontmatter });
+                 } catch (e) {
+                     setPageState('error');
+                     setErrorMessage("Post not found.");
+                 }
+             };
+             loadFrontmatter();
+             return;
+        }
 
-        const loadPostAndCheckAccess = async () => {
-            setPageState('checking');
-            try {
-                const rawContentModule = await import(`../posts/${slug}.md?raw`);
-                const { data: frontmatter, content: localContent } = matter(rawContentModule.default);
-                setPostData({ content: localContent, frontmatter });
-
-                if (frontmatter.premium === true) {
-                    if (!walletAddress) { setPageState('prompt_connect'); return; }
-                    if (!premiumContentContract || !usdcContract) { setPageState('unsupported_network'); return; }
-                    
+        const checkAccess = async () => {
+            if (postData.frontmatter.premium === true) {
+                if (!walletAddress) { setPageState('prompt_connect'); return; }
+                if (!premiumContentContract || !usdcContract) { setPageState('unsupported_network'); return; }
+                
+                setPageState('checking');
+                try {
                     const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
                     if (hasPaid) {
                         await secureFetchContent();
@@ -75,21 +82,18 @@ function BlogPostDetail() {
                             setPageState('ready_to_unlock');
                         }
                     }
-                } else {
-                    setPageState('unlocked');
+                } catch (e) {
+                    setPageState('error');
+                    setErrorMessage("Failed to check access.");
                 }
-            } catch (e) {
-                setPageState('error');
-                setErrorMessage("Post not found or failed to load.");
+            } else {
+                setPageState('unlocked');
             }
         };
 
-        // Only run this check if the contracts have been initialized
-        if (postData.frontmatter || pageState === 'checking') {
-             loadPostAndCheckAccess();
-        }
+        checkAccess();
        
-    }, [isInitialized, walletAddress, premiumContentContract, usdcContract]); // Re-run when contracts are created
+    }, [isInitialized, walletAddress, premiumContentContract, usdcContract, postData.frontmatter]);
 
     const secureFetchContent = async () => { /* ... same as before ... */ };
     const handleApprove = async () => { /* ... same as before ... */ };
