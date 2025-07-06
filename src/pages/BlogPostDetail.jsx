@@ -1,6 +1,6 @@
 // src/pages/BlogPostDetail.jsx
 
-import React, { useState, useEffect, useContext, useMemo } from 'react'; // <-- I HAVE CORRECTED THIS LINE
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import ReactMarkdown from 'react-markdown';
@@ -25,17 +25,15 @@ function BlogPostDetail() {
     const [premiumContentContract, setPremiumContentContract] = useState(null);
     const [usdcContract, setUsdcContract] = useState(null);
 
-    // Effect to create contract instances when signer/chain changes
+    // Effect to create contract instances
     useEffect(() => {
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
             if (config?.premiumContentContractAddress) {
-                const pcContract = new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer);
-                setPremiumContentContract(pcContract);
+                setPremiumContentContract(new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer));
             }
             if (config?.usdcTokenAddress) {
-                const usdc = new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer);
-                setUsdcContract(usdc);
+                setUsdcContract(new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer));
             }
         } else {
             setPremiumContentContract(null);
@@ -45,31 +43,48 @@ function BlogPostDetail() {
 
     const contentId = useMemo(() => slug ? ethers.utils.id(slug) : null, [slug]);
 
-    // Main effect to check access
+    // --- FINAL, SIMPLIFIED useEffect LOGIC ---
     useEffect(() => {
-        if (!isInitialized || !slug) return;
-        if (!postData.frontmatter) { // Only run if frontmatter is loaded
-             const loadFrontmatter = async () => {
-                 try {
-                     const rawContentModule = await import(`../posts/${slug}.md?raw`);
-                     const { data: frontmatter, content: localContent } = matter(rawContentModule.default);
-                     setPostData({ content: localContent, frontmatter });
-                 } catch (e) {
-                     setPageState('error');
-                     setErrorMessage("Post not found.");
-                 }
-             };
-             loadFrontmatter();
-             return;
-        }
-
-        const checkAccess = async () => {
-            if (postData.frontmatter.premium === true) {
-                if (!walletAddress) { setPageState('prompt_connect'); return; }
-                if (!premiumContentContract || !usdcContract) { setPageState('unsupported_network'); return; }
+        if (!slug) return;
+        
+        // This function will ALWAYS run once the slug is available.
+        const loadPost = async () => {
+            setPageState('loading');
+            try {
+                const rawContentModule = await import(`../posts/${slug}.md?raw`);
+                const { data: frontmatter, content: localContent } = matter(rawContentModule.default);
                 
-                setPageState('checking');
-                try {
+                // Immediately set the data we have.
+                setPostData({ content: localContent, frontmatter });
+                
+                // Now, decide what to do based on the frontmatter
+                if (frontmatter.premium !== true) {
+                    // It's a free post, we are done.
+                    setPageState('unlocked');
+                } else {
+                    // It's a premium post, now we need a wallet.
+                    if (!walletAddress) {
+                        setPageState('prompt_connect'); // Show paywall, ask to connect
+                    } else {
+                        // Wallet is connected, proceed to check access
+                        setPageState('checking_access'); // Go to a new state before the async call
+                    }
+                }
+            } catch (e) {
+                setPageState('error');
+                setErrorMessage("Post not found.");
+            }
+        };
+
+        loadPost();
+    }, [slug, isInitialized]); // Depend only on slug and initialization
+
+    // A SEPARATE effect to handle the on-chain check AFTER the wallet is connected
+    // and we've determined it's a premium post.
+    useEffect(() => {
+        if (pageState === 'checking_access' && walletAddress && premiumContentContract && usdcContract) {
+            const checkAccess = async () => {
+                 try {
                     const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
                     if (hasPaid) {
                         await secureFetchContent();
@@ -84,16 +99,12 @@ function BlogPostDetail() {
                     }
                 } catch (e) {
                     setPageState('error');
-                    setErrorMessage("Failed to check access.");
+                    setErrorMessage("Failed to check on-chain access.");
                 }
-            } else {
-                setPageState('unlocked');
-            }
-        };
-
-        checkAccess();
-       
-    }, [isInitialized, walletAddress, premiumContentContract, usdcContract, postData.frontmatter]);
+            };
+            checkAccess();
+        }
+    }, [pageState, walletAddress, premiumContentContract, usdcContract]);
 
     const secureFetchContent = async () => { /* ... same as before ... */ };
     const handleApprove = async () => { /* ... same as before ... */ };
