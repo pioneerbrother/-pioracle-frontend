@@ -22,25 +22,20 @@ function BlogPostDetail() {
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
 
-    // --- THIS IS THE FINAL FIX: Use useState for contracts ---
     const [premiumContentContract, setPremiumContentContract] = useState(null);
     const [usdcContract, setUsdcContract] = useState(null);
-    // --- END OF FIX ---
 
-    // Effect to create contract instances when signer/chain changes
+    // Effect to create contract instances
     useEffect(() => {
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
             if (config?.premiumContentContractAddress) {
-                const pcContract = new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer);
-                setPremiumContentContract(pcContract);
+                setPremiumContentContract(new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer));
             }
             if (config?.usdcTokenAddress) {
-                const usdc = new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer);
-                setUsdcContract(usdc);
+                setUsdcContract(new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer));
             }
         } else {
-            // If signer disconnects, clear the contracts
             setPremiumContentContract(null);
             setUsdcContract(null);
         }
@@ -48,53 +43,139 @@ function BlogPostDetail() {
 
     const contentId = useMemo(() => slug ? ethers.utils.id(slug) : null, [slug]);
 
-    // Main effect to check access
+    // Main effect to load post and check access
     useEffect(() => {
-        if (!isInitialized || !slug) return;
-
-        const loadPostAndCheckAccess = async () => {
-            setPageState('checking');
+        if (!slug) return;
+        
+        let isMounted = true;
+        const loadPost = async () => {
+            if (!isMounted) return;
+            setPageState('loading');
             try {
                 const rawContentModule = await import(`../posts/${slug}.md?raw`);
                 const { data: frontmatter, content: localContent } = matter(rawContentModule.default);
+                if (!isMounted) return;
                 setPostData({ content: localContent, frontmatter });
+                
+                if (frontmatter.premium !== true) {
+                    setPageState('unlocked');
+                } else {
+                    // It's premium, now we need a wallet.
+                    if (!walletAddress) {
+                        setPageState('prompt_connect');
+                    } else {
+                        setPageState('checking_access'); // Go to a new state before the async call
+                    }
+                }
+            } catch (e) {
+                if (isMounted) {
+                    setPageState('error');
+                    setErrorMessage("Post not found.");
+                }
+            }
+        };
+        loadPost();
+        return () => { isMounted = false; }; // Cleanup function
+    }, [slug, isInitialized, walletAddress]); // Re-run if wallet connects
 
-                if (frontmatter.premium === true) {
-                    if (!walletAddress) { setPageState('prompt_connect'); return; }
-                    if (!premiumContentContract || !usdcContract) { setPageState('unsupported_network'); return; }
-                    
+    // A SEPARATE effect to handle the on-chain check AFTER the wallet is connected
+    // and we've determined it's a premium post.
+    useEffect(() => {
+        if (pageState !== 'checking_access' || !walletAddress || !premiumContentContract || !usdcContract) {
+            return;
+        }
+
+        let isMounted = true;
+        const checkAccess = async () => {
+                 try {
                     const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
+                    if (!isMounted) return;
                     if (hasPaid) {
                         await secureFetchContent();
                     } else {
                         const fee = await premiumContentContract.contentPrice();
                         const allowance = await usdcContract.allowance(walletAddress, premiumContentContract.address);
+                        if (!isMounted) return;
                         if (allowance.lt(fee)) {
                             setPageState('needs_approval');
                         } else {
                             setPageState('ready_to_unlock');
                         }
                     }
-                } else {
-                    setPageState('unlocked');
+                } catch (e) {
+                    if (isMounted) {
+                        setPageState('error');
+                        setErrorMessage("Failed to check on-chain access.");
+                    }
                 }
-            } catch (e) {
-                setPageState('error');
-                setErrorMessage("Post not found or failed to load.");
-            }
         };
+        checkAccess();
+        return () => { isMounted = false; };
+    }, [pageState, walletAddress, premiumContentContract, usdcContract, contentId]);
 
-        // Only run this check if the contracts have been initialized
-        loadPostAndCheckAccess();
-       
-    }, [isInitialized, walletAddress, premiumContentContract, usdcContract]); // Re-run when contracts are created
 
     const secureFetchContent = async () => { /* ... same as before ... */ };
     const handleApprove = async () => { /* ... same as before ... */ };
     const handleUnlock = async () => { /* ... same as before ... */ };
 
-    // --- RENDER LOGIC (remains the same) ---
-    // ... (This can be copied from the previous version, including the "Reset" button if desired for debug)
+
+    // --- FINAL, FOOLPROOF RENDER LOGIC ---
+    // This logic is now inside the main component body, not a helper function.
+    
+    // 1. Handle initial loading before we even have frontmatter
+    if (!postData.frontmatter) {
+        if (pageState === 'error') {
+            return <div className="blog-post-page"><div className="blog-post-content-wrapper"><p className="error-message">{errorMessage}</p></div></div>;
+        }
+        return <div className="blog-post-page"><LoadingSpinner message="Loading Post..." /></div>;
+    }
+
+    // 2. If the page state is "unlocked", show the content. This is the success case.
+    if (pageState === 'unlocked') {
+        return (
+            <div className="blog-post-page">
+                <div className="blog-post-content-wrapper">
+                    <h1 className="post-title">{postData.frontmatter.title}</h1>
+                    <p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p>
+                    <div className="post-body-content">
+                        <ReactMarkdown>{postData.content}</ReactMarkdown>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    // 3. If we've gotten here, it means the page is NOT unlocked. It's either a premium paywall or a loading/error state.
+    // This is our default case that will always show something.
+    return (
+        <div className="blog-post-page">
+            <div className="blog-post-content-wrapper">
+                <h1 className="post-title">{postData.frontmatter.title}</h1>
+                <p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p>
+                
+                {/* For premium posts, show the teaser content above the paywall */}
+                {postData.frontmatter.premium === true && (
+                     <div className="post-body-content">
+                        <ReactMarkdown>{postData.content}</ReactMarkdown>
+                    </div>
+                )}
+                
+                <hr style={{margin: "3rem 0"}} />
+
+                <div className="paywall">
+                    <h3>Unlock Full Access</h3>
+                    {pageState === 'loading' && <LoadingSpinner message="Loading..." />}
+                    {pageState === 'checking_access' && <LoadingSpinner message="Verifying access on-chain..." />}
+                    {pageState === 'fetching_secure' && <LoadingSpinner message="Decrypting secure content..." />}
+                    {pageState === 'prompt_connect' && <ConnectWalletButton />}
+                    {pageState === 'unsupported_network' && <p className="error-message">Please switch to a supported network.</p>}
+                    {pageState === 'needs_approval' && <button onClick={handleApprove} className="action-button">1. Approve USDC</button>}
+                    {pageState === 'ready_to_unlock' && <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>}
+                    {pageState === 'error' && <p className="error-message">{errorMessage}</p>}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default BlogPostDetail;
