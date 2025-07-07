@@ -3,17 +3,24 @@ import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import ReactMarkdown from 'react-markdown';
 import matter from 'gray-matter';
+import { useWeb3ModalProvider } from '@web3modal/ethers5/react';
 
 import { WalletContext } from './WalletProvider';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
-import { getTargetChainIdHex } from '../config/contractConfig';
+import { getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
+
+// --- THIS IS THE CRITICAL FIX: The ABIs are now imported here. ---
+import PremiumContentABI from '../config/abis/PremiumContent.json';
+import IERC20_ABI from '../config/abis/IERC20.json';
+// ---
+
 import './BlogPage.css';
 
 const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
 function BlogPostPaywall() {
-    console.log("--- BLOG POST PAYWALL - HYDRATION-SAFE VERSION LOADED ---");
+    console.log("--- BLOG POST PAYWALL - SELF-SUFFICIENT VERSION LOADED ---");
     const { slug } = useParams();
 
     const post = useMemo(() => {
@@ -24,41 +31,35 @@ function BlogPostPaywall() {
         return { slug, frontmatter: data, content };
     }, [slug]);
 
-    const { 
-        walletAddress, chainId, isConnected, isInitialized,
-        premiumContentContract, usdcContract
-    } = useContext(WalletContext);
-
-    const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
+    const { walletAddress, chainId, isConnected } = useContext(WalletContext);
+    const { walletProvider } = useWeb3ModalProvider(); 
     
+    const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
+    const [isClient, setIsClient] = useState(false);
+    useEffect(() => setIsClient(true), []);
 
+    const { premiumContentContract, usdcContract } = useMemo(() => {
+        if (isConnected && walletProvider && chainId) {
+            const provider = new ethers.providers.Web3Provider(walletProvider);
+            const signer = provider.getSigner();
+            const config = getConfigForChainId(chainId);
+            const pcc = config?.premiumContentContractAddress ? new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer) : null;
+            const usdc = config?.usdcTokenAddress ? new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer) : null;
+            return { premiumContentContract: pcc, usdcContract: usdc };
+        }
+        return { premiumContentContract: null, usdcContract: null };
+    }, [isConnected, walletProvider, chainId]);
+    
     const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
 
     useEffect(() => {
-        if (!isInitialized || !post) {
-            setPageState('initializing');
-            return;
-        }
-        
-        if (post.frontmatter.premium !== true) {
-            setPageState('unlocked');
-            return;
-        }
-        if (!isConnected) {
-            setPageState('prompt_connect');
-            return;
-        }
-        if (chainId !== targetChainId) {
-            setPageState('unsupported_network');
-            return;
-        }
-        if (!premiumContentContract || !usdcContract) {
-            setPageState('initializing');
-            return;
-        }
-
+        if (!isClient || !post) { return; }
+        if (post.frontmatter.premium !== true) { setPageState('unlocked'); return; }
+        if (!isConnected) { setPageState('prompt_connect'); return; }
+        if (chainId !== targetChainId) { setPageState('unsupported_network'); return; }
+        if (!premiumContentContract || !usdcContract) { setPageState('initializing'); return; }
         const checkAccess = async () => {
             setPageState('checking_access');
             try {
@@ -71,13 +72,12 @@ function BlogPostPaywall() {
                     setPageState(allowance.lt(fee) ? 'needs_approval' : 'ready_to_unlock');
                 }
             } catch (e) {
-                console.error("Error checking access:", e);
                 setPageState('error');
                 setErrorMessage('Failed to check access. Please refresh.');
             }
         };
         checkAccess();
-    }, [isInitialized, post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
+    }, [isClient, post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
     
     const handleApprove = useCallback(async () => {
         if (!usdcContract || !premiumContentContract) return;
@@ -109,10 +109,9 @@ function BlogPostPaywall() {
     }, [premiumContentContract, contentId]);
 
     const renderPaywallActions = () => {
-        if (!isInitialized) {
+        if (!isClient) {
             return <LoadingSpinner message="Loading..." />;
         }
-
         switch (pageState) {
             case 'prompt_connect':
                 return <div><p>Please connect your wallet to unlock this premium article.</p><ConnectWalletButton /></div>;
@@ -132,11 +131,11 @@ function BlogPostPaywall() {
         }
     };
 
-    if (!post) {
-        return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
+    if (!isClient || !post) {
+        return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading..." /></div></div>;
     }
-
-    if (isInitialized && pageState === 'unlocked') {
+    
+    if (pageState === 'unlocked') {
         return (
             <div className="blog-post-page">
                 <div className="blog-post-content-wrapper">
