@@ -2,7 +2,7 @@
 
 import React, { useContext } from 'react';
 // The import must exactly match the filename, case-sensitively.
-import './WalletStatus.css'; 
+import './WalletStatus.css'; // This line must match the filename exactly.
 import { WalletContext } from '../context/WalletContext.jsx'; // Use explicit path for safety
 
 export default function WalletStatus() {
