@@ -59,3 +59,61 @@
     font-weight: bold;
     text-decoration: none;
 }
+/* Add this to src/pages/BlogPage.css */
+
+.excerpt {
+  position: relative;
+  max-height: 250px;
+  overflow: hidden;
+}
+
+.excerpt-fadeout {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+}
+
+.payment-flow .steps {
+  display: flex;
+  margin-bottom: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.payment-flow .step {
+  flex: 1;
+  padding: 0.75rem;
+  text-align: center;
+  background: #f8f9fa;
+  color: #6c757d;
+  border-right: 1px solid #e0e0e0;
+}
+.payment-flow .step:last-child {
+    border-right: none;
+}
+.payment-flow .step.active {
+  background: #e9ecef;
+  color: #212529;
+  font-weight: bold;
+}
+.payment-flow .step.complete {
+    background: #d4edda;
+    color: #155724;
+}
+
+.wallet-connect-prompt, .network-alert {
+  text-align: center;
+  padding: 2rem;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.small-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 1rem;
+}

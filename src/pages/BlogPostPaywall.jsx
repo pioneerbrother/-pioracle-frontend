@@ -1,18 +1,14 @@
 import React, { useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import matter from 'gray-matter';
 
-// Import our new custom hook and other components
 import { usePaywall } from '../hooks/usePaywall'; 
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
-import './BlogPage.css';
-
-const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
+import './BlogPage.css'; // Make sure to add the new CSS here
 
 function BlogPostPaywall() {
-    console.log("--- BLOG POST PAYWALL - REFACTORED HOOK VERSION ---");
     const { slug } = useParams();
 
     const post = useMemo(() => {
@@ -20,7 +16,7 @@ function BlogPostPaywall() {
         if (!postPath) return null;
         const rawContent = postModules[postPath];
         const { data, content } = matter(rawContent);
-        const excerpt = data.excerpt || content.substring(0, 300) + '...';
+        const excerpt = data.excerpt || content.substring(0, 400) + '...';
         return { slug, frontmatter: data, content, excerpt };
     }, [slug]);
 
@@ -32,33 +28,51 @@ function BlogPostPaywall() {
 }
 
 function PaywallView({ post }) {
-    // All the complex logic is now neatly contained in this one line.
-    const { pageState, errorMessage, price, handleApprove, handleUnlock } = usePaywall(post);
+    const { pageState, errorMessage, price, txStatus, handleApprove, handleUnlock, handleSwitchNetwork } = usePaywall(post);
 
     const renderPaywallActions = () => {
+        if (txStatus?.status === 'pending' || txStatus?.status === 'mined') {
+            return <LoadingSpinner message={txStatus.type === 'approval' ? "Processing Approval..." : "Unlocking Content..."} txHash={txStatus.txHash} />;
+        }
+
         switch (pageState) {
             case 'prompt_connect':
-                return <div><p>This is a premium article. Please connect your wallet to unlock.</p><ConnectWalletButton /></div>;
+                return (
+                    <div className="wallet-connect-prompt">
+                        <h4>Premium Content Locked</h4>
+                        <p>Connect your wallet to unlock this exclusive analysis.</p>
+                        <ConnectWalletButton />
+                        <p className="small-text">You will need USDC on the BNB Chain.</p>
+                    </div>
+                );
             case 'unsupported_network':
-                return <div className="error-message">Please switch your wallet to BNB Mainnet to continue.</div>;
+                return (
+                    <div className="network-alert">
+                        <h4>Wrong Network</h4>
+                        <p>This content is available on the BNB Smart Chain.</p>
+                        <button onClick={handleSwitchNetwork} className="action-button">Switch to BNB Chain</button>
+                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                    </div>
+                );
             case 'needs_approval':
                 return (
-                    <div>
+                    <div className="payment-flow">
+                        <div className="steps"><div className="step active">1. Approve</div><div className="step">2. Unlock</div></div>
                         <p>Unlock this article for **{price?.amount} {price?.symbol}**. First, you must approve spending.</p>
-                        <button onClick={handleApprove} className="action-button">1. Approve {price?.symbol}</button>
+                        <button onClick={handleApprove} className="action-button">Approve {price?.symbol}</button>
                         {errorMessage && <p className="error-message">{errorMessage}</p>}
                     </div>
                 );
             case 'ready_to_unlock':
                 return (
-                    <div>
-                        <p>You have approved spending. You can now unlock the content for **{price?.amount} {price?.symbol}**.</p>
-                        <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>
+                    <div className="payment-flow">
+                        <div className="steps"><div className="step complete">✓</div><div className="step active">2. Unlock</div></div>
+                        <p>Approval successful! You can now unlock the content for **{price?.amount} {price?.symbol}**.</p>
+                        <button onClick={handleUnlock} className="action-button highlight">Unlock Content</button>
                         {errorMessage && <p className="error-message">{errorMessage}</p>}
                     </div>
                 );
-            case 'checking':
-            case 'checking_access':
+            case 'checking': case 'checking_access':
                 return <LoadingSpinner message="Verifying on-chain..." />;
             case 'error':
                 return <p className="error-message">{errorMessage}</p>;
@@ -79,14 +93,15 @@ function PaywallView({ post }) {
         );
     }
     
-    // The "locked" view now shows the excerpt, not the full content.
     return (
         <div className="blog-post-page">
             <div className="blog-post-content-wrapper">
                 <h1 className="post-title">{post.frontmatter.title}</h1>
                 <p className="post-meta">Published on {post.frontmatter.date} by {post.frontmatter.author}</p>
-                <div className="post-body-content"><ReactMarkdown>{post.excerpt}</ReactMarkdown></div>
-                <hr style={{margin: "3rem 0"}} />
+                <div className="post-body-content excerpt">
+                    <ReactMarkdown>{post.excerpt}</ReactMarkdown>
+                    <div className="excerpt-fadeout" />
+                </div>
                 <div className="paywall"><h3>Unlock Full Access</h3>{renderPaywallActions()}</div>
             </div>
         </div>
