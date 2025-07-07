@@ -25,7 +25,7 @@ function BlogPostPaywall() {
     }, [slug]);
 
     const { 
-        walletAddress, chainId, isConnected, isInitialized, // <-- Use the new isInitialized flag
+        walletAddress, chainId, isConnected, isInitialized,
         premiumContentContract, usdcContract
     } = useContext(WalletContext);
 
@@ -37,7 +37,6 @@ function BlogPostPaywall() {
     const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
 
     useEffect(() => {
-        // Guard: Don't run ANY logic until the WalletProvider is mounted and initialized.
         if (!isInitialized || !post) {
             setPageState('initializing');
             return;
@@ -78,7 +77,6 @@ function BlogPostPaywall() {
             }
         };
         checkAccess();
-    // Depend on `isInitialized` to re-run the logic once the provider is ready.
     }, [isInitialized, post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
     
     const handleApprove = useCallback(async () => {
@@ -111,8 +109,6 @@ function BlogPostPaywall() {
     }, [premiumContentContract, contentId]);
 
     const renderPaywallActions = () => {
-        // During the initial server render and hydration phase, `isInitialized` will be false.
-        // We MUST render a loading state here to guarantee a match with the server.
         if (!isInitialized) {
             return <LoadingSpinner message="Loading..." />;
         }
@@ -131,7 +127,7 @@ function BlogPostPaywall() {
                 return <LoadingSpinner message="Verifying on-chain..." />;
             case 'error':
                 return <p className="error-message">{errorMessage}</p>;
-            default: // Catches 'initializing'
+            default:
                 return <LoadingSpinner message="Loading..." />;
         }
     };
@@ -140,7 +136,6 @@ function BlogPostPaywall() {
         return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
     }
 
-    // Only render the full unlocked content once we are on the client and the state is 'unlocked'.
     if (isInitialized && pageState === 'unlocked') {
         return (
             <div className="blog-post-page">
