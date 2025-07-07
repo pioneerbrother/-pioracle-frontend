@@ -274,6 +274,9 @@
     color: #d32f2f;
     margin-top: 1rem;
 }
+.paywall {
+    text-align: center; /* This will center the button and all other content inside */
+}
 
 /* Not found state */
 .not-found {

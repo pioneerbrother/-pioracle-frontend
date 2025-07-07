@@ -10,9 +10,9 @@ const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true }
 const posts = Object.entries(postModules).map(([path, rawContent]) => {
     const { data } = matter(rawContent);
     const slug = path.split('/').pop().replace('.md', '');
-    if (!data.title) return null;
-    return { slug, title: data.title, date: data.date || 'No Date' };
-}).filter(Boolean).sort((a, b) => new Date(b.date) - new Date(a.date));
+    return { slug, frontmatter: data };
+}).filter(post => post.frontmatter.title)
+  .sort((a, b) => new Date(b.frontmatter.date) - new Date(a.frontmatter.date));
 
 function BlogPage() {
     return (
@@ -22,9 +22,10 @@ function BlogPage() {
             <div className="post-list">
                 {posts.map(post => (
                     <div key={post.slug} className="post-list-item">
-                        <Link to={`/blog/${post.slug}`}>
-                            <h2>{post.title}</h2>
-                            <p className="post-meta">Published on {post.date}</p>
+                        {/* --- THIS LINK IS NOW UNAMBIGUOUS --- */}
+                        <Link to={`/posts/${post.slug}`}>
+                            <h2>{post.frontmatter.title}</h2>
+                            <p className="post-meta">Published on {post.frontmatter.date}</p>
                             <span className="read-more">Read More →</span>
                         </Link>
                     </div>

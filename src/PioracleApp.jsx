@@ -3,23 +3,23 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-// Core Application Wrapper
-import { WalletProvider } from './pages/WalletProvider'; 
+import { WalletProvider } from './pages/WalletProvider.jsx'; 
+import Header from './components/common/Header.jsx'; 
+import Footer from './components/common/Footer.jsx';
+import WalletStatus from './components/WalletStatus.jsx';
 
-// Layout Components
-import Header from './components/common/Header'; 
-import Footer from './components/common/Footer';
-import WalletStatus from './components/WalletStatus'; // <-- IMPORT YOUR DEBUG COMPONENT
+// Import all your page components with their full file extensions.
+import PredictionMarketsListPage from './pages/PredictionMarketsListPage.jsx';
+import CreateMarketPage from './pages/CreateMarketPage.jsx';
+import RecentlyResolvedPage from './pages/RecentlyResolvedPage.jsx';
+import MyPredictionsPage from './pages/MyPredictionsPage.jsx';
+import GuidePage from './pages/GuidePage.jsx';
+import TippingPage from './pages/TippingPage.jsx';
+import MarketDetailPage from './pages/MarketDetailPage.jsx';
 
-// Page Components
-import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
-import CreateMarketPage from './pages/CreateMarketPage';
-import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
-import MyPredictionsPage from './pages/MyPredictionsPage';
-import GuidePage from './pages/GuidePage';
-import TippingPage from './pages/TippingPage';
-import MarketDetailPage from './pages/MarketDetailPage';
-import Blog from './pages/Blog'; // Your unified blog component
+// --- Import the two separate, simple blog components ---
+import BlogPage from './pages/BlogPage.jsx';
+import BlogPostPaywall from './pages/BlogPostPaywall.jsx';
 
 function PioracleApp() {
   return (
@@ -29,7 +29,7 @@ function PioracleApp() {
           <Header />
           <main>
             <Routes>
-              {/* === ALL YOUR OTHER PAGES RESTORED === */}
+              {/* === ALL YOUR OTHER PAGES === */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
@@ -39,16 +39,15 @@ function PioracleApp() {
               <Route path="/guide" element={<GuidePage />} />
               <Route path="/tip-jar" element={<TippingPage />} />
 
-              {/* === THE CORRECTED BLOG ROUTES === */}
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<Blog />} />
+              {/* ======================================================== */}
+              {/* === THE FINAL, UNAMBIGUOUS BLOG ROUTING === */}
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/posts/:slug" element={<BlogPostPaywall />} />
+              {/* ======================================================== */}
               
             </Routes>
           </main>
           <Footer />
-          
-          {/* === ADD YOUR DEBUG COMPONENT HERE === */}
-          {/* It will be visible on all pages, floating at the bottom right */}
           <WalletStatus />
         </div>
       </Router>
