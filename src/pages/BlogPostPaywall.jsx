@@ -12,21 +12,17 @@ import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
 import './BlogPage.css';
 
-// This logic for finding the post is correct.
+// This logic for finding all posts remains the same.
 const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
+// ======================================================================
+// === LOADER COMPONENT: Its only job is to find the correct post. ===
+// ======================================================================
 function BlogPostPaywall() {
-    console.log("--- BLOG POST PAYWALL - UNIFIED COMPONENT LOADED ---");
+    console.log("--- BLOG POST PAYWALL (LOADER) - FINAL ARCHITECTURE LOADED ---");
     const { slug } = useParams();
 
-    // --- All logic is now inside ONE component ---
-    const { walletAddress, chainId, isConnected, walletProvider } = useContext(WalletContext);
-    const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
-
-    const [pageState, setPageState] = useState('initializing');
-    const [errorMessage, setErrorMessage] = useState('');
-
-    // Load post data using useMemo to do it only once per slug
+    // useMemo ensures this logic runs only when the slug changes.
     const post = useMemo(() => {
         const path = `../posts/${slug}.md`;
         const rawContent = postModules[path];
@@ -35,7 +31,26 @@ function BlogPostPaywall() {
         return { slug, frontmatter: data, content };
     }, [slug]);
 
-    // Memoize contract instances to prevent re-creation on every render
+    if (!post) {
+        return <div className="page-container"><h1>Post not found</h1></div>;
+    }
+
+    // Pass the stable 'post' object to the view component.
+    return <PaywallView post={post} />;
+}
+
+
+// ======================================================================
+// === VIEW COMPONENT: Its only job is to handle UI and wallet logic. ===
+// ======================================================================
+function PaywallView({ post }) {
+    console.log("--- PAYWALL VIEW - FINAL ARCHITECTURE LOADED ---");
+    const { walletAddress, chainId, isConnected, walletProvider } = useContext(WalletContext);
+    const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
+    
+    const [pageState, setPageState] = useState('initializing');
+    const [errorMessage, setErrorMessage] = useState('');
+
     const { premiumContentContract, usdcContract } = useMemo(() => {
         if (isConnected && walletProvider && chainId) {
             const provider = new ethers.providers.Web3Provider(walletProvider);
@@ -48,19 +63,15 @@ function BlogPostPaywall() {
         return { premiumContentContract: null, usdcContract: null };
     }, [isConnected, walletProvider, chainId]);
     
-    const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
+    const contentId = useMemo(() => ethers.utils.id(post.slug), [post.slug]);
 
-    // The Master State Machine Effect
+    // This is the stable, final state machine.
     useEffect(() => {
-        if (!post) { // If post is still loading or not found, do nothing.
-            setPageState('initializing');
-            return;
-        }
         if (post.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
         }
-        if (!isConnected) { // This now works because the WalletProvider is stable
+        if (!isConnected) {
             setPageState('prompt_connect');
             return;
         }
@@ -69,7 +80,7 @@ function BlogPostPaywall() {
             return;
         }
         if (!premiumContentContract || !usdcContract) {
-            setPageState('initializing'); // Waiting for contracts to be created
+            setPageState('initializing');
             return;
         }
 
@@ -92,13 +103,34 @@ function BlogPostPaywall() {
         checkAccess();
     }, [post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
     
-    const handleApprove = useCallback(async () => { /* ... (Your existing logic is fine) ... */ }, [usdcContract, premiumContentContract]);
-    const handleUnlock = useCallback(async () => { /* ... (Your existing logic is fine) ... */ }, [premiumContentContract, contentId]);
-
-    // --- Render Logic ---
-    if (!post) {
-        return <div className="page-container"><h1>Loading Post...</h1></div>;
-    }
+    const handleApprove = useCallback(async () => {
+        if (!usdcContract || !premiumContentContract) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const fee = await premiumContentContract.contentPrice();
+            const tx = await usdcContract.approve(premiumContentContract.address, fee);
+            await tx.wait();
+            setPageState('ready_to_unlock');
+        } catch(e) {
+            setErrorMessage(`Approval failed. ${e.reason || 'Transaction rejected.'}`);
+            setPageState('needs_approval');
+        }
+    }, [usdcContract, premiumContentContract]);
+    
+    const handleUnlock = useCallback(async () => {
+        if (!premiumContentContract || !contentId) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await premiumContentContract.purchaseContent(contentId);
+            await tx.wait();
+            setPageState('unlocked');
+        } catch(e) {
+            setErrorMessage(`Unlock failed. ${e.reason || 'Transaction rejected.'}`);
+            setPageState('ready_to_unlock');
+        }
+    }, [premiumContentContract, contentId]);
 
     const renderPaywallActions = () => {
         switch (pageState) {
