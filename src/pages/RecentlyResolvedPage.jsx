@@ -1,7 +1,7 @@
 // src/pages/RecentlyResolvedPage.jsx
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { WalletContext } from './WalletProvider'; 
+
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
