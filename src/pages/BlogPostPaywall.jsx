@@ -25,21 +25,11 @@ function BlogPostPaywall() {
     }, [slug]);
 
     const { 
-        walletAddress, chainId, isConnected,
+        walletAddress, chainId, isConnected, isInitialized, // <-- Use the new isInitialized flag
         premiumContentContract, usdcContract
     } = useContext(WalletContext);
 
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
-    
-    // --- THIS IS THE HYDRATION FIX ---
-    // 1. We start a new state `isClient` as false.
-    const [isClient, setIsClient] = useState(false);
-    
-    // 2. This effect runs only ONCE on the client, AFTER the initial render.
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-    // --- END OF HYDRATION FIX ---
     
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
@@ -47,9 +37,8 @@ function BlogPostPaywall() {
     const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
 
     useEffect(() => {
-        // Guard: Don't run ANY logic until the client has mounted.
-        // This ensures the server render and initial client render are identical.
-        if (!isClient || !post) {
+        // Guard: Don't run ANY logic until the WalletProvider is mounted and initialized.
+        if (!isInitialized || !post) {
             setPageState('initializing');
             return;
         }
@@ -89,8 +78,8 @@ function BlogPostPaywall() {
             }
         };
         checkAccess();
-    // Depend on `isClient` to re-run the logic once the client is ready.
-    }, [isClient, post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
+    // Depend on `isInitialized` to re-run the logic once the provider is ready.
+    }, [isInitialized, post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
     
     const handleApprove = useCallback(async () => {
         if (!usdcContract || !premiumContentContract) return;
@@ -122,9 +111,9 @@ function BlogPostPaywall() {
     }, [premiumContentContract, contentId]);
 
     const renderPaywallActions = () => {
-        // Guard: If we're not on the client yet, we MUST render the same thing as the server.
-        // In this case, that's the "Connect Wallet" button, but in a disabled/loading state.
-        if (!isClient) {
+        // During the initial server render and hydration phase, `isInitialized` will be false.
+        // We MUST render a loading state here to guarantee a match with the server.
+        if (!isInitialized) {
             return <LoadingSpinner message="Loading..." />;
         }
 
@@ -151,7 +140,8 @@ function BlogPostPaywall() {
         return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
     }
 
-    if (pageState === 'unlocked' && isClient) {
+    // Only render the full unlocked content once we are on the client and the state is 'unlocked'.
+    if (isInitialized && pageState === 'unlocked') {
         return (
             <div className="blog-post-page">
                 <div className="blog-post-content-wrapper">
