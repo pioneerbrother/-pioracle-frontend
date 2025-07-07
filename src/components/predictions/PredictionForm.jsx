@@ -1,7 +1,7 @@
 // src/components/predictions/PredictionForm.jsx
 import React, { useState, useContext } from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from '../../pages/WalletProvider';
+
 import './PredictionForm.css'; // Make sure this import is here
 
 function PredictionForm({
