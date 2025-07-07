@@ -12,7 +12,7 @@ import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
 import './BlogPostPage.css';
 
-function BlogPostDetail() {
+function BlogPostPaywall() {
     const { slug } = useParams();
     const { walletAddress, chainId, signer } = useContext(WalletContext);
 
@@ -137,4 +137,4 @@ function BlogPostDetail() {
     return (<div className="blog-post-page"><div className="blog-post-content-wrapper"><h1 className="post-title">{postData.frontmatter.title}</h1><p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p><div className="post-body-content"><ReactMarkdown>{postData.content}</ReactMarkdown></div><hr style={{margin: "3rem 0"}} /><div className="paywall"><h3>Unlock Full Access</h3>{renderPaywallActions()}</div></div></div>);
 }
 
-export default BlogPostDetail;
+export default BlogPostPaywall;

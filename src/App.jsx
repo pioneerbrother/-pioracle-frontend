@@ -20,8 +20,9 @@ import BlogPostPage from './pages/BlogPostPage'; // For regular, free posts
 import GuidePage from './pages/GuidePage';
 import MarketDetailLoader from './pages/MarketDetailLoader';
 import TippingPage from './pages/TippingPage'; // For the Tip Jar / Host Hub
-import BlogPostDetail from './pages/BlogPostDetail'; // Your NEW detail/paywall page
+import BlogPostDetail from './pages/BlogPostPaywall'; // Your NEW detail/paywall page
 import MarketDetailPage from './pages/MarketDetailPage';
+import BlogPostPaywall from './pages/BlogPostPaywall';
 
 function App() {
   return (
@@ -51,7 +52,7 @@ function App() {
               {/* Route 2: Shows the detail page for ANY post. */}
               {/* It renders our smart BlogPostDetail component, which will */}
               {/* check for the 'premium' flag and handle the paywall. */}
-              <Route path="/blog/:slug" element={<BlogPostDetail />} />
+              <Route path="/blog/:slug" element={<BlogPostPaywall />} />
               {/* ======================================================== */}
 
              
