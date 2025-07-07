@@ -9,7 +9,6 @@ import { WalletProvider } from './pages/WalletProvider';
 // Layout Components
 import Header from './components/common/Header'; 
 import Footer from './components/common/Footer';
-// We no longer need BlogLayout
 
 // Page Components
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
@@ -17,7 +16,7 @@ import CreateMarketPage from './pages/CreateMarketPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
 import BlogPage from './pages/BlogPage';
-import BlogPostPaywall from './pages/BlogPostPaywall'; // Using the renamed component
+import BlogPostPaywall from './pages/BlogPostPaywall'; // Assuming you renamed the file
 import GuidePage from './pages/GuidePage';
 import TippingPage from './pages/TippingPage';
 import MarketDetailPage from './pages/MarketDetailPage';
@@ -41,11 +40,13 @@ function App() {
               <Route path="/tip-jar" element={<TippingPage />} />
 
               {/* ======================================================== */}
-              {/* --- THIS IS THE FINAL, SIMPLIFIED BLOG ROUTING --- */}
-              {/* The router is smart enough to pick the most specific path first. */}
+              {/* --- THIS IS THE FINAL, ISOLATED BLOG ROUTING --- */}
               
-              <Route path="/blog/:slug" element={<BlogPostPaywall />} />
+              {/* This route handles the blog list page at "/blog" */}
               <Route path="/blog" element={<BlogPage />} />
+
+              {/* This is the new, completely separate route for reading a post */}
+              <Route path="/read/:slug" element={<BlogPostPaywall />} />
               
               {/* ======================================================== */}
               
@@ -59,5 +60,4 @@ function App() {
 }
 
 export default App;
-
 
