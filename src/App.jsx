@@ -1,4 +1,5 @@
 // src/App.jsx
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
@@ -8,7 +9,7 @@ import { WalletProvider } from './pages/WalletProvider';
 // Layout Components
 import Header from './components/common/Header'; 
 import Footer from './components/common/Footer';
-import BlogLayout from './pages/BlogLayout'; // <-- IMPORT THE NEW LAYOUT
+// We no longer need BlogLayout
 
 // Page Components
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
@@ -16,13 +17,10 @@ import CreateMarketPage from './pages/CreateMarketPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
 import BlogPage from './pages/BlogPage';
-import BlogPostPage from './pages/BlogPostPage'; // For regular, free posts
+import BlogPostPaywall from './pages/BlogPostPaywall'; // Using the renamed component
 import GuidePage from './pages/GuidePage';
-import MarketDetailLoader from './pages/MarketDetailLoader';
-import TippingPage from './pages/TippingPage'; // For the Tip Jar / Host Hub
-import BlogPostDetail from './pages/BlogPostPaywall'; // Your NEW detail/paywall page
+import TippingPage from './pages/TippingPage';
 import MarketDetailPage from './pages/MarketDetailPage';
-import BlogPostPaywall from './pages/BlogPostPaywall';
 
 function App() {
   return (
@@ -32,7 +30,7 @@ function App() {
           <Header />
           <main>
             <Routes>
-              {/* --- Core App Routes --- */}
+              {/* --- Core App Routes (Unchanged) --- */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
@@ -41,26 +39,16 @@ function App() {
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/guide" element={<GuidePage />} />
               <Route path="/tip-jar" element={<TippingPage />} />
-              {/* Note: /hosts might be a better name for the Tip Jar page route */}
-              {/* <Route path="/hosts" element={<HostPage />} /> */}
-               {/* ======================================================== */}
-              {/* --- THIS IS THE CORRECTED BLOG ROUTING LOGIC --- */}
-              {/* Route 1: Shows the list of all posts. */}
-              <Route path="/blog" element={<BlogLayout />} />
-               <Route index element={<BlogPage />} />
 
-              {/* Route 2: Shows the detail page for ANY post. */}
-              {/* It renders our smart BlogPostDetail component, which will */}
-              {/* check for the 'premium' flag and handle the paywall. */}
-              <Route path="/blog/:slug" element={<BlogPostPaywall />} />
               {/* ======================================================== */}
-
-             
-
-        
-
-
-
+              {/* --- THIS IS THE FINAL, SIMPLIFIED BLOG ROUTING --- */}
+              {/* The router is smart enough to pick the most specific path first. */}
+              
+              <Route path="/blog/:slug" element={<BlogPostPaywall />} />
+              <Route path="/blog" element={<BlogPage />} />
+              
+              {/* ======================================================== */}
+              
             </Routes>
           </main>
           <Footer />
@@ -71,4 +59,5 @@ function App() {
 }
 
 export default App;
+
 
