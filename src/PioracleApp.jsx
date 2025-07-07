@@ -2,26 +2,22 @@
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
-// Core Application Wrapper
-import { WalletProvider } from './pages/WalletProvider'; 
-
-// Layout Components
-import Header from './components/common/Header'; 
+import { WalletProvider } from './pages/WalletProvider';
+import Header from './components/common/Header';
 import Footer from './components/common/Footer';
 
-// Page Components
+// --- IMPORT ALL YOUR PAGE COMPONENTS ---
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
+import MarketDetailPage from './pages/MarketDetailPage';
 import CreateMarketPage from './pages/CreateMarketPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
 import GuidePage from './pages/GuidePage';
 import TippingPage from './pages/TippingPage';
-import MarketDetailPage from './pages/MarketDetailPage';
-import Blog from './pages/Blog'; // The new unified blog component
+import BlogPage from './pages/BlogPage';
+import BlogPostPaywall from './pages/BlogPostPaywall'; // Ensure you have this file
 
 function PioracleApp() {
-  console.log("--- PIORACLE APP (RENAMED) - FINAL ROUTING LOADED ---");
   return (
     <WalletProvider>
       <Router>
@@ -29,7 +25,7 @@ function PioracleApp() {
           <Header />
           <main>
             <Routes>
-              {/* === ALL YOUR OTHER PAGES RESTORED === */}
+              {/* === CORE APP ROUTES (UNCHANGED) === */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
@@ -40,11 +36,16 @@ function PioracleApp() {
               <Route path="/tip-jar" element={<TippingPage />} />
 
               {/* ======================================================== */}
-              {/* === THIS IS THE FINAL, CORRECTED BLOG ROUTING --- */}
-              {/* This tells the router that all URLs STARTING WITH /blog should be handled by the Blog component */}
-              <Route path="/blog/*" element={<Blog />} />
-              {/* ======================================================== */}
+              {/* === THIS IS THE FINAL, CORRECTED BLOG ROUTING === */}
               
+              {/* This route handles the blog list page at "/blog" */}
+              <Route path="/blog" element={<BlogPage />} />
+
+              {/* This route handles the detail/paywall page at "/read/:slug" */}
+              {/* This now matches the links in your BlogPage.jsx file */}
+              <Route path="/read/:slug" element={<BlogPostPaywall />} />
+              
+              {/* ======================================================== */}
             </Routes>
           </main>
           <Footer />
