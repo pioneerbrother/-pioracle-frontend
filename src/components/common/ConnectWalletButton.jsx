@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { WalletContext } from '../../pages/WalletProvider';
+
 import './ConnectWalletButton.css';
 
 function ConnectWalletButton() {
