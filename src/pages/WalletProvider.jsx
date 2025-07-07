@@ -87,7 +87,8 @@ export function WalletProvider({ children }) {
     }, [setupReadOnlyState]);
 
     const connectWallet = useCallback(() => web3Modal.open(), []);
-    const disconnectWallet = useCallback(() => web3Modal.disconnect(), []);
+    const disconnectWallet = useCallback(() => web3Modal.clearState(), []);
+
 
     const contextValue = useMemo(() => ({ ...connectionState, connectWallet, disconnectWallet }), [connectionState, connectWallet, disconnectWallet]);
 
