@@ -16,10 +16,7 @@ function BlogPostDetail() {
     const { slug } = useParams();
     const { walletAddress, chainId, signer, isInitialized, provider } = useContext(WalletContext);
 
-    // --- ADD THIS CONSOLE LOG ---
-    console.log('BlogPostDetail Rendered/Re-rendered. Wallet Address:', walletAddress, 'Chain ID:', chainId, 'isInitialized:', isInitialized, 'Current PageState:', pageState);
-    // --- END ADD ---
-
+    // Declare all state variables first
     const [postData, setPostData] = useState({ content: '', frontmatter: null });
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
@@ -28,11 +25,17 @@ function BlogPostDetail() {
     const [premiumContentContract, setPremiumContentContract] = useState(null);
     const [usdcContract, setUsdcContract] = useState(null);
 
+    // --- MOVE THE CONSOLE LOG HERE, AFTER ALL STATE DECLARATIONS ---
+    console.log('BlogPostDetail Rendered/Re-rendered. Wallet Address:', walletAddress, 'Chain ID:', chainId, 'isInitialized:', isInitialized, 'Current PageState:', pageState);
+    // --- END MOVE ---
+
+    // ... rest of your component code (useEffect, useCallback, etc.)
+    // All other console.logs you added should be fine as they are within useEffects or callbacks,
+    // which execute after the initial render and state declarations.
+
     // Effect to initialize contracts when signer or chainId changes
     useEffect(() => {
-        // --- ADD THIS CONSOLE LOG ---
         console.log('BlogPostDetail: Contract Init Effect. Signer:', !!signer, 'Chain ID:', chainId);
-        // --- END ADD ---
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
             if (config?.premiumContentContractAddress) {
@@ -55,9 +58,7 @@ function BlogPostDetail() {
 
     // Effect to load post content and determine initial paywall state
     useEffect(() => {
-        // --- ADD THIS CONSOLE LOG ---
         console.log('BlogPostDetail: Load Post Effect. Slug:', slug, 'Wallet Address:', walletAddress, 'isInitialized:', isInitialized);
-        // --- END ADD ---
         if (!slug) return;
 
         let isMounted = true;
@@ -72,20 +73,14 @@ function BlogPostDetail() {
 
                 // Determine initial state based on premium status and wallet connection
                 if (frontmatter.premium !== true) {
-                    // --- ADD THIS CONSOLE LOG ---
                     console.log('BlogPostDetail: Post is NOT premium. Setting pageState to unlocked.');
-                    // --- END ADD ---
                     setPageState('unlocked');
                 } else {
                     if (!walletAddress) {
-                        // --- ADD THIS CONSOLE LOG ---
                         console.log('BlogPostDetail: Post is premium, wallet NOT connected. Setting pageState to prompt_connect.');
-                        // --- END ADD ---
                         setPageState('prompt_connect');
                     } else {
-                        // --- ADD THIS CONSOLE LOG ---
                         console.log('BlogPostDetail: Post is premium, wallet IS connected. Setting pageState to checking_access.');
-                        // --- END ADD ---
                         setPageState('checking_access');
                     }
                 }
@@ -114,15 +109,11 @@ function BlogPostDetail() {
 
     // Effect to check on-chain access and allowance
     useEffect(() => {
-        // --- ADD THIS CONSOLE LOG ---
         console.log('BlogPostDetail: Access Check Effect. Current PageState:', pageState, 'Wallet:', walletAddress, 'Premium Content Contract:', !!premiumContentContract, 'USDC Contract:', !!usdcContract, 'Content ID:', contentId, 'Is Premium Post:', postData.frontmatter?.premium);
-        // --- END ADD ---
 
         if (!postData.frontmatter?.premium || !premiumContentContract || !usdcContract || !walletAddress || !contentId) {
             if (postData.frontmatter?.premium && !walletAddress && pageState !== 'prompt_connect') {
-                // --- ADD THIS CONSOLE LOG ---
                 console.log('BlogPostDetail: Access Check Effect - Premium post, no wallet, not prompt_connect. Setting to prompt_connect.');
-                // --- END ADD ---
                 setPageState('prompt_connect');
             }
             return;
@@ -130,9 +121,7 @@ function BlogPostDetail() {
 
         if (pageState !== 'checking_access' && pageState !== 'needs_approval' && pageState !== 'ready_to_unlock') {
             if (walletAddress && postData.frontmatter?.premium && pageState !== 'fetching_secure' && pageState !== 'unlocked') {
-                 // --- ADD THIS CONSOLE LOG ---
                  console.log('BlogPostDetail: Access Check Effect - Wallet connected, premium post, not final state. Setting to checking_access.');
-                 // --- END ADD ---
                  setPageState('checking_access');
             } else {
                 return;
@@ -141,18 +130,14 @@ function BlogPostDetail() {
 
         let isMounted = true;
         const checkAccess = async () => {
-            // --- ADD THIS CONSOLE LOG ---
             console.log('BlogPostDetail: Running checkAccess function...');
-            // --- END ADD ---
             setPageState('checking_access');
             try {
                 const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
                 if (!isMounted) return;
 
                 if (hasPaid) {
-                    // --- ADD THIS CONSOLE LOG ---
                     console.log('BlogPostDetail: User has paid. Fetching secure content.');
-                    // --- END ADD ---
                     await secureFetchContent();
                 } else {
                     const fee = await premiumContentContract.contentPrice();
@@ -161,14 +146,10 @@ function BlogPostDetail() {
                     if (!isMounted) return;
 
                     if (allowance.lt(fee)) {
-                        // --- ADD THIS CONSOLE LOG ---
                         console.log('BlogPostDetail: Needs approval. Setting pageState to needs_approval. Allowance:', allowance.toString(), 'Fee:', fee.toString());
-                        // --- END ADD ---
                         setPageState('needs_approval');
                     } else {
-                        // --- ADD THIS CONSOLE LOG ---
                         console.log('BlogPostDetail: Ready to unlock. Setting pageState to ready_to_unlock. Allowance:', allowance.toString(), 'Fee:', fee.toString());
-                        // --- END ADD ---
                         setPageState('ready_to_unlock');
                     }
                 }
@@ -188,9 +169,6 @@ function BlogPostDetail() {
         return () => { isMounted = false; };
     }, [walletAddress, premiumContentContract, usdcContract, contentId, postData.frontmatter, secureFetchContent, pageState]);
 
-    // ... rest of the component (handleApprove, handleUnlock, renderPaywallActions, etc.)
-    // No changes needed in handleApprove, handleUnlock, renderPaywallActions for this debugging step.
-    // ...
     const handleApprove = useCallback(async () => {
         if (!usdcContract || !premiumContentContract || !contentPrice.gt(0)) {
             setErrorMessage("Contracts not ready or content price not loaded.");
@@ -202,13 +180,9 @@ function BlogPostDetail() {
         setErrorMessage('');
         try {
             const tx = await usdcContract.approve(premiumContentContract.address, contentPrice);
-            // --- ADD THIS CONSOLE LOG ---
             console.log('BlogPostDetail: Approve TX sent:', tx.hash);
-            // --- END ADD ---
             await tx.wait();
-            // --- ADD THIS CONSOLE LOG ---
             console.log('BlogPostDetail: Approve TX confirmed.');
-            // --- END ADD ---
             setPageState('ready_to_unlock');
         } catch (e) {
             console.error("Error approving USDC:", e);
@@ -228,13 +202,9 @@ function BlogPostDetail() {
         setErrorMessage('');
         try {
             const tx = await premiumContentContract.purchaseContent(contentId);
-            // --- ADD THIS CONSOLE LOG ---
             console.log('BlogPostDetail: Unlock TX sent:', tx.hash);
-            // --- END ADD ---
             await tx.wait();
-            // --- ADD THIS CONSOLE LOG ---
             console.log('BlogPostDetail: Unlock TX confirmed.');
-            // --- END ADD ---
             await secureFetchContent();
         } catch (e) {
             console.error("Error unlocking content:", e);
