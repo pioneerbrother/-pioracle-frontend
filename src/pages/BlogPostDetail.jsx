@@ -13,6 +13,10 @@ import IERC20_ABI from '../config/abis/IERC20.json';
 import './BlogPostPage.css';
 
 function BlogPostDetail() {
+   // --- ADD THIS LINE ---
+    console.log("--- BLOG POST DETAIL - LATEST VERSION LOADED ---");
+    // --- END OF ADDITION   
+
     const { slug } = useParams();
     const { walletAddress, chainId, signer, isInitialized } = useContext(WalletContext);
 
