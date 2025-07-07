@@ -9,24 +9,23 @@ import { WalletContext } from './WalletProvider';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
 import { getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
-
-// --- THIS IS THE CRITICAL FIX: The ABIs are now imported here. ---
 import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
-// ---
-
 import './BlogPage.css';
 
 const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
 function BlogPostPaywall() {
-    console.log("--- BLOG POST PAYWALL - SELF-SUFFICIENT VERSION LOADED ---");
+    console.log("--- BLOG POST PAYWALL - ROBUST POST-FINDING VERSION LOADED ---");
     const { slug } = useParams();
 
+    // --- THIS IS THE ROBUST FIX for finding the post ---
     const post = useMemo(() => {
-        const path = `../posts/${slug}.md`;
-        const rawContent = postModules[path];
-        if (!rawContent) return null;
+        // Find the path that ends with the slug. This is resilient to build changes.
+        const postPath = Object.keys(postModules).find(path => path.endsWith(`${slug}.md`));
+        if (!postPath) return null;
+
+        const rawContent = postModules[postPath];
         const { data, content } = matter(rawContent);
         return { slug, frontmatter: data, content };
     }, [slug]);
@@ -55,11 +54,26 @@ function BlogPostPaywall() {
     const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
 
     useEffect(() => {
-        if (!isClient || !post) { return; }
-        if (post.frontmatter.premium !== true) { setPageState('unlocked'); return; }
-        if (!isConnected) { setPageState('prompt_connect'); return; }
-        if (chainId !== targetChainId) { setPageState('unsupported_network'); return; }
-        if (!premiumContentContract || !usdcContract) { setPageState('initializing'); return; }
+        if (!isClient || !post) {
+            setPageState('initializing');
+            return;
+        }
+        if (post.frontmatter.premium !== true) {
+            setPageState('unlocked');
+            return;
+        }
+        if (!isConnected) {
+            setPageState('prompt_connect');
+            return;
+        }
+        if (chainId !== targetChainId) {
+            setPageState('unsupported_network');
+            return;
+        }
+        if (!premiumContentContract || !usdcContract) {
+            setPageState('initializing');
+            return;
+        }
         const checkAccess = async () => {
             setPageState('checking_access');
             try {
@@ -72,6 +86,7 @@ function BlogPostPaywall() {
                     setPageState(allowance.lt(fee) ? 'needs_approval' : 'ready_to_unlock');
                 }
             } catch (e) {
+                console.error("Error checking access:", e);
                 setPageState('error');
                 setErrorMessage('Failed to check access. Please refresh.');
             }
@@ -132,6 +147,10 @@ function BlogPostPaywall() {
     };
 
     if (!isClient || !post) {
+        // Show a more specific message if the post can't be found after client loads
+        if (isClient && !post) {
+            return <div className="page-container"><h1>404 - Post Not Found</h1><p>The post with this URL could not be located.</p></div>;
+        }
         return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading..." /></div></div>;
     }
     
