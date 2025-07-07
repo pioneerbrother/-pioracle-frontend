@@ -6,47 +6,39 @@ import { ethers } from 'ethers';
 import ReactMarkdown from 'react-markdown';
 import matter from 'gray-matter';
 
-// --- Import all your context and components ---
 import { WalletContext } from './WalletProvider';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
 import { getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
 import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
-import './BlogPage.css'; // You can reuse your existing CSS
+import './BlogPage.css';
 
-// --- VITE GLOB IMPORT (This stays the same) ---
+// --- VITE GLOB IMPORT ---
 const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
 const allPosts = Object.entries(postModules).map(([path, rawContent]) => {
-    const { data } = matter(rawContent);
+    const { data, content } = matter(rawContent);
     const slug = path.split('/').pop().replace('.md', '');
-    return {
-        slug,
-        frontmatter: data,
-        content: matter(rawContent).content, // Keep the content for the detail view
-    };
+    return { slug, frontmatter: data, content };
 }).filter(post => post.frontmatter.title)
   .sort((a, b) => new Date(b.frontmatter.date) - new Date(a.frontmatter.date));
 
 
 // ======================================================================
-// === THE NEW, UNIFIED BLOG COMPONENT ==================================
+// === THE UNIFIED BLOG COMPONENT =======================================
 // ======================================================================
 function Blog() {
-    const { slug } = useParams(); // This will be undefined on /blog, and have a value on /blog/:slug
+    const { slug } = useParams();
 
-    // If a slug exists in the URL, render the detail/paywall view
     if (slug) {
         const post = allPosts.find(p => p.slug === slug);
         if (!post) {
             return <div className="page-container"><h1>Post not found</h1></div>;
         }
-        // Render the detail view component, passing the post data
         return <BlogPostDetailView post={post} />;
     }
 
-    // If no slug exists, render the list view
     return (
         <div className="page-container blog-page">
             <h1>PiOracle Insights</h1>
@@ -67,17 +59,16 @@ function Blog() {
 }
 
 // ======================================================================
-// === THE PAYWALL LOGIC, NOW AS A DEDICATED SUB-COMPONENT =============
+// === THE PAYWALL LOGIC SUB-COMPONENT ==================================
 // ======================================================================
 function BlogPostDetailView({ post }) {
-    const { walletAddress, chainId, signer } = useContext(WalletContext);
+    const { walletAddress, chainId, signer, isInitialized } = useContext(WalletContext);
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
 
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
     const [contentPrice, setContentPrice] = useState(ethers.BigNumber.from(0));
 
-    // Stabilized contract instances using useMemo
     const premiumContentContract = useMemo(() => {
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
@@ -100,12 +91,19 @@ function BlogPostDetailView({ post }) {
     
     const contentId = useMemo(() => post.slug ? ethers.utils.id(post.slug) : null, [post.slug]);
 
-    // The Master State Machine Effect
     useEffect(() => {
         if (post.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
         }
+
+        // --- THIS IS THE FINAL FIX ---
+        // Wait until the wallet context confirms it's fully initialized.
+        if (!isInitialized) {
+            setPageState('initializing');
+            return;
+        }
+
         if (!walletAddress) {
             setPageState('prompt_connect');
             return;
@@ -118,7 +116,6 @@ function BlogPostDetailView({ post }) {
             setPageState('initializing');
             return;
         }
-
         const checkAccess = async () => {
             setPageState('checking_access');
             try {
@@ -137,23 +134,71 @@ function BlogPostDetailView({ post }) {
             }
         };
         checkAccess();
-    }, [post, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
+    }, [post, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId, isInitialized]);
     
-    // Callbacks for user actions
-    const handleApprove = useCallback(async () => { /* ... (same logic as before) ... */ }, [usdcContract, premiumContentContract, contentPrice]);
-    const handleUnlock = useCallback(async () => { /* ... (same logic as before) ... */ }, [premiumContentContract, contentId]);
+    const handleApprove = useCallback(async () => {
+        if (!usdcContract || !premiumContentContract || !contentPrice.gt(0)) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await usdcContract.approve(premiumContentContract.address, contentPrice);
+            await tx.wait();
+            setPageState('ready_to_unlock');
+        } catch (e) {
+            setErrorMessage(`Approval failed. ${e.reason || 'Transaction rejected.'}`);
+            setPageState('needs_approval');
+        }
+    }, [usdcContract, premiumContentContract, contentPrice]);
+
+    const handleUnlock = useCallback(async () => {
+        if (!premiumContentContract || !contentId) return;
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await premiumContentContract.purchaseContent(contentId);
+            await tx.wait();
+            setPageState('unlocked');
+        } catch (e) {
+            setErrorMessage(`Unlock failed. ${e.reason || 'Transaction rejected.'}`);
+            setPageState('ready_to_unlock');
+        }
+    }, [premiumContentContract, contentId]);
 
     const renderPaywallActions = () => {
         switch (pageState) {
-            case 'prompt_connect': return <div><p>Please connect your wallet to unlock this premium article.</p><ConnectWalletButton /></div>;
-            case 'unsupported_network': return <div className="error-message">Please switch your wallet to BNB Mainnet to continue.</div>;
-            case 'needs_approval': return (<div><p>To unlock this article, you must approve USDC spending.</p><button onClick={handleApprove} className="action-button">1. Approve USDC</button>{errorMessage && <p className="error-message">{errorMessage}</p>}</div>);
-            case 'ready_to_unlock': return (<div><p>USDC approved. You can now unlock the content.</p><button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>{errorMessage && <p className="error-message">{errorMessage}</p>}</div>);
-            case 'checking': case 'checking_access': return <LoadingSpinner message="Verifying on-chain..." />;
-            case 'error': return <p className="error-message">{errorMessage}</p>;
-            default: return <LoadingSpinner message="Loading..." />;
+            case 'prompt_connect':
+                return <div><p>Please connect your wallet to unlock this premium article.</p><ConnectWalletButton /></div>;
+            case 'unsupported_network':
+                return <div className="error-message">Please switch your wallet to BNB Mainnet to continue.</div>;
+            case 'needs_approval':
+                return (
+                    <div>
+                        <p>To unlock this article, you must approve USDC spending.</p>
+                        <button onClick={handleApprove} className="action-button">1. Approve USDC</button>
+                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                    </div>
+                );
+            case 'ready_to_unlock':
+                return (
+                    <div>
+                        <p>USDC approved. You can now unlock the content.</p>
+                        <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>
+                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                    </div>
+                );
+            case 'checking':
+            case 'checking_access':
+                return <LoadingSpinner message="Verifying on-chain..." />;
+            case 'error':
+                return <p className="error-message">{errorMessage}</p>;
+            default:
+                return <LoadingSpinner message="Loading..." />;
         }
     };
+
+    if (pageState === 'initializing') {
+        return <div className="blog-post-page"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
+    }
 
     if (pageState === 'unlocked') {
         return (
@@ -167,7 +212,6 @@ function BlogPostDetailView({ post }) {
         );
     }
     
-    // Default locked view
     return (
         <div className="blog-post-page">
             <div className="blog-post-content-wrapper">
