@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useContext, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
-import { WalletContext } from './WalletProvider'; 
+ 
 import PredictionForm from '../components/predictions/PredictionForm';
 import MarketOddsDisplay from '../components/predictions/MarketOddsDisplay';
 import LoadingSpinner from '../components/common/LoadingSpinner';
