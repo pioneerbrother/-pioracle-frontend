@@ -7,22 +7,15 @@ import matter from 'gray-matter';
 import { WalletContext } from './WalletProvider';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
-import { getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
-import PremiumContentABI from '../config/abis/PremiumContent.json';
-import IERC20_ABI from '../config/abis/IERC20.json';
+import { getTargetChainIdHex } from '../config/contractConfig';
 import './BlogPage.css';
 
-// This logic for finding all posts remains the same.
 const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
-// ======================================================================
-// === LOADER COMPONENT: Its only job is to find the correct post. ===
-// ======================================================================
 function BlogPostPaywall() {
-    console.log("--- BLOG POST PAYWALL (LOADER) - FINAL ARCHITECTURE LOADED ---");
+    console.log("--- BLOG POST PAYWALL - FINAL SIMPLIFIED VERSION LOADED ---");
     const { slug } = useParams();
 
-    // useMemo ensures this logic runs only when the slug changes.
     const post = useMemo(() => {
         const path = `../posts/${slug}.md`;
         const rawContent = postModules[path];
@@ -31,42 +24,24 @@ function BlogPostPaywall() {
         return { slug, frontmatter: data, content };
     }, [slug]);
 
-    if (!post) {
-        return <div className="page-container"><h1>Post not found</h1></div>;
-    }
+    const { 
+        walletAddress, chainId, isConnected,
+        premiumContentContract, usdcContract
+    } = useContext(WalletContext);
 
-    // Pass the stable 'post' object to the view component.
-    return <PaywallView post={post} />;
-}
-
-
-// ======================================================================
-// === VIEW COMPONENT: Its only job is to handle UI and wallet logic. ===
-// ======================================================================
-function PaywallView({ post }) {
-    console.log("--- PAYWALL VIEW - FINAL ARCHITECTURE LOADED ---");
-    const { walletAddress, chainId, isConnected, walletProvider } = useContext(WalletContext);
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
     
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
 
-    const { premiumContentContract, usdcContract } = useMemo(() => {
-        if (isConnected && walletProvider && chainId) {
-            const provider = new ethers.providers.Web3Provider(walletProvider);
-            const signer = provider.getSigner();
-            const config = getConfigForChainId(chainId);
-            const pcc = config?.premiumContentContractAddress ? new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer) : null;
-            const usdc = config?.usdcTokenAddress ? new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer) : null;
-            return { premiumContentContract: pcc, usdcContract: usdc };
-        }
-        return { premiumContentContract: null, usdcContract: null };
-    }, [isConnected, walletProvider, chainId]);
-    
-    const contentId = useMemo(() => ethers.utils.id(post.slug), [post.slug]);
+    const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
 
-    // This is the stable, final state machine.
     useEffect(() => {
+        if (!post) {
+            setPageState('initializing');
+            return;
+        }
+        
         if (post.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
@@ -96,6 +71,7 @@ function PaywallView({ post }) {
                     setPageState(allowance.lt(fee) ? 'needs_approval' : 'ready_to_unlock');
                 }
             } catch (e) {
+                console.error("Error checking access:", e);
                 setPageState('error');
                 setErrorMessage('Failed to check access. Please refresh.');
             }
@@ -139,18 +115,34 @@ function PaywallView({ post }) {
             case 'unsupported_network':
                 return <div className="error-message">Please switch your wallet to BNB Mainnet to continue.</div>;
             case 'needs_approval':
-                return (<div><p>To unlock this article, you must approve USDC spending.</p><button onClick={handleApprove} className="action-button">1. Approve USDC</button>{errorMessage && <p className="error-message">{errorMessage}</p>}</div>);
+                return (
+                    <div>
+                        <p>To unlock this article, you must approve USDC spending.</p>
+                        <button onClick={handleApprove} className="action-button">1. Approve USDC</button>
+                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                    </div>
+                );
             case 'ready_to_unlock':
-                return (<div><p>USDC approved. You can now unlock the content.</p><button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>{errorMessage && <p className="error-message">{errorMessage}</p>}</div>);
+                return (
+                    <div>
+                        <p>USDC approved. You can now unlock the content.</p>
+                        <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>
+                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                    </div>
+                );
             case 'checking':
             case 'checking_access':
                 return <LoadingSpinner message="Verifying on-chain..." />;
             case 'error':
                 return <p className="error-message">{errorMessage}</p>;
-            default: // Catches 'initializing'
+            default:
                 return <LoadingSpinner message="Loading..." />;
         }
     };
+
+    if (!post || pageState === 'initializing') {
+        return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading..." /></div></div>;
+    }
 
     if (pageState === 'unlocked') {
         return (
