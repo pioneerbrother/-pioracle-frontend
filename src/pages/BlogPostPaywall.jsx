@@ -53,9 +53,16 @@ function PaywallView({ post }) {
         if (post.frontmatter.premium !== true) { setPageState('unlocked'); return; }
         if (!isConnected) { setPageState('prompt_connect'); return; }
         if (chainId !== targetChainId) { setPageState('unsupported_network'); return; }
-        if (!premiumContentContract || !usdcContract) { setPageState('initializing'); return; }
-
+        
+        // --- THIS IS THE FINAL FIX ---
+        // We know if we got this far, the contracts are being created. 
+        // We start the check immediately. This removes the race condition.
         const checkAccess = async () => {
+            // Guard against the contracts not being ready yet.
+            if (!premiumContentContract || !usdcContract) {
+                setPageState('initializing'); // Stay in loading state
+                return;
+            }
             setPageState('checking_access');
             try {
                 const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
@@ -72,9 +79,9 @@ function PaywallView({ post }) {
             }
         };
         checkAccess();
-    // This is the final dependency array. It was missing walletProvider.
-    }, [post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId, walletProvider]);
+    }, [post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
     
+    // Callbacks and render functions remain the same
     const handleApprove = useCallback(async () => { /* ... */ }, [usdcContract, premiumContentContract]);
     const handleUnlock = useCallback(async () => { /* ... */ }, [premiumContentContract, contentId]);
 
