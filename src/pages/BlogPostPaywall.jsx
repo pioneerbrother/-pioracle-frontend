@@ -13,7 +13,7 @@ import './BlogPage.css';
 const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
 function BlogPostPaywall() {
-    console.log("--- BLOG POST PAYWALL - FINAL SIMPLIFIED VERSION LOADED ---");
+    console.log("--- BLOG POST PAYWALL - HYDRATION-SAFE VERSION LOADED ---");
     const { slug } = useParams();
 
     const post = useMemo(() => {
@@ -31,16 +31,29 @@ function BlogPostPaywall() {
 
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
     
+    // --- THIS IS THE HYDRATION FIX ---
+    // 1. We start a new state `isClient` as false.
+    const [isClient, setIsClient] = useState(false);
+    
+    // 2. This effect runs only ONCE on the client, AFTER the initial render.
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+    // --- END OF HYDRATION FIX ---
+    
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
 
     const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
 
     useEffect(() => {
-        if (!post) {
-            setPageState('initializing'); // Show loader while post loads
+        // Guard: Don't run ANY logic until the client has mounted.
+        // This ensures the server render and initial client render are identical.
+        if (!isClient || !post) {
+            setPageState('initializing');
             return;
         }
+        
         if (post.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
@@ -54,7 +67,7 @@ function BlogPostPaywall() {
             return;
         }
         if (!premiumContentContract || !usdcContract) {
-            setPageState('initializing'); // Show loader while provider creates contracts
+            setPageState('initializing');
             return;
         }
 
@@ -76,7 +89,8 @@ function BlogPostPaywall() {
             }
         };
         checkAccess();
-    }, [post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
+    // Depend on `isClient` to re-run the logic once the client is ready.
+    }, [isClient, post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
     
     const handleApprove = useCallback(async () => {
         if (!usdcContract || !premiumContentContract) return;
@@ -108,6 +122,12 @@ function BlogPostPaywall() {
     }, [premiumContentContract, contentId]);
 
     const renderPaywallActions = () => {
+        // Guard: If we're not on the client yet, we MUST render the same thing as the server.
+        // In this case, that's the "Connect Wallet" button, but in a disabled/loading state.
+        if (!isClient) {
+            return <LoadingSpinner message="Loading..." />;
+        }
+
         switch (pageState) {
             case 'prompt_connect':
                 return <div><p>Please connect your wallet to unlock this premium article.</p><ConnectWalletButton /></div>;
@@ -131,7 +151,7 @@ function BlogPostPaywall() {
         return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
     }
 
-    if (pageState === 'unlocked') {
+    if (pageState === 'unlocked' && isClient) {
         return (
             <div className="blog-post-page">
                 <div className="blog-post-content-wrapper">
