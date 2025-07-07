@@ -32,37 +32,49 @@ function BlogPostPaywall() {
 function PaywallView({ post }) {
     const { walletAddress, chainId, isConnected, walletProvider } = useContext(WalletContext);
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
+    
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
 
-    const { premiumContentContract, usdcContract } = useMemo(() => {
+    // --- FINAL FIX: Store contracts in state to prevent race conditions ---
+    const [premiumContentContract, setPremiumContentContract] = useState(null);
+    const [usdcContract, setUsdcContract] = useState(null);
+
+    // Effect 1: This effect's ONLY job is to create the contract instances.
+    useEffect(() => {
         if (isConnected && walletProvider && chainId) {
             const provider = new ethers.providers.Web3Provider(walletProvider);
             const signer = provider.getSigner();
             const config = getConfigForChainId(chainId);
-            const pcc = config?.premiumContentContractAddress ? new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer) : null;
-            const usdc = config?.usdcTokenAddress ? new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer) : null;
-            return { premiumContentContract: pcc, usdcContract: usdc };
+            
+            if (config?.premiumContentContractAddress) {
+                setPremiumContentContract(new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer));
+            }
+            if (config?.usdcTokenAddress) {
+                setUsdcContract(new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer));
+            }
+        } else {
+            // Clear contracts when disconnected
+            setPremiumContentContract(null);
+            setUsdcContract(null);
         }
-        return { premiumContentContract: null, usdcContract: null };
     }, [isConnected, walletProvider, chainId]);
-    
+
     const contentId = useMemo(() => post.slug ? ethers.utils.id(post.slug) : null, [post.slug]);
 
+    // Effect 2: The Master State Machine. This now depends on the stateful contracts.
     useEffect(() => {
         if (post.frontmatter.premium !== true) { setPageState('unlocked'); return; }
         if (!isConnected) { setPageState('prompt_connect'); return; }
         if (chainId !== targetChainId) { setPageState('unsupported_network'); return; }
         
-        // --- THIS IS THE FINAL FIX ---
-        // We know if we got this far, the contracts are being created. 
-        // We start the check immediately. This removes the race condition.
+        // This guard now waits for the state to be set by the first effect.
+        if (!premiumContentContract || !usdcContract) {
+            setPageState('initializing');
+            return;
+        }
+
         const checkAccess = async () => {
-            // Guard against the contracts not being ready yet.
-            if (!premiumContentContract || !usdcContract) {
-                setPageState('initializing'); // Stay in loading state
-                return;
-            }
             setPageState('checking_access');
             try {
                 const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
@@ -81,9 +93,27 @@ function PaywallView({ post }) {
         checkAccess();
     }, [post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
     
-    // Callbacks and render functions remain the same
-    const handleApprove = useCallback(async () => { /* ... */ }, [usdcContract, premiumContentContract]);
-    const handleUnlock = useCallback(async () => { /* ... */ }, [premiumContentContract, contentId]);
+    // --- Callbacks and Render Logic (Unchanged and Correct) ---
+    const handleApprove = useCallback(async () => {
+        if (!usdcContract || !premiumContentContract) return;
+        setPageState('checking');
+        try {
+            const fee = await premiumContentContract.contentPrice();
+            const tx = await usdcContract.approve(premiumContentContract.address, fee);
+            await tx.wait();
+            setPageState('ready_to_unlock');
+        } catch(e) { setErrorMessage('Approval failed.'); setPageState('needs_approval'); }
+    }, [usdcContract, premiumContentContract]);
+    
+    const handleUnlock = useCallback(async () => {
+        if (!premiumContentContract || !contentId) return;
+        setPageState('checking');
+        try {
+            const tx = await premiumContentContract.purchaseContent(contentId);
+            await tx.wait();
+            setPageState('unlocked');
+        } catch(e) { setErrorMessage('Unlock failed.'); setPageState('ready_to_unlock'); }
+    }, [premiumContentContract, contentId]);
 
     const renderPaywallActions = () => {
         switch (pageState) {
@@ -96,6 +126,7 @@ function PaywallView({ post }) {
             default: return <LoadingSpinner message="Loading..." />;
         }
     };
+
     if (pageState === 'unlocked') { return (<div className="blog-post-page"><div className="blog-post-content-wrapper"><h1>{post.frontmatter.title}</h1><p className="post-meta">Published on {post.frontmatter.date} by {post.frontmatter.author}</p><div className="post-body-content"><ReactMarkdown>{post.content}</ReactMarkdown></div></div></div>); }
     return (<div className="blog-post-page"><div className="blog-post-content-wrapper"><h1>{post.frontmatter.title}</h1><p className="post-meta">Published on {post.frontmatter.date} by {post.frontmatter.author}</p><div className="post-body-content"><ReactMarkdown>{post.content}</ReactMarkdown></div><hr style={{margin: "3rem 0"}} /><div className="paywall"><h3>Unlock Full Access</h3>{renderPaywallActions()}</div></div></div>);
 }
