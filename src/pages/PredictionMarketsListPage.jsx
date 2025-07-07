@@ -1,7 +1,7 @@
 // src/pages/PredictionMarketsListPage.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
-import { WalletContext } from '../../context/WalletContext.jsx'; 
+ 
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
