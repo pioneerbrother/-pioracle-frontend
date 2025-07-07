@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { createWeb3Modal, useWeb3Modal, useWeb3ModalState, useWeb3ModalProvider } from '@web3modal/ethers5/react';
 import { getAllSupportedChainsForModal, getConfigForChainId } from '../config/contractConfig';
@@ -24,21 +24,17 @@ export function WalletProvider({ children }) {
     const { address, chainId, isConnected } = useWeb3ModalState();
     const { walletProvider } = useWeb3ModalProvider();
     
-    // Step 1: Create a stable provider and signer object.
-    // This will only be a new object if the underlying connection changes.
     const ethersData = useMemo(() => {
-        if (isConnected && walletProvider && chainId) {
+        if (isConnected && walletProvider) {
             const provider = new ethers.providers.Web3Provider(walletProvider, 'any');
             const signer = provider.getSigner();
             return { provider, signer };
         }
         return { provider: null, signer: null };
-    }, [isConnected, walletProvider, chainId]);
+    }, [isConnected, walletProvider]);
 
     const { provider, signer } = ethersData;
     
-    // Step 2: Create stable contract instances.
-    // These will only be new objects if the signer or chainId changes.
     const contracts = useMemo(() => {
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
@@ -50,15 +46,13 @@ export function WalletProvider({ children }) {
         return { pmContract: null, pcContract: null, usdc: null };
     }, [signer, chainId]);
 
-    // Step 3: Assemble the final, stable context value.
-    // This object will only change when its fundamental dependencies change.
     const contextValue = useMemo(() => ({
         provider,
         signer,
         walletAddress: address,
         chainId,
         isConnected,
-        isInitialized: true, // It's always initialized after the first render.
+        isInitialized: true,
         predictionMarketContract: contracts.pmContract,
         premiumContentContract: contracts.pcContract,
         usdcContract: contracts.usdc,

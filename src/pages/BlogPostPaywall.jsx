@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import ReactMarkdown from 'react-markdown';
 import matter from 'gray-matter';
@@ -38,10 +38,9 @@ function BlogPostPaywall() {
 
     useEffect(() => {
         if (!post) {
-            setPageState('initializing');
+            setPageState('initializing'); // Show loader while post loads
             return;
         }
-        
         if (post.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
@@ -55,7 +54,7 @@ function BlogPostPaywall() {
             return;
         }
         if (!premiumContentContract || !usdcContract) {
-            setPageState('initializing');
+            setPageState('initializing'); // Show loader while provider creates contracts
             return;
         }
 
@@ -115,33 +114,21 @@ function BlogPostPaywall() {
             case 'unsupported_network':
                 return <div className="error-message">Please switch your wallet to BNB Mainnet to continue.</div>;
             case 'needs_approval':
-                return (
-                    <div>
-                        <p>To unlock this article, you must approve USDC spending.</p>
-                        <button onClick={handleApprove} className="action-button">1. Approve USDC</button>
-                        {errorMessage && <p className="error-message">{errorMessage}</p>}
-                    </div>
-                );
+                return (<div><p>To unlock this article, you must approve USDC spending.</p><button onClick={handleApprove} className="action-button">1. Approve USDC</button>{errorMessage && <p className="error-message">{errorMessage}</p>}</div>);
             case 'ready_to_unlock':
-                return (
-                    <div>
-                        <p>USDC approved. You can now unlock the content.</p>
-                        <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>
-                        {errorMessage && <p className="error-message">{errorMessage}</p>}
-                    </div>
-                );
+                return (<div><p>USDC approved. You can now unlock the content.</p><button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>{errorMessage && <p className="error-message">{errorMessage}</p>}</div>);
             case 'checking':
             case 'checking_access':
                 return <LoadingSpinner message="Verifying on-chain..." />;
             case 'error':
                 return <p className="error-message">{errorMessage}</p>;
-            default:
+            default: // Catches 'initializing'
                 return <LoadingSpinner message="Loading..." />;
         }
     };
 
-    if (!post || pageState === 'initializing') {
-        return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading..." /></div></div>;
+    if (!post) {
+        return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
     }
 
     if (pageState === 'unlocked') {
