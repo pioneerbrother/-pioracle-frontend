@@ -29,6 +29,9 @@ const initialState = {
 };
 
 export function WalletProvider({ children }) {
+     // --- ADD THIS NEW LINE ---
+    console.log("--- WALLET PROVIDER - STABLE HOOKS VERSION LOADED (v2) ---");
+    // --- END OF ADDITION 
     const [connectionState, setConnectionState] = useState(initialState);
     
     // --- FIX: --- These hooks from Web3Modal provide stable state and prevent loops.
