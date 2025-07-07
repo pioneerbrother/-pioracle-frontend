@@ -3,54 +3,39 @@ import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import ReactMarkdown from 'react-markdown';
 import matter from 'gray-matter';
-import { useWeb3ModalProvider } from '@web3modal/ethers5/react';
 
 import { WalletContext } from './WalletProvider';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
-import { getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
-import PremiumContentABI from '../config/abis/PremiumContent.json';
-import IERC20_ABI from '../config/abis/IERC20.json';
+import { getTargetChainIdHex } from '../config/contractConfig';
 import './BlogPage.css';
 
 const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
 function BlogPostPaywall() {
-    console.log("--- BLOG POST PAYWALL - ROBUST POST-FINDING VERSION LOADED ---");
+    console.log("--- BLOG POST PAYWALL - DUMB CONSUMER VERSION LOADED ---");
     const { slug } = useParams();
 
-    // --- THIS IS THE ROBUST FIX for finding the post ---
     const post = useMemo(() => {
-        // Find the path that ends with the slug. This is resilient to build changes.
         const postPath = Object.keys(postModules).find(path => path.endsWith(`${slug}.md`));
         if (!postPath) return null;
-
         const rawContent = postModules[postPath];
         const { data, content } = matter(rawContent);
         return { slug, frontmatter: data, content };
     }, [slug]);
 
-    const { walletAddress, chainId, isConnected } = useContext(WalletContext);
-    const { walletProvider } = useWeb3ModalProvider(); 
-    
+    const { 
+        walletAddress, chainId, isConnected,
+        premiumContentContract, usdcContract
+    } = useContext(WalletContext);
+
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
+    
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
     const [isClient, setIsClient] = useState(false);
     useEffect(() => setIsClient(true), []);
 
-    const { premiumContentContract, usdcContract } = useMemo(() => {
-        if (isConnected && walletProvider && chainId) {
-            const provider = new ethers.providers.Web3Provider(walletProvider);
-            const signer = provider.getSigner();
-            const config = getConfigForChainId(chainId);
-            const pcc = config?.premiumContentContractAddress ? new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer) : null;
-            const usdc = config?.usdcTokenAddress ? new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer) : null;
-            return { premiumContentContract: pcc, usdcContract: usdc };
-        }
-        return { premiumContentContract: null, usdcContract: null };
-    }, [isConnected, walletProvider, chainId]);
-    
     const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
 
     useEffect(() => {
@@ -58,6 +43,7 @@ function BlogPostPaywall() {
             setPageState('initializing');
             return;
         }
+        
         if (post.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
@@ -74,6 +60,7 @@ function BlogPostPaywall() {
             setPageState('initializing');
             return;
         }
+
         const checkAccess = async () => {
             setPageState('checking_access');
             try {
@@ -146,11 +133,7 @@ function BlogPostPaywall() {
         }
     };
 
-    if (!isClient || !post) {
-        // Show a more specific message if the post can't be found after client loads
-        if (isClient && !post) {
-            return <div className="page-container"><h1>404 - Post Not Found</h1><p>The post with this URL could not be located.</p></div>;
-        }
+    if (!isClient || !post || pageState === 'initializing') {
         return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading..." /></div></div>;
     }
     
