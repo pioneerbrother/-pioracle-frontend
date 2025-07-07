@@ -23,9 +23,7 @@ function PioracleApp() {
       <Router>
         <div className="App">
           {/* --- THIS IS THE VISIBLE PROOF --- */}
-          <h1 style={{ textAlign: 'center', color: 'red', background: 'yellow', padding: '10px' }}>
-            ROUTING FIXED - vFINAL
-          </h1>
+         
           
           <Header />
           <main>
