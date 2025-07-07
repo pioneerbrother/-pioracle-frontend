@@ -3,8 +3,20 @@
     padding: 1.5rem;
     border-radius: 8px;
     background: #f8f9fa;
-    margin: 1rem 0;
+    margin: 1rem;
     max-width: 400px;
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    border: 1px solid #dee2e6;
+    z-index: 9999;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.wallet-status-container h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #343a40;
 }
 
 .status-indicator {
@@ -21,29 +33,33 @@
 }
 
 .status-dot.connected {
-    background-color: #4CAF50;
+    background-color: #4CAF50; /* Green */
 }
 
 .status-dot.disconnected {
-    background-color: #F44336;
+    background-color: #F44336; /* Red */
 }
 
 .status-dot.connecting {
-    background-color: #FFC107;
+    background-color: #FFC107; /* Yellow */
+    animation: pulse 1.5s infinite;
 }
 
 .status-dot.error {
-    background-color: #9E9E9E;
+    background-color: #9E9E9E; /* Gray */
 }
 
 .status-text {
     font-weight: 600;
+    color: #495057;
 }
 
 .connection-details {
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid #e9ecef;
+    font-size: 0.9rem;
+    word-break: break-all;
 }
 
 .connect-button, .disconnect-button, .retry-button {
@@ -53,6 +69,7 @@
     cursor: pointer;
     font-weight: 500;
     margin-top: 0.5rem;
+    width: 100%;
 }
 
 .connect-button {
@@ -73,4 +90,11 @@
 .error-message {
     color: #f44336;
     margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
 }
