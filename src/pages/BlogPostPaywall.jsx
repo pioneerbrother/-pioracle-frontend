@@ -13,15 +13,18 @@ import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
 import './BlogPage.css';
 
-// --- This is the Vite-specific feature to load all markdown files. ---
-// By placing it here, it is available to the entire component.
 const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
 
 function BlogPostPaywall() {
-    console.log("--- BLOG POST PAYWALL - UNIFIED & CORRECTED VERSION ---");
     const { slug } = useParams();
+    const { walletAddress, chainId, isConnected, isInitialized } = useContext(WalletContext);
+    const { walletProvider } = useWeb3ModalProvider();
+    
+    const [pageState, setPageState] = useState('initializing');
+    const [errorMessage, setErrorMessage] = useState('');
+    const [price, setPrice] = useState(null);
+    const [txStatus, setTxStatus] = useState(null);
 
-    // The logic to find the post is now safely inside the component that defines postModules.
     const post = useMemo(() => {
         const postPath = Object.keys(postModules).find(path => path.endsWith(`${slug}.md`));
         if (!postPath) return null;
@@ -31,23 +34,16 @@ function BlogPostPaywall() {
         return { slug, frontmatter: data, content, excerpt };
     }, [slug]);
 
-    // Consume the simple, stable state from the WalletProvider.
-    const { walletAddress, chainId, isConnected, isInitialized } = useContext(WalletContext);
-    const { walletProvider } = useWeb3ModalProvider();
-    
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
-    const [pageState, setPageState] = useState('initializing');
-    const [errorMessage, setErrorMessage] = useState('');
-    const [price, setPrice] = useState(null);
-
-    // Create stable contract instances right here, where they are needed.
     const { premiumContentContract, usdcContract } = useMemo(() => {
         if (isConnected && walletProvider && chainId) {
             const provider = new ethers.providers.Web3Provider(walletProvider);
             const signer = provider.getSigner();
             const config = getConfigForChainId(chainId);
-            const pcc = config?.premiumContentContractAddress ? new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer) : null;
-            const usdc = config?.usdcTokenAddress ? new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer) : null;
+            const pcc = config?.premiumContentContractAddress ? 
+                new ethers.Contract(config.premiumContentContractAddress, PremiumContentABI.abi, signer) : null;
+            const usdc = config?.usdcTokenAddress ? 
+                new ethers.Contract(config.usdcTokenAddress, IERC20_ABI.abi, signer) : null;
             return { premiumContentContract: pcc, usdcContract: usdc };
         }
         return { premiumContentContract: null, usdcContract: null };
@@ -55,28 +51,32 @@ function BlogPostPaywall() {
     
     const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
 
-    // The Master State Machine Effect. This is stable and correct.
     useEffect(() => {
         if (!isInitialized || !post) {
             setPageState('initializing');
             return;
         }
+        
         if (post.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
         }
+        
         if (!isConnected) {
             setPageState('prompt_connect');
             return;
         }
+        
         if (chainId !== targetChainId) {
             setPageState('unsupported_network');
             return;
         }
+        
         if (!premiumContentContract || !usdcContract) {
             setPageState('initializing');
             return;
         }
+
         const checkAccess = async () => {
             setPageState('checking_access');
             try {
@@ -85,15 +85,19 @@ function BlogPostPaywall() {
                     setPageState('unlocked');
                 } else {
                     const feeInWei = await premiumContentContract.contentPrice();
-                    const decimals = 18; // Assume 18, but could fetch from contract if needed
-                    setPrice({ amount: ethers.utils.formatUnits(feeInWei, decimals), symbol: 'USDC', raw: feeInWei });
+                    const decimals = await usdcContract.decimals();
+                    setPrice({ 
+                        amount: parseFloat(ethers.utils.formatUnits(feeInWei, decimals)).toFixed(2), 
+                        symbol: 'USDC', 
+                        raw: feeInWei 
+                    });
                     const allowance = await usdcContract.allowance(walletAddress, premiumContentContract.address);
                     setPageState(allowance.lt(feeInWei) ? 'needs_approval' : 'ready_to_unlock');
                 }
             } catch (e) {
                 console.error("Error checking access:", e);
                 setPageState('error');
-                setErrorMessage('Failed to check access. Please refresh.');
+                setErrorMessage('Failed to verify access. Please refresh or try again later.');
             }
         };
         checkAccess();
@@ -103,13 +107,18 @@ function BlogPostPaywall() {
         if (!usdcContract || !premiumContentContract || !price) return;
         setPageState('checking');
         setErrorMessage('');
+        setTxStatus({ type: 'approval', status: 'pending' });
+        
         try {
             const tx = await usdcContract.approve(premiumContentContract.address, price.raw);
+            setTxStatus({ type: 'approval', status: 'mined', txHash: tx.hash });
             await tx.wait();
             setPageState('ready_to_unlock');
+            setTxStatus(null);
         } catch(e) {
             setErrorMessage(`Approval failed: ${e.reason || 'Transaction rejected.'}`);
             setPageState('needs_approval');
+            setTxStatus({ type: 'approval', status: 'error', error: e.message });
         }
     }, [usdcContract, premiumContentContract, price]);
     
@@ -117,105 +126,193 @@ function BlogPostPaywall() {
         if (!premiumContentContract || !contentId) return;
         setPageState('checking');
         setErrorMessage('');
+        setTxStatus({ type: 'purchase', status: 'pending' });
+        
         try {
             const tx = await premiumContentContract.purchaseContent(contentId);
+            setTxStatus({ type: 'purchase', status: 'mined', txHash: tx.hash });
             await tx.wait();
             setPageState('unlocked');
+            setTxStatus(null);
         } catch(e) {
             setErrorMessage(`Unlock failed: ${e.reason || 'Transaction rejected.'}`);
             setPageState('ready_to_unlock');
+            setTxStatus({ type: 'purchase', status: 'error', error: e.message });
         }
     }, [premiumContentContract, contentId]);
 
     const handleSwitchNetwork = useCallback(async () => {
-        if (!window.ethereum) return;
+        if (!window.ethereum) {
+            setErrorMessage("Wallet extension not detected");
+            return;
+        }
+        
         try {
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: getTargetChainIdHex() }],
             });
         } catch (error) {
-            setErrorMessage("Failed to switch network. Please do it manually in your wallet.");
+            setErrorMessage("Failed to switch network. Please switch manually in your wallet.");
         }
     }, []);
 
     const renderPaywallActions = () => {
-        // Guard against hydration mismatch
-        if (!isInitialized) {
-            return <LoadingSpinner message="Loading..." />;
-        }
+        if (!isInitialized) return <LoadingSpinner message="Initializing..." />;
+        
         switch (pageState) {
             case 'prompt_connect':
                 return (
-                    <div className="wallet-connect-prompt">
-                        <h4>Premium Content Locked</h4>
-                        <p>Connect your wallet to unlock this exclusive analysis.</p>
+                    <div className="wallet-prompt">
+                        <div className="lock-icon">🔒</div>
+                        <h3>Premium Content Locked</h3>
+                        <p>Connect your wallet to access this exclusive analysis</p>
                         <ConnectWalletButton />
-                        <p className="small-text">You will need USDC on the BNB Chain.</p>
+                        <div className="network-requirements">
+                            <span>Requires:</span>
+                            <span>• BNB Smart Chain</span>
+                            <span>• USDC for payment</span>
+                        </div>
                     </div>
                 );
+                
             case 'unsupported_network':
                 return (
                     <div className="network-alert">
-                        <h4>Wrong Network</h4>
-                        <p>This content is available on the BNB Smart Chain.</p>
-                        <button onClick={handleSwitchNetwork} className="action-button">Switch to BNB Chain</button>
+                        <h3>Wrong Network Detected</h3>
+                        <p>Please switch to BNB Smart Chain to continue</p>
+                        <button 
+                            onClick={handleSwitchNetwork}
+                            className="network-switch-button"
+                        >
+                            Switch to BNB Chain
+                        </button>
+                        {errorMessage && <p className="error">{errorMessage}</p>}
                     </div>
                 );
+                
             case 'needs_approval':
                 return (
                     <div className="payment-flow">
-                        <div className="steps"><div className="step active">1. Approve</div><div className="step">2. Unlock</div></div>
-                        <p>Unlock this article for **{price?.amount} {price?.symbol}**. First, approve spending.</p>
-                        <button onClick={handleApprove} className="action-button">Approve {price?.symbol}</button>
-                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                        <div className="steps">
+                            <div className="step active">1. Approve USDC</div>
+                            <div className="step">2. Unlock Content</div>
+                        </div>
+                        <div className="price-display">
+                            Price: {price?.amount} {price?.symbol}
+                        </div>
+                        <button 
+                            onClick={handleApprove}
+                            className="action-button"
+                            disabled={txStatus?.status === 'pending'}
+                        >
+                            {txStatus?.status === 'pending' ? 'Approving...' : 'Approve USDC'}
+                        </button>
+                        {txStatus?.status === 'mined' && (
+                            <div className="tx-status">
+                                Transaction confirmed! Proceeding to next step...
+                            </div>
+                        )}
+                        {errorMessage && <div className="error">{errorMessage}</div>}
                     </div>
                 );
+                
             case 'ready_to_unlock':
-                 return (
+                return (
                     <div className="payment-flow">
-                        <div className="steps"><div className="step complete">✓</div><div className="step active">2. Unlock</div></div>
-                        <p>Approval successful! You can now unlock the content.</p>
-                        <button onClick={handleUnlock} className="action-button highlight">Unlock Content</button>
-                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                        <div className="steps">
+                            <div className="step completed">✓ Approved</div>
+                            <div className="step active">2. Unlock Content</div>
+                        </div>
+                        <button 
+                            onClick={handleUnlock}
+                            className="action-button highlight"
+                            disabled={txStatus?.status === 'pending'}
+                        >
+                            {txStatus?.status === 'pending' ? 'Processing...' : 'Unlock for ' + price?.amount + ' USDC'}
+                        </button>
+                        {txStatus?.status === 'mined' && (
+                            <div className="tx-status success">
+                                Content unlocked! Loading...
+                            </div>
+                        )}
+                        {errorMessage && <div className="error">{errorMessage}</div>}
                     </div>
                 );
-            case 'checking':
+                
             case 'checking_access':
-                return <LoadingSpinner message="Verifying on-chain..." />;
+                return <LoadingSpinner message="Checking your access..." />;
+                
             case 'error':
-                return <p className="error-message">{errorMessage}</p>;
-            default: // 'initializing'
+                return (
+                    <div className="error-state">
+                        <p>{errorMessage}</p>
+                        <button 
+                            onClick={() => window.location.reload()}
+                            className="retry-button"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                );
+                
+            default:
                 return <LoadingSpinner message="Loading..." />;
         }
     };
 
     if (!post) {
-        if (isInitialized) return <div className="page-container"><h1>404 - Post Not Found</h1></div>;
-        return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
-    }
-    if (pageState === 'unlocked') {
         return (
-            <div className="blog-post-page">
-                <div className="blog-post-content-wrapper">
-                    <h1 className="post-title">{post.frontmatter.title}</h1>
-                    <p className="post-meta">Published on {post.frontmatter.date} by {post.frontmatter.author}</p>
-                    <div className="post-body-content"><ReactMarkdown>{post.content}</ReactMarkdown></div>
-                </div>
+            <div className="not-found">
+                <h1>Article Not Found</h1>
+                <p>The requested analysis could not be located.</p>
             </div>
         );
     }
-    
+
+    if (pageState === 'unlocked') {
+        return (
+            <div className="article-container">
+                <article className="premium-article">
+                    <header>
+                        <h1>{post.frontmatter.title}</h1>
+                        <div className="meta">
+                            <span>Published: {post.frontmatter.date}</span>
+                            <span>Author: {post.frontmatter.author}</span>
+                        </div>
+                    </header>
+                    <div className="content">
+                        <ReactMarkdown>{post.content}</ReactMarkdown>
+                    </div>
+                </article>
+            </div>
+        );
+    }
+
     return (
-        <div className="blog-post-page">
-            <div className="blog-post-content-wrapper">
-                <h1 className="post-title">{post.frontmatter.title}</h1>
-                <p className="post-meta">Published on {post.frontmatter.date} by {post.frontmatter.author}</p>
-                <div className="post-body-content excerpt">
-                    <ReactMarkdown>{post.excerpt}</ReactMarkdown>
-                    <div className="excerpt-fadeout" />
+        <div className="article-preview">
+            <article>
+                <header>
+                    <h1>{post.frontmatter.title}</h1>
+                    <div className="meta">
+                        <span>Published: {post.frontmatter.date}</span>
+                        <span>Author: {post.frontmatter.author}</span>
+                    </div>
+                </header>
+                <div className="excerpt-container">
+                    <div className="excerpt">
+                        <ReactMarkdown>{post.excerpt}</ReactMarkdown>
+                    </div>
+                    <div className="excerpt-fade" />
                 </div>
-                <div className="paywall"><h3>Unlock Full Access</h3>{renderPaywallActions()}</div>
+            </article>
+            
+            <div className="paywall-container">
+                <div className="paywall-header">
+                    <h2>Continue Reading</h2>
+                    <p>Unlock full access to this premium analysis</p>
+                </div>
+                {renderPaywallActions()}
             </div>
         </div>
     );
