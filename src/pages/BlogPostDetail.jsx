@@ -13,10 +13,7 @@ import IERC20_ABI from '../config/abis/IERC20.json';
 import './BlogPostPage.css';
 
 function BlogPostDetail() {
-   // --- ADD THIS LINE ---
-    console.log("--- BLOG POST DETAIL - LATEST VERSION LOADED ---");
-    // --- END OF ADDITION   
-
+    console.log("--- BLOG POST DETAIL - LATEST VERSION LOADED (vFinal) ---");
     const { slug } = useParams();
     const { walletAddress, chainId, signer, isInitialized } = useContext(WalletContext);
 
@@ -30,9 +27,7 @@ function BlogPostDetail() {
     const [premiumContentContract, setPremiumContentContract] = useState(null);
     const [usdcContract, setUsdcContract] = useState(null);
 
-    // --- REFACTORED LOGIC ---
-
-    // Effect 1: Initialize contracts. This is a separate concern.
+    // Effect 1: Initialize contracts when the signer changes.
     useEffect(() => {
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
@@ -50,7 +45,7 @@ function BlogPostDetail() {
 
     const contentId = useMemo(() => slug ? ethers.utils.id(slug) : null, [slug]);
 
-    // Effect 2: Load the post's markdown file. This only depends on the slug.
+    // Effect 2: Load the post's markdown file.
     useEffect(() => {
         if (!slug) return;
         let isMounted = true;
@@ -73,77 +68,100 @@ function BlogPostDetail() {
         return () => { isMounted = false; };
     }, [slug]);
 
-    // Effect 3: The main State Machine. This effect runs whenever the core data changes.
-    // It decides what the page should be doing based on the current context.
+    // Effect 3: The Master State Machine. This is the single source of truth for the UI state.
     useEffect(() => {
-        // Don't do anything until the post markdown has finished loading.
-        if (postData.isLoading) {
+        if (postData.isLoading || !postData.frontmatter || !contentId) {
             setPageState('initializing');
             return;
         }
 
-        const isPremium = postData.frontmatter?.premium === true;
-
-        if (!isPremium) {
+        if (postData.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
         }
 
-        // From here, we know it's a premium post.
         if (!walletAddress) {
             setPageState('prompt_connect');
-        } else if (chainId !== targetChainId) {
-            setPageState('unsupported_network');
-        } else {
-            // Wallet connected and on the right network. Start the on-chain check.
-            setPageState('checking_access');
+            return;
         }
-
-    }, [postData, walletAddress, chainId, targetChainId]);
-
-
-    // Effect 4: Handles the on-chain logic AFTER the state has been set to 'checking_access'.
-    useEffect(() => {
-        if (pageState !== 'checking_access' || !premiumContentContract || !usdcContract || !walletAddress || !contentId) {
+        
+        if (chainId !== targetChainId) {
+            setPageState('unsupported_network');
             return;
         }
 
-        let isMounted = true;
+        if (!premiumContentContract || !usdcContract) {
+            setPageState('initializing');
+            return;
+        }
+
         const checkAccess = async () => {
+            setPageState('checking_access');
             try {
                 const hasPaid = await premiumContentContract.hasAccess(contentId, walletAddress);
-                if (!isMounted) return;
-
                 if (hasPaid) {
-                    await secureFetchContent();
+                    setPageState('unlocked');
                 } else {
                     const fee = await premiumContentContract.contentPrice();
                     setContentPrice(fee);
                     const allowance = await usdcContract.allowance(walletAddress, premiumContentContract.address);
-                    if (!isMounted) return;
-
                     setPageState(allowance.lt(fee) ? 'needs_approval' : 'ready_to_unlock');
                 }
             } catch (e) {
-                console.error("Error checking on-chain access:", e);
-                if (isMounted) {
-                    setPageState('error');
-                    setErrorMessage(`Failed to check on-chain access. Please ensure you are on the correct network.`);
-                }
+                console.error("Error during on-chain access check:", e);
+                setPageState('error');
+                setErrorMessage('Failed to check access. Please ensure wallet is on the correct network and refresh.');
             }
         };
 
         checkAccess();
-        return () => { isMounted = false; };
-    }, [pageState, walletAddress, premiumContentContract, usdcContract, contentId]);
+
+    }, [postData, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
 
 
-    // --- CALLBACKS & RENDER LOGIC (Mostly Unchanged) ---
+    // --- Callbacks for user actions ---
+    const secureFetchContent = useCallback(() => setPageState('unlocked'), []);
 
-    const secureFetchContent = useCallback(async () => { /* ... same as before ... */ }, [postData.frontmatter]);
-    const handleApprove = useCallback(async () => { /* ... same as before ... */ }, [usdcContract, premiumContentContract, contentPrice]);
-    const handleUnlock = useCallback(async () => { /* ... same as before ... */ }, [premiumContentContract, contentId, secureFetchContent]);
+    const handleApprove = useCallback(async () => {
+        if (!usdcContract || !premiumContentContract || !contentPrice.gt(0)) {
+            setErrorMessage("Contracts not ready. Please refresh.");
+            setPageState('error');
+            return;
+        }
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await usdcContract.approve(premiumContentContract.address, contentPrice);
+            await tx.wait();
+            setPageState('ready_to_unlock');
+        } catch (e) {
+            console.error("Error approving USDC:", e);
+            setErrorMessage(`Failed to approve USDC. ${e.reason || 'Transaction rejected.'}`);
+            setPageState('needs_approval');
+        }
+    }, [usdcContract, premiumContentContract, contentPrice]);
 
+    const handleUnlock = useCallback(async () => {
+        if (!premiumContentContract || !contentId) {
+            setErrorMessage("Premium content contract not ready.");
+            setPageState('error');
+            return;
+        }
+        setPageState('checking');
+        setErrorMessage('');
+        try {
+            const tx = await premiumContentContract.purchaseContent(contentId);
+            await tx.wait();
+            await secureFetchContent();
+        } catch (e) {
+            console.error("Error unlocking content:", e);
+            setErrorMessage(`Failed to unlock content. ${e.reason || 'Transaction rejected.'}`);
+            setPageState('ready_to_unlock');
+        }
+    }, [premiumContentContract, contentId, secureFetchContent]);
+
+
+    // --- Render logic ---
     const renderPaywallActions = () => {
         switch (pageState) {
             case 'prompt_connect':
@@ -159,7 +177,7 @@ function BlogPostDetail() {
                     </div>
                 );
             case 'ready_to_unlock':
-                 return (
+                return (
                     <div>
                         <p>USDC approved. You can now unlock the content.</p>
                         <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>
@@ -176,7 +194,7 @@ function BlogPostDetail() {
         }
     };
 
-    if (postData.isLoading) {
+    if (postData.isLoading || pageState === 'initializing') {
         return <div className="blog-post-page"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
     }
 
@@ -194,6 +212,7 @@ function BlogPostDetail() {
         );
     }
 
+    // This is the default "locked" view
     return (
         <div className="blog-post-page">
             <div className="blog-post-content-wrapper">
