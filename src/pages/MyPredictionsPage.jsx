@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ethers } from 'ethers'; // Only if needed for direct BigNumber ops, often not here
-import { WalletContext } from './WalletProvider'; 
+
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
