@@ -2,7 +2,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers'; // This should be your v5 import
-import { WalletContext } from './WalletProvider';
+
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
