@@ -17,57 +17,58 @@ createWeb3Modal({
     projectId: WALLETCONNECT_PROJECT_ID,
 });
 
-const initialState = {
-    provider: null, signer: null, walletAddress: null, chainId: null,
-    isInitialized: false, isConnected: false,
-    predictionMarketContract: null,
-    premiumContentContract: null, // Add paywall contract
-    usdcContract: null, // Add USDC contract
-};
-
 export function WalletProvider({ children }) {
-    console.log("--- WALLET PROVIDER - FINAL CENTRALIZED VERSION LOADED ---");
-    const [connectionState, setConnectionState] = useState(initialState);
+    console.log("--- WALLET PROVIDER - FINAL MEMOIZED VERSION LOADED ---");
     
     const { open, disconnect } = useWeb3Modal();
     const { address, chainId, isConnected } = useWeb3ModalState();
     const { walletProvider } = useWeb3ModalProvider();
-
-    useEffect(() => {
-        if (isConnected && address && chainId && walletProvider) {
+    
+    // Step 1: Create a stable provider and signer object.
+    // This will only be a new object if the underlying connection changes.
+    const ethersData = useMemo(() => {
+        if (isConnected && walletProvider && chainId) {
             const provider = new ethers.providers.Web3Provider(walletProvider, 'any');
             const signer = provider.getSigner();
-            const config = getConfigForChainId(chainId);
-            
-            const pmContract = config?.predictionMarketContractAddress ? new ethers.Contract(config.predictionMarketContractAddress, PREDICTION_MARKET_ABI, signer) : null;
-            const pcContract = config?.premiumContentContractAddress ? new ethers.Contract(config.premiumContentContractAddress, PremiumContentABI.abi, signer) : null;
-            const usdc = config?.usdcTokenAddress ? new ethers.Contract(config.usdcTokenAddress, IERC20_ABI.abi, signer) : null;
-
-            setConnectionState({
-                provider, signer, walletAddress: address, chainId, isInitialized: true, isConnected: true,
-                predictionMarketContract: pmContract,
-                premiumContentContract: pcContract,
-                usdcContract: usdc,
-            });
-        
-        } else {
-            setConnectionState({ ...initialState, isInitialized: true, isConnected: false });
+            return { provider, signer };
         }
-    }, [isConnected, address, chainId, walletProvider]);
+        return { provider: null, signer: null };
+    }, [isConnected, walletProvider, chainId]);
 
+    const { provider, signer } = ethersData;
+    
+    // Step 2: Create stable contract instances.
+    // These will only be new objects if the signer or chainId changes.
+    const contracts = useMemo(() => {
+        if (signer && chainId) {
+            const config = getConfigForChainId(chainId);
+            const pmContract = config?.predictionMarketContractAddress ? new ethers.Contract(config.predictionMarketContractAddress, PREDICTION_MARKET_ABI, signer) : null;
+            const pcContract = config?.premiumContentContractAddress ? new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer) : null;
+            const usdc = config?.usdcTokenAddress ? new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer) : null;
+            return { pmContract, pcContract, usdc };
+        }
+        return { pmContract: null, pcContract: null, usdc: null };
+    }, [signer, chainId]);
+
+    // Step 3: Assemble the final, stable context value.
+    // This object will only change when its fundamental dependencies change.
     const contextValue = useMemo(() => ({
-        ...connectionState,
+        provider,
+        signer,
+        walletAddress: address,
+        chainId,
+        isConnected,
+        isInitialized: true, // It's always initialized after the first render.
+        predictionMarketContract: contracts.pmContract,
+        premiumContentContract: contracts.pcContract,
+        usdcContract: contracts.usdc,
         connectWallet: open,
         disconnectWallet: disconnect,
-    }), [connectionState, open, disconnect]);
+    }), [provider, signer, address, chainId, isConnected, contracts, open, disconnect]);
 
     return (
         <WalletContext.Provider value={contextValue}>
-            {connectionState.isInitialized ? children : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                    Initializing Application...
-                </div>
-            )}
+            {children}
         </WalletContext.Provider>
     );
 }
