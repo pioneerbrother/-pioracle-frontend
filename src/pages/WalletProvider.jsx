@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { createWeb3Modal, useWeb3Modal, useWeb3ModalState, useWeb3ModalProvider } from '@web3modal/ethers5/react';
 import { getAllSupportedChainsForModal, getConfigForChainId } from '../config/contractConfig';
 
+// Import ABIs directly into the provider, as this is the single source of truth for them.
 import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
 const PREDICTION_MARKET_ABI = [{"inputs":[{"internalType":"address payable","name":"_initialPlatformFeeWallet","type":"address"},{"internalType":"uint16","name":"_initialPlatformFeeBP","type":"uint16"},{"internalType":"uint256","name":"_initialMarketCreationListingFee","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},{"inputs":[],"name":"ReentrancyGuardReentrantCall","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":true,"internalType":"address","name":"bettor","type":"address"},{"indexed":false,"internalType":"bool","name":"predictedYes","type":"bool"},{"indexed":false,"internalType":"uint256","name":"grossAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"netAmountPooled","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"feeAmount","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":false,"internalType":"bool","name":"conditionMetAndResolved","type":"bool"},{"indexed":false,"internalType":"enum PredictionMarketP2P.MarketState","name":"resultingState","type":"uint8"},{"indexed":false,"internalType":"int256","name":"oraclePriceObserved","type":"int256"}],"name":"EarlyResolutionAttempt","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"string","name":"assetSymbol","type":"string"},{"indexed":false,"internalType":"address","name":"priceFeedAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"targetPrice","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"expiryTimestamp","type":"uint256"},{"indexed":false,"internalType":"bool","name":"isEventMarket","type":"bool"},{"indexed":false,"internalType":"uint256","name":"creationTimestamp","type":"uint256"}],"name":"MarketCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"MarketCreationListingFeeSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":false,"internalType":"enum PredictionMarketP2P.MarketState","name":"outcomeState","type":"uint8"},{"indexed":false,"internalType":"int256","name":"actualValue","type":"int256"}],"name":"MarketResolved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint16","name":"newFeeBasisPoints","type":"uint16"}],"name":"PlatformFeeSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"newWallet","type":"address"}],"name":"PlatformFeeWalletSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":true,"internalType":"address","name":"marketCreator","type":"address"},{"indexed":false,"internalType":"string","name":"assetSymbol","type":"string"},{"indexed":false,"internalType":"address","name":"priceFeedAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"targetPrice","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"expiryTimestamp","type":"uint256"},{"indexed":false,"internalType":"bool","name":"isEventMarket","type":"bool"},{"indexed":false,"internalType":"uint16","name":"creatorFeeBasisPoints","type":"uint16"},{"indexed":false,"internalType":"uint256","name":"creationTimestamp","type":"uint256"}],"name":"UserMarketCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":true,"internalType":"address","name":"bettor","type":"address"},{"indexed":false,"internalType":"uint256","name":"payoutAmount","type":"uint256"}],"name":"WinningsClaimed","type":"event"}];
@@ -18,62 +19,61 @@ createWeb3Modal({
 });
 
 export function WalletProvider({ children }) {
-    console.log("--- WALLET PROVIDER - HYDRATION-SAFE SIGNALING VERSION ---");
+    console.log("--- WALLET PROVIDER - ADAPTED AND STABLE VERSION ---");
 
-    // This state tells us when we are safely on the client.
-    const [isMounted, setIsMounted] = useState(false);
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
+    const [connectionState, setConnectionState] = useState({
+        signer: null,
+        walletAddress: null,
+        chainId: null,
+        isConnected: false,
+        isInitialized: false,
+        predictionMarketContract: null,
+        premiumContentContract: null,
+        usdcContract: null,
+    });
     
-    // Raw, stable hooks from Web3Modal.
     const { open, disconnect } = useWeb3Modal();
     const { address, chainId, isConnected } = useWeb3ModalState();
     const { walletProvider } = useWeb3ModalProvider();
-    
-    // Create stable ethers instances. These will only re-create if the underlying connection changes.
-    const ethersData = useMemo(() => {
-        if (isConnected && walletProvider) {
+
+    useEffect(() => {
+        if (isConnected && address && chainId && walletProvider) {
             const provider = new ethers.providers.Web3Provider(walletProvider, 'any');
             const signer = provider.getSigner();
-            return { provider, signer };
-        }
-        return { provider: null, signer: null };
-    }, [isConnected, walletProvider]);
-
-    const { provider, signer } = ethersData;
-    
-    // Create stable contract instances. These will only re-create if the signer changes.
-    const contracts = useMemo(() => {
-        if (signer && chainId) {
             const config = getConfigForChainId(chainId);
+            
             const pmContract = config?.predictionMarketContractAddress ? new ethers.Contract(config.predictionMarketContractAddress, PREDICTION_MARKET_ABI, signer) : null;
             const pcContract = config?.premiumContentContractAddress ? new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer) : null;
             const usdc = config?.usdcTokenAddress ? new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer) : null;
-            return { pmContract, pcContract, usdc };
-        }
-        return { pmContract: null, pcContract: null, usdc: null };
-    }, [signer, chainId]);
 
-    // Assemble the final, stable context value.
-    // The `isInitialized` flag is the most critical piece.
+            setConnectionState({
+                signer, walletAddress: address, chainId, isConnected: true, isInitialized: true,
+                predictionMarketContract: pmContract,
+                premiumContentContract: pcContract,
+                usdcContract: usdc,
+            });
+        
+        } else {
+            setConnectionState({
+                signer: null, walletAddress: null, chainId: null, isConnected: false, isInitialized: true,
+                predictionMarketContract: null, premiumContentContract: null, usdcContract: null,
+            });
+        }
+    }, [isConnected, address, chainId, walletProvider]);
+
     const contextValue = useMemo(() => ({
-        provider,
-        signer,
-        walletAddress: address,
-        chainId,
-        isConnected,
-        isInitialized: isMounted, // The "Ready!" signal for all consumer components.
-        predictionMarketContract: contracts.pmContract,
-        premiumContentContract: contracts.pcContract,
-        usdcContract: contracts.usdc,
+        ...connectionState,
         connectWallet: open,
         disconnectWallet: disconnect,
-    }), [provider, signer, address, chainId, isConnected, isMounted, contracts, open, disconnect]);
-    
+    }), [connectionState, open, disconnect]);
+
     return (
         <WalletContext.Provider value={contextValue}>
-            {children}
+            {connectionState.isInitialized ? children : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                    Initializing...
+                </div>
+            )}
         </WalletContext.Provider>
     );
 }

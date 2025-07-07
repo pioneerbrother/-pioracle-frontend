@@ -104,3 +104,74 @@
 .wallet-widget-container.error .wallet-address {
     color: #fed7d7; /* Light red text, though likely not used if button changes */
 }
+/* src/components/common/ConnectWalletButton.css */
+.connect-wallet-button {
+    background-color: #4e44ce;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.connect-wallet-button:hover {
+    background-color: #3a30b0;
+}
+
+.connect-wallet-button:disabled {
+    background-color: #a5a5a5;
+    cursor: not-allowed;
+}
+
+.wallet-widget-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.wallet-address {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.connection-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #4caf50;
+}
+
+.disconnect-button {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.disconnect-button:hover {
+    background-color: #d32f2f;
+}
+
+.disconnect-button:disabled {
+    background-color: #a5a5a5;
+    cursor: not-allowed;
+}
+
+.error-message {
+    color: #f44336;
+    font-size: 12px;
+    margin-top: 4px;
+}

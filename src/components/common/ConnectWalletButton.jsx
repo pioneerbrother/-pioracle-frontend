@@ -1,35 +1,56 @@
 // src/components/common/ConnectWalletButton.jsx
-
-import React, { useContext } from 'react';
-import { WalletContext } from '../../pages/WalletProvider'; // Make sure this path is correct
-import './ConnectWalletButton.css'; 
+import React, { useContext, useState, useEffect } from 'react';
+import { WalletContext } from '../../pages/WalletProvider';
+import './ConnectWalletButton.css';
 
 function ConnectWalletButton() {
-    // 1. Consume the context to get the wallet state and functions.
-    const { walletAddress, chainId, connectWallet, disconnectWallet } = useContext(WalletContext);
+    const { walletAddress, chainId, isConnected, connectWallet, disconnectWallet } = useContext(WalletContext);
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [connectionError, setConnectionError] = useState(null);
 
-    // If a wallet is connected, show the address and a disconnect button.
-    if (walletAddress) {
+    const handleConnect = async () => {
+        setIsConnecting(true);
+        setConnectionError(null);
+        try {
+            await connectWallet();
+            // Add small delay to allow state propagation
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+            setConnectionError('Failed to connect wallet');
+            console.error('Connection error:', error);
+        } finally {
+            setIsConnecting(false);
+        }
+    };
+
+    if (isConnected && walletAddress) {
         const truncatedAddress = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
         
         return (
             <div className="wallet-widget-container connected">
                 <span className="wallet-address" title={`Connected to Chain ID: ${chainId}`}>
-                    <span className="connection-indicator-dot"></span>
+                    <span className="connection-indicator"></span>
                     {truncatedAddress}
                 </span>
-                <button onClick={disconnectWallet} className="disconnect-button pioracle-button">
-                    Disconnect
+                <button 
+                    onClick={disconnectWallet} 
+                    className="disconnect-button"
+                    disabled={isConnecting}
+                >
+                    {isConnecting ? 'Disconnecting...' : 'Disconnect'}
                 </button>
+                {connectionError && <div className="error-message">{connectionError}</div>}
             </div>
         );
     }
 
-    // If no wallet is connected, show the main connect button.
-    // The onClick handler is now correctly wired to the connectWallet function from the context.
     return (
-        <button onClick={connectWallet} className="connect-wallet-button pioracle-button">
-            Connect Wallet
+        <button 
+            onClick={handleConnect} 
+            className="connect-wallet-button"
+            disabled={isConnecting}
+        >
+            {isConnecting ? 'Connecting...' : 'Connect Wallet'}
         </button>
     );
 }
