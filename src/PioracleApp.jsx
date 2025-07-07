@@ -15,8 +15,8 @@ import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
 import CreateMarketPage from './pages/CreateMarketPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
-import BlogPage from './pages/BlogPage';
-import BlogPostPaywall from './pages/BlogPostPaywall'; // Assuming you renamed the file
+
+import Blog from './pages/Blog'; // <-- IMPORT THE NEW UNIFIED COMPONENT
 import GuidePage from './pages/GuidePage';
 import TippingPage from './pages/TippingPage';
 import MarketDetailPage from './pages/MarketDetailPage';
@@ -44,10 +44,10 @@ function PioracleApp() {
               {/* --- THIS IS THE FINAL, ISOLATED BLOG ROUTING --- */}
               
               {/* This route handles the blog list page at "/blog" */}
-              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/blog" element={<Blog />} />
 
               {/* This is the new, completely separate route for reading a post */}
-              <Route path="/read/:slug" element={<BlogPostPaywall />} />
+                <Route path="/blog/:slug" element={<Blog />} />
               
               {/* ======================================================== */}
               
