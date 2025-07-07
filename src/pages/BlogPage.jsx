@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import matter from 'gray-matter';
 import './BlogPage.css';
 
-const postModules = import.meta.glob('../posts/*.md', { as: 'raw', eager: true });
+const postModules = import.meta.glob('../posts/*.md', { query: '?raw', eager: true });
 
 const posts = Object.entries(postModules).map(([path, rawContent]) => {
     const { data } = matter(rawContent);

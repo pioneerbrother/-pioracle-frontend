@@ -1,18 +1,22 @@
 // src/components/WalletStatus.jsx
 
 import React, { useContext } from 'react';
-import { WalletContext } from '../context/WalletContext'; // <-- Updated path
-import './WalletStatus.css'; // <-- New CSS file needed
+// The import must exactly match the filename, case-sensitively.
+import './WalletStatus.css'; 
+import { WalletContext } from '../context/WalletContext.jsx'; // Use explicit path for safety
 
 export default function WalletStatus() {
     const { 
         status, address, chainId, error,
-        connectWallet, disconnectWallet
+        connectWallet, disconnectWallet, isInitialized
     } = useContext(WalletContext);
 
+    // Render nothing until the provider is initialized on the client, to prevent hydration errors.
+    if (!isInitialized) {
+        return null;
+    }
+    
     const truncatedAddress = address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : null;
-
-    if (!status) return null; // Wait for provider to be ready
 
     return (
         <div className="wallet-status-container">
