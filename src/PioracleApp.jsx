@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/PioracleApp.jsx
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -15,14 +15,13 @@ import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
 import CreateMarketPage from './pages/CreateMarketPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
-
-import Blog from './pages/Blog'; // <-- IMPORT THE NEW UNIFIED COMPONENT
 import GuidePage from './pages/GuidePage';
 import TippingPage from './pages/TippingPage';
 import MarketDetailPage from './pages/MarketDetailPage';
+import Blog from './pages/Blog'; // The new unified blog component
 
 function PioracleApp() {
-  console.log("--- PIORACLE APP (RENAMED) - LATEST ROUTING LOADED ---");
+  console.log("--- PIORACLE APP (RENAMED) - FINAL ROUTING LOADED ---");
   return (
     <WalletProvider>
       <Router>
@@ -30,7 +29,7 @@ function PioracleApp() {
           <Header />
           <main>
             <Routes>
-              {/* --- Core App Routes (Unchanged) --- */}
+              {/* === ALL YOUR OTHER PAGES RESTORED === */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
@@ -40,16 +39,9 @@ function PioracleApp() {
               <Route path="/guide" element={<GuidePage />} />
               <Route path="/tip-jar" element={<TippingPage />} />
 
-              {/* ======================================================== */}
-              {/* --- THIS IS THE FINAL, ISOLATED BLOG ROUTING --- */}
-              
-              {/* This route handles the blog list page at "/blog" */}
+              {/* === THE CORRECTED BLOG ROUTES === */}
               <Route path="/blog" element={<Blog />} />
-
-              {/* This is the new, completely separate route for reading a post */}
-                <Route path="/blog/:slug" element={<Blog />} />
-              
-              {/* ======================================================== */}
+              <Route path="/blog/:slug" element={<Blog />} />
               
             </Routes>
           </main>
