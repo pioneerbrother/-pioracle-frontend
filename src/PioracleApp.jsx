@@ -39,9 +39,11 @@ function PioracleApp() {
               <Route path="/guide" element={<GuidePage />} />
               <Route path="/tip-jar" element={<TippingPage />} />
 
-              {/* === THE CORRECTED BLOG ROUTES === */}
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<Blog />} />
+              {/* ======================================================== */}
+              {/* === THIS IS THE FINAL, CORRECTED BLOG ROUTING --- */}
+              {/* This tells the router that all URLs STARTING WITH /blog should be handled by the Blog component */}
+              <Route path="/blog/*" element={<Blog />} />
+              {/* ======================================================== */}
               
             </Routes>
           </main>
