@@ -8,6 +8,7 @@ import { WalletProvider } from './pages/WalletProvider';
 // Layout Components
 import Header from './components/common/Header'; 
 import Footer from './components/common/Footer';
+import BlogLayout from './pages/BlogLayout'; // <-- IMPORT THE NEW LAYOUT
 
 // Page Components
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
@@ -44,7 +45,8 @@ function App() {
                {/* ======================================================== */}
               {/* --- THIS IS THE CORRECTED BLOG ROUTING LOGIC --- */}
               {/* Route 1: Shows the list of all posts. */}
-              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/blog" element={<BlogLayout />} />
+               <Route index element={<BlogPage />} />
 
               {/* Route 2: Shows the detail page for ANY post. */}
               {/* It renders our smart BlogPostDetail component, which will */}
