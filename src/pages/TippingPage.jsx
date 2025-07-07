@@ -1,7 +1,7 @@
 // src/pages/TippingPage.jsx (New File)
 import React, { useState, useContext, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from './WalletProvider';
+
 // Import ABIs (assuming you placed them in src/config/abis/)
 import TIPPING_JAR_ABI from '../config/abis/TippingJar.json'; 
 import IERC20_ABI from '../config/abis/IERC20.json'; // A standard ERC20 ABI
