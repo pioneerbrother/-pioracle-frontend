@@ -209,4 +209,3 @@ function BlogPostDetail() {
 }
 
 export default BlogPostDetail;
-
