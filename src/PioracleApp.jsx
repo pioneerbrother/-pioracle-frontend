@@ -6,7 +6,7 @@ import { WalletProvider } from './pages/WalletProvider';
 import Header from './components/common/Header';
 import Footer from './components/common/Footer';
 
-// --- IMPORT ALL YOUR PAGE COMPONENTS ---
+// --- IMPORT ALL YOUR PAGES ---
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
 import MarketDetailPage from './pages/MarketDetailPage';
 import CreateMarketPage from './pages/CreateMarketPage';
@@ -15,17 +15,22 @@ import MyPredictionsPage from './pages/MyPredictionsPage';
 import GuidePage from './pages/GuidePage';
 import TippingPage from './pages/TippingPage';
 import BlogPage from './pages/BlogPage';
-import BlogPostPaywall from './pages/BlogPostPaywall'; // Ensure you have this file
+import BlogPostPaywall from './pages/BlogPostPaywall';
 
 function PioracleApp() {
   return (
     <WalletProvider>
       <Router>
         <div className="App">
+          {/* --- THIS IS THE VISIBLE PROOF --- */}
+          <h1 style={{ textAlign: 'center', color: 'red', background: 'yellow', padding: '10px' }}>
+            ROUTING FIXED - vFINAL
+          </h1>
+          
           <Header />
           <main>
             <Routes>
-              {/* === CORE APP ROUTES (UNCHANGED) === */}
+              {/* === CORE APP ROUTES === */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
@@ -36,15 +41,12 @@ function PioracleApp() {
               <Route path="/tip-jar" element={<TippingPage />} />
 
               {/* ======================================================== */}
-              {/* === THIS IS THE FINAL, CORRECTED BLOG ROUTING === */}
+              {/* === FINAL, SEPARATED BLOG ROUTING === */}
+              {/* This specific route MUST come first */}
+              <Route path="/blog/:slug" element={<BlogPostPaywall />} />
               
-              {/* This route handles the blog list page at "/blog" */}
+              {/* This general route comes second */}
               <Route path="/blog" element={<BlogPage />} />
-
-              {/* This route handles the detail/paywall page at "/read/:slug" */}
-              {/* This now matches the links in your BlogPage.jsx file */}
-              <Route path="/read/:slug" element={<BlogPostPaywall />} />
-              
               {/* ======================================================== */}
             </Routes>
           </main>
@@ -56,4 +58,3 @@ function PioracleApp() {
 }
 
 export default PioracleApp;
-
