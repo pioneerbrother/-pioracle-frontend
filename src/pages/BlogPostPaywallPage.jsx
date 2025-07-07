@@ -1,7 +1,7 @@
 // src/pages/BlogPostPaywallPage.jsx
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { WalletContext } from './WalletProvider';
+
 
 // ABIs and Config
 import PAYWALL_ABI from '../config/abis/PremiumContent.json'; 
