@@ -21,7 +21,8 @@ import GuidePage from './pages/GuidePage';
 import TippingPage from './pages/TippingPage';
 import MarketDetailPage from './pages/MarketDetailPage';
 
-function App() {
+function PioracleApp() {
+  console.log("--- PIORACLE APP (RENAMED) - LATEST ROUTING LOADED ---");
   return (
     <WalletProvider>
       <Router>
@@ -59,5 +60,5 @@ function App() {
   );
 }
 
-export default App;
+export default PioracleApp;
 
