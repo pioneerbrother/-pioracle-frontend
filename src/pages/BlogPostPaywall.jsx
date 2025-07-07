@@ -25,22 +25,13 @@ function BlogPostPaywall() {
         const { data, content } = matter(rawContent);
         return { slug, frontmatter: data, content };
     }, [slug]);
-
-    if (!post) {
-        return <div className="page-container"><h1>Post not found</h1></div>;
-    }
-
+    if (!post) { return <div className="page-container"><h1>Post not found</h1></div>; }
     return <PaywallView post={post} />;
 }
 
 function PaywallView({ post }) {
-    // --- THIS IS THE FINAL DEBUGGING STEP ---
-    const walletContextValues = useContext(WalletContext);
-    console.log("FINAL DEBUG - Wallet Context Values:", walletContextValues);
-    
-    const { walletAddress, chainId, isConnected, walletProvider } = walletContextValues;
+    const { walletAddress, chainId, isConnected, walletProvider } = useContext(WalletContext);
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
-    
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
 
@@ -59,8 +50,14 @@ function PaywallView({ post }) {
     const contentId = useMemo(() => post.slug ? ethers.utils.id(post.slug) : null, [post.slug]);
 
     useEffect(() => {
+        // --- THIS IS THE FINAL FIX ---
+        // This single, simple check handles both the initial 'undefined' state and the 'disconnected' state.
+        if (!isConnected) {
+            setPageState('prompt_connect');
+            return;
+        }
+
         if (post.frontmatter.premium !== true) { setPageState('unlocked'); return; }
-        if (!isConnected) { setPageState('prompt_connect'); return; }
         if (chainId !== targetChainId) { setPageState('unsupported_network'); return; }
         if (!premiumContentContract || !usdcContract) { setPageState('initializing'); return; }
 
@@ -76,7 +73,6 @@ function PaywallView({ post }) {
                     setPageState(allowance.lt(fee) ? 'needs_approval' : 'ready_to_unlock');
                 }
             } catch (e) {
-                console.error("Error during checkAccess:", e);
                 setPageState('error');
                 setErrorMessage('Failed to check access. Please refresh.');
             }
@@ -93,7 +89,7 @@ function PaywallView({ post }) {
             const tx = await usdcContract.approve(premiumContentContract.address, fee);
             await tx.wait();
             setPageState('ready_to_unlock');
-        } catch (e) {
+        } catch(e) {
             setErrorMessage(`Approval failed. ${e.reason || 'Transaction rejected.'}`);
             setPageState('needs_approval');
         }
@@ -107,13 +103,13 @@ function PaywallView({ post }) {
             const tx = await premiumContentContract.purchaseContent(contentId);
             await tx.wait();
             setPageState('unlocked');
-        } catch (e) {
+        } catch(e) {
             setErrorMessage(`Unlock failed. ${e.reason || 'Transaction rejected.'}`);
             setPageState('ready_to_unlock');
         }
     }, [premiumContentContract, contentId]);
 
-    // --- RENDER LOGIC IS NOW COMPLETE ---
+    // --- THIS IS THE COMPLETE RENDER LOGIC ---
     const renderPaywallActions = () => {
         switch (pageState) {
             case 'prompt_connect':
