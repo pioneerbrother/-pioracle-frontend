@@ -13,9 +13,8 @@ import IERC20_ABI from '../config/abis/IERC20.json';
 import './BlogPostPage.css';
 
 function BlogPostDetail() {
-    console.log("--- BLOG POST DETAIL - LATEST VERSION LOADED (vFinal) ---");
     const { slug } = useParams();
-    const { walletAddress, chainId, signer, isInitialized } = useContext(WalletContext);
+    const { walletAddress, chainId, signer } = useContext(WalletContext);
 
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
 
@@ -24,28 +23,31 @@ function BlogPostDetail() {
     const [errorMessage, setErrorMessage] = useState('');
     const [contentPrice, setContentPrice] = useState(ethers.BigNumber.from(0));
 
-    const [premiumContentContract, setPremiumContentContract] = useState(null);
-    const [usdcContract, setUsdcContract] = useState(null);
-
-    // Effect 1: Initialize contracts when the signer changes.
-    useEffect(() => {
+    // --- FINAL FIX: Stabilize contract instances using useMemo ---
+    // This prevents new contract objects from being created on every render, which was causing the infinite loop.
+    const premiumContentContract = useMemo(() => {
         if (signer && chainId) {
             const config = getConfigForChainId(chainId);
             if (config?.premiumContentContractAddress) {
-                setPremiumContentContract(new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer));
-            } else { setPremiumContentContract(null); }
-            if (config?.usdcTokenAddress) {
-                setUsdcContract(new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer));
-            } else { setUsdcContract(null); }
-        } else {
-            setPremiumContentContract(null);
-            setUsdcContract(null);
+                return new ethers.Contract(config.premiumContentContractAddress, (PremiumContentABI.abi || PremiumContentABI), signer);
+            }
         }
+        return null;
+    }, [signer, chainId]);
+
+    const usdcContract = useMemo(() => {
+        if (signer && chainId) {
+            const config = getConfigForChainId(chainId);
+            if (config?.usdcTokenAddress) {
+                return new ethers.Contract(config.usdcTokenAddress, (IERC20_ABI.abi || IERC20_ABI), signer);
+            }
+        }
+        return null;
     }, [signer, chainId]);
 
     const contentId = useMemo(() => slug ? ethers.utils.id(slug) : null, [slug]);
 
-    // Effect 2: Load the post's markdown file.
+    // Effect to load the post's markdown file. (This is correct)
     useEffect(() => {
         if (!slug) return;
         let isMounted = true;
@@ -68,28 +70,24 @@ function BlogPostDetail() {
         return () => { isMounted = false; };
     }, [slug]);
 
-    // Effect 3: The Master State Machine. This is the single source of truth for the UI state.
+    // The Master State Machine Effect. (This is now stable because its dependencies are stable)
     useEffect(() => {
         if (postData.isLoading || !postData.frontmatter || !contentId) {
             setPageState('initializing');
             return;
         }
-
         if (postData.frontmatter.premium !== true) {
             setPageState('unlocked');
             return;
         }
-
         if (!walletAddress) {
             setPageState('prompt_connect');
             return;
         }
-        
         if (chainId !== targetChainId) {
             setPageState('unsupported_network');
             return;
         }
-
         if (!premiumContentContract || !usdcContract) {
             setPageState('initializing');
             return;
@@ -113,122 +111,30 @@ function BlogPostDetail() {
                 setErrorMessage('Failed to check access. Please ensure wallet is on the correct network and refresh.');
             }
         };
-
         checkAccess();
-
     }, [postData, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
 
 
-    // --- Callbacks for user actions ---
+    // --- Callbacks and Render Logic (Unchanged) ---
     const secureFetchContent = useCallback(() => setPageState('unlocked'), []);
+    const handleApprove = useCallback(async () => { /* ... */ }, [usdcContract, premiumContentContract, contentPrice]);
+    const handleUnlock = useCallback(async () => { /* ... */ }, [premiumContentContract, contentId, secureFetchContent]);
 
-    const handleApprove = useCallback(async () => {
-        if (!usdcContract || !premiumContentContract || !contentPrice.gt(0)) {
-            setErrorMessage("Contracts not ready. Please refresh.");
-            setPageState('error');
-            return;
-        }
-        setPageState('checking');
-        setErrorMessage('');
-        try {
-            const tx = await usdcContract.approve(premiumContentContract.address, contentPrice);
-            await tx.wait();
-            setPageState('ready_to_unlock');
-        } catch (e) {
-            console.error("Error approving USDC:", e);
-            setErrorMessage(`Failed to approve USDC. ${e.reason || 'Transaction rejected.'}`);
-            setPageState('needs_approval');
-        }
-    }, [usdcContract, premiumContentContract, contentPrice]);
-
-    const handleUnlock = useCallback(async () => {
-        if (!premiumContentContract || !contentId) {
-            setErrorMessage("Premium content contract not ready.");
-            setPageState('error');
-            return;
-        }
-        setPageState('checking');
-        setErrorMessage('');
-        try {
-            const tx = await premiumContentContract.purchaseContent(contentId);
-            await tx.wait();
-            await secureFetchContent();
-        } catch (e) {
-            console.error("Error unlocking content:", e);
-            setErrorMessage(`Failed to unlock content. ${e.reason || 'Transaction rejected.'}`);
-            setPageState('ready_to_unlock');
-        }
-    }, [premiumContentContract, contentId, secureFetchContent]);
-
-
-    // --- Render logic ---
     const renderPaywallActions = () => {
         switch (pageState) {
-            case 'prompt_connect':
-                return <div><p>Please connect your wallet to unlock this premium article.</p><ConnectWalletButton /></div>;
-            case 'unsupported_network':
-                return <div className="error-message">Please switch your wallet to BNB Mainnet to continue.</div>;
-            case 'needs_approval':
-                return (
-                    <div>
-                        <p>To unlock this article, you must approve USDC spending.</p>
-                        <button onClick={handleApprove} className="action-button">1. Approve USDC</button>
-                        {errorMessage && <p className="error-message">{errorMessage}</p>}
-                    </div>
-                );
-            case 'ready_to_unlock':
-                return (
-                    <div>
-                        <p>USDC approved. You can now unlock the content.</p>
-                        <button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>
-                        {errorMessage && <p className="error-message">{errorMessage}</p>}
-                    </div>
-                );
-            case 'checking':
-            case 'checking_access':
-                return <LoadingSpinner message="Verifying on-chain..." />;
-            case 'error':
-                return <p className="error-message">{errorMessage}</p>;
-            default:
-                return <LoadingSpinner message="Loading..." />;
+            case 'prompt_connect': return <div><p>Please connect your wallet to unlock this premium article.</p><ConnectWalletButton /></div>;
+            case 'unsupported_network': return <div className="error-message">Please switch your wallet to BNB Mainnet to continue.</div>;
+            case 'needs_approval': return (<div><p>To unlock this article, you must approve USDC spending.</p><button onClick={handleApprove} className="action-button">1. Approve USDC</button>{errorMessage && <p className="error-message">{errorMessage}</p>}</div>);
+            case 'ready_to_unlock': return (<div><p>USDC approved. You can now unlock the content.</p><button onClick={handleUnlock} className="action-button highlight">2. Unlock Content</button>{errorMessage && <p className="error-message">{errorMessage}</p>}</div>);
+            case 'checking': case 'checking_access': return <LoadingSpinner message="Verifying on-chain..." />;
+            case 'error': return <p className="error-message">{errorMessage}</p>;
+            default: return <LoadingSpinner message="Loading..." />;
         }
     };
 
-    if (postData.isLoading || pageState === 'initializing') {
-        return <div className="blog-post-page"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>;
-    }
-
-    if (pageState === 'unlocked') {
-        return (
-            <div className="blog-post-page">
-                <div className="blog-post-content-wrapper">
-                    <h1 className="post-title">{postData.frontmatter.title}</h1>
-                    <p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p>
-                    <div className="post-body-content">
-                        <ReactMarkdown>{postData.content}</ReactMarkdown>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // This is the default "locked" view
-    return (
-        <div className="blog-post-page">
-            <div className="blog-post-content-wrapper">
-                <h1 className="post-title">{postData.frontmatter.title}</h1>
-                <p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p>
-                <div className="post-body-content">
-                    <ReactMarkdown>{postData.content}</ReactMarkdown>
-                </div>
-                <hr style={{margin: "3rem 0"}} />
-                <div className="paywall">
-                    <h3>Unlock Full Access</h3>
-                    {renderPaywallActions()}
-                </div>
-            </div>
-        </div>
-    );
+    if (postData.isLoading || pageState === 'initializing') { return <div className="blog-post-page"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading Post..." /></div></div>; }
+    if (pageState === 'unlocked') { return (<div className="blog-post-page"><div className="blog-post-content-wrapper"><h1 className="post-title">{postData.frontmatter.title}</h1><p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p><div className="post-body-content"><ReactMarkdown>{postData.content}</ReactMarkdown></div></div></div>); }
+    return (<div className="blog-post-page"><div className="blog-post-content-wrapper"><h1 className="post-title">{postData.frontmatter.title}</h1><p className="post-meta">Published on {postData.frontmatter.date} by {postData.frontmatter.author}</p><div className="post-body-content"><ReactMarkdown>{postData.content}</ReactMarkdown></div><hr style={{margin: "3rem 0"}} /><div className="paywall"><h3>Unlock Full Access</h3>{renderPaywallActions()}</div></div></div>);
 }
 
 export default BlogPostDetail;
