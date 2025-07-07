@@ -1,56 +1,49 @@
-// src/components/common/ConnectWalletButton.jsx
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext } from 'react';
 import { WalletContext } from '../../pages/WalletProvider';
 import './ConnectWalletButton.css';
 
 function ConnectWalletButton() {
-    const { walletAddress, chainId, isConnected, connectWallet, disconnectWallet } = useContext(WalletContext);
-    const [isConnecting, setIsConnecting] = useState(false);
-    const [connectionError, setConnectionError] = useState(null);
+    const { 
+        walletAddress, 
+        isConnected, 
+        isConnecting, 
+        connectWallet, 
+        disconnectWallet 
+    } = useContext(WalletContext);
 
-    const handleConnect = async () => {
-        setIsConnecting(true);
-        setConnectionError(null);
-        try {
-            await connectWallet();
-            // Add small delay to allow state propagation
-            await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-            setConnectionError('Failed to connect wallet');
-            console.error('Connection error:', error);
-        } finally {
-            setIsConnecting(false);
-        }
-    };
+    // Guard for initial render before context is fully ready
+    if (!connectWallet) return null;
 
     if (isConnected && walletAddress) {
         const truncatedAddress = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
         
         return (
-            <div className="wallet-widget-container connected">
-                <span className="wallet-address" title={`Connected to Chain ID: ${chainId}`}>
-                    <span className="connection-indicator"></span>
-                    {truncatedAddress}
-                </span>
+            <div className="wallet-connected">
+                <span className="wallet-address">{truncatedAddress}</span>
                 <button 
-                    onClick={disconnectWallet} 
-                    className="disconnect-button"
-                    disabled={isConnecting}
+                    onClick={disconnectWallet}
+                    className="wallet-button disconnect"
                 >
-                    {isConnecting ? 'Disconnecting...' : 'Disconnect'}
+                    Disconnect
                 </button>
-                {connectionError && <div className="error-message">{connectionError}</div>}
             </div>
         );
     }
 
     return (
-        <button 
-            onClick={handleConnect} 
-            className="connect-wallet-button"
+        <button
+            onClick={connectWallet}
+            className={`wallet-button connect ${isConnecting ? 'connecting' : ''}`}
             disabled={isConnecting}
         >
-            {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+            {isConnecting ? (
+                <>
+                    <span className="spinner"></span>
+                    Connecting...
+                </>
+            ) : (
+                'Connect Wallet'
+            )}
         </button>
     );
 }

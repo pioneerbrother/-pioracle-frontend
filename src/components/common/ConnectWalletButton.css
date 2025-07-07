@@ -1,177 +1,66 @@
 /* src/components/common/ConnectWalletButton.css */
-
-/* Main button style when disconnected OR for "Unsupported Network" */
-.connect-wallet-button {
-    background-color: #4a90e2; /* Default Pleasant blue for "Connect Wallet" */
-    color: white;
-    font-weight: bold;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
-    font-size: 0.9rem; /* Consistent font size */
-}
-
-.connect-wallet-button:hover {
-    background-color: #5aa1f2; /* Lighter blue on hover */
-}
-
-.connect-wallet-button:active {
-    transform: scale(0.98);
-}
-
-.connect-wallet-button:disabled {
-    background-color: #555; /* Darker, muted for disabled */
-    cursor: not-allowed;
-    opacity: 0.8;
-}
-
-/* Specific style for the "Unsupported Network" button variant */
-/* This will override the default blue when this class is also present */
-.connect-wallet-button.wrong-network-button { 
-    background-color: #c53030; /* Distinct red for error/warning */
-    /* border: 1px solid #e53e3e; /* Optional: if you want a border too */
-}
-.connect-wallet-button.wrong-network-button:hover {
-    background-color: #e53e3e; /* Lighter red on hover */
-}
-
-
-/* Container for the address and disconnect button when connected */
-.wallet-widget-container {
-    display: flex;
-    align-items: center;
-    gap: 12px; /* Your original gap */
-    background-color: rgba(0, 0, 0, 0.2); /* Your original background */
-    border: 1px solid #4a5568; /* Default border */
-    padding: 6px 12px; /* Your original padding */
-    border-radius: 8px;
-    transition: border-color 0.2s ease;
-}
-
-/* The small green/red dot indicator */
-/* This selector targets the old .connection-indicator AND the new .connection-indicator-dot */
-.connection-indicator, 
-.connection-indicator-dot { 
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: #48bb78; /* Green for connected by default */
-    margin-right: 6px; /* Added space between dot and address text */
-}
-
-/* Styling for the text of the wallet address */
-.wallet-address {
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: 500;
-    color: #e2e8f0; /* Your original light text color */
-    display: flex; /* To align dot and text nicely if dot is inside */
-    align-items: center;
-}
-
-/* Styling for the disconnect button */
-.disconnect-button {
-    background: #4a5568; /* Your original background */
-    color: #e2e8f0; /* Your original text color */
-    border: none;
-    padding: 6px 10px; /* Your original padding */
-    font-size: 0.85rem; /* Your original font size */
-    font-weight: bold;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.disconnect-button:hover {
-    background: #718096; /* Your original hover background */
-}
-
-/* --- Error State Styling for the Container (when network is unsupported) --- */
-/* This will apply when the "Unsupported Network" button is shown */
-.wallet-widget-container.error {
-    border-color: #e53e3e !important; /* Red border for the whole widget, !important to ensure override if needed */
-}
-
-/* If the "Unsupported Network" button is active, its specific style above takes precedence. */
-/* The .connection-indicator within an error container (if you were to use it) would be red. */
-/* However, with the new JSX, the .connection-indicator-dot for a supported connection won't appear in an error state. */
-.wallet-widget-container.error .connection-indicator { 
-    background-color: #e53e3e; /* Red dot, though likely not used if button changes */
-}
-
-/* If you were to show address text in error state, this would apply */
-.wallet-widget-container.error .wallet-address {
-    color: #fed7d7; /* Light red text, though likely not used if button changes */
-}
-/* src/components/common/ConnectWalletButton.css */
-.connect-wallet-button {
-    background-color: #4e44ce;
-    color: white;
-    border: none;
+.wallet-button {
     padding: 12px 24px;
     border-radius: 8px;
-    font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    transition: all 0.3s ease;
 }
 
-.connect-wallet-button:hover {
+.wallet-button.connect {
+    background-color: #4e44ce;
+    color: white;
+}
+
+.wallet-button.connect:hover {
     background-color: #3a30b0;
 }
 
-.connect-wallet-button:disabled {
-    background-color: #a5a5a5;
+.wallet-button.connect.connecting {
+    background-color: #4e44ceaa;
+    cursor: wait;
+}
+
+.wallet-button.disconnect {
+    background-color: #f44336;
+    color: white;
+}
+
+.wallet-button.disconnect:hover {
+    background-color: #d32f2f;
+}
+
+.wallet-button:disabled {
+    opacity: 0.7;
     cursor: not-allowed;
 }
 
-.wallet-widget-container {
+.wallet-connected {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
 .wallet-address {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     font-family: monospace;
     font-size: 14px;
+    color: #333;
 }
 
-.connection-indicator {
-    width: 10px;
-    height: 10px;
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
     border-radius: 50%;
-    background-color: #4caf50;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
 }
 
-.disconnect-button {
-    background-color: #f44336;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.disconnect-button:hover {
-    background-color: #d32f2f;
-}
-
-.disconnect-button:disabled {
-    background-color: #a5a5a5;
-    cursor: not-allowed;
-}
-
-.error-message {
-    color: #f44336;
-    font-size: 12px;
-    margin-top: 4px;
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }

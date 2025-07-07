@@ -2,33 +2,34 @@
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { WalletProvider } from './pages/WalletProvider';
-import Header from './components/common/Header';
-import Footer from './components/common/Footer';
 
-// --- IMPORT ALL YOUR PAGES ---
+// Core Application Wrapper
+import { WalletProvider } from './pages/WalletProvider'; 
+
+// Layout Components
+import Header from './components/common/Header'; 
+import Footer from './components/common/Footer';
+import WalletStatus from './components/WalletStatus'; // <-- IMPORT YOUR DEBUG COMPONENT
+
+// Page Components
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage';
-import MarketDetailPage from './pages/MarketDetailPage';
 import CreateMarketPage from './pages/CreateMarketPage';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage';
 import MyPredictionsPage from './pages/MyPredictionsPage';
 import GuidePage from './pages/GuidePage';
 import TippingPage from './pages/TippingPage';
-import BlogPage from './pages/BlogPage';
-import BlogPostPaywall from './pages/BlogPostPaywall';
+import MarketDetailPage from './pages/MarketDetailPage';
+import Blog from './pages/Blog'; // Your unified blog component
 
 function PioracleApp() {
   return (
     <WalletProvider>
       <Router>
         <div className="App">
-          {/* --- THIS IS THE VISIBLE PROOF --- */}
-         
-          
           <Header />
           <main>
             <Routes>
-              {/* === CORE APP ROUTES === */}
+              {/* === ALL YOUR OTHER PAGES RESTORED === */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
@@ -38,17 +39,17 @@ function PioracleApp() {
               <Route path="/guide" element={<GuidePage />} />
               <Route path="/tip-jar" element={<TippingPage />} />
 
-              {/* ======================================================== */}
-              {/* === FINAL, SEPARATED BLOG ROUTING === */}
-              {/* This specific route MUST come first */}
-              <Route path="/blog/:slug" element={<BlogPostPaywall />} />
+              {/* === THE CORRECTED BLOG ROUTES === */}
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<Blog />} />
               
-              {/* This general route comes second */}
-              <Route path="/blog" element={<BlogPage />} />
-              {/* ======================================================== */}
             </Routes>
           </main>
           <Footer />
+          
+          {/* === ADD YOUR DEBUG COMPONENT HERE === */}
+          {/* It will be visible on all pages, floating at the bottom right */}
+          <WalletStatus />
         </div>
       </Router>
     </WalletProvider>
