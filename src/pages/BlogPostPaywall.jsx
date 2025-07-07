@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import matter from 'gray-matter';
 import { useWeb3ModalProvider } from '@web3modal/ethers5/react';
 
-import { WalletContext } from './WalletProvider';
+
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
 import { getConfigForChainId, getTargetChainIdHex } from '../config/contractConfig';
