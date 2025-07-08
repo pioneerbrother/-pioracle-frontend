@@ -2,7 +2,7 @@
 
 // Import each post explicitly. This is robust and will not fail in production.
 import post1 from './invasion-plan-of-turkey-en.md?raw';
-import post2 from './another-post-slug.md?raw';
+
 // ... add one import for every single post you have.
 
 // Create a simple map that links the slug to the raw content.
