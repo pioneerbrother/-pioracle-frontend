@@ -2,29 +2,24 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import matter from 'gray-matter';
-import { getPostBySlug } from '../posts/index.js'; // Import our new helper
+// --- THIS IS THE CRITICAL FIX ---
+import { allPosts } from '../posts/index.js';
+// --- END OF FIX ---
 import './BlogPage.css';
-
-// To get all posts, we need to iterate over the slugs we defined in the manifest.
-// This is a placeholder; you would ideally export an `allPosts` array from the manifest.
-const posts = Object.keys(postContent).map(slug => {
-    const rawContent = getPostBySlug(slug);
-    const { data } = matter(rawContent);
-    return { slug, frontmatter: data };
-}).sort((a, b) => new Date(b.frontmatter.date) - new Date(a.frontmatter.date));
-
 
 function BlogPage() {
     return (
         <div className="page-container blog-page">
             <h1>PiOracle Insights</h1>
+            <p className="page-subtitle">Analysis, guides, and updates from the team.</p>
             <div className="post-list">
-                {posts.map(post => (
+                {/* The component now correctly uses the imported `allPosts` array */}
+                {allPosts.map(post => (
                     <div key={post.slug} className="post-list-item">
                         <Link to={`/posts/${post.slug}`}>
                             <h2>{post.frontmatter.title}</h2>
-                            <p>{post.frontmatter.date}</p>
+                            <p className="post-meta">Published on {post.frontmatter.date}</p>
+                            <span className="read-more">Read More →</span>
                         </Link>
                     </div>
                 ))}
