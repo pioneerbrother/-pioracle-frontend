@@ -1,12 +1,15 @@
-// src/pages/BlogPostPaywall.jsx
+// src/pages/Blog.jsx
 
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import ReactMarkdown from 'react-markdown';
 import { useWeb3ModalProvider } from '@web3modal/ethers5/react';
 
-import { getPostBySlug } from '../posts/index.js';
+// Import our new, robust post helpers
+import { allPosts, getPostBySlug } from '../posts/index.js';
+
+// Import all necessary components and context
 import { WalletContext } from '../context/WalletContext.jsx';
 import LoadingSpinner from '../components/common/LoadingSpinner.jsx';
 import ConnectWalletButton from '../components/common/ConnectWalletButton.jsx';
@@ -15,13 +18,47 @@ import PremiumContentABI from '../config/abis/PremiumContent.json';
 import IERC20_ABI from '../config/abis/IERC20.json';
 import './BlogPage.css';
 
-function BlogPostPaywall() {
+// ======================================================================
+// === THE UNIFIED BLOG COMPONENT =======================================
+// ======================================================================
+function Blog() {
     const { slug } = useParams();
-    const { walletAddress, chainId, isConnected, isInitialized } = useContext(WalletContext);
-    const { walletProvider } = useWeb3ModalProvider(); 
-    
-    const post = useMemo(() => getPostBySlug(slug), [slug]);
 
+    // If a slug exists in the URL, render the detail/paywall view
+    if (slug) {
+        const post = getPostBySlug(slug);
+        if (!post) {
+            return <div className="page-container"><h1>404 - Post Not Found</h1></div>;
+        }
+        return <BlogPostDetailView post={post} />;
+    }
+
+    // Otherwise, show the list of all posts
+    return (
+        <div className="page-container blog-page">
+            <h1>PiOracle Insights</h1>
+            <p className="page-subtitle">Analysis, guides, and updates from the team.</p>
+            <div className="post-list">
+                {allPosts.map(post => (
+                    <div key={post.slug} className="post-list-item">
+                        <Link to={`/posts/${post.slug}`}>
+                            <h2>{post.frontmatter.title}</h2>
+                            <p className="post-meta">Published on {post.frontmatter.date}</p>
+                            <span className="read-more">Read More →</span>
+                        </Link>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ======================================================================
+// === THE PAYWALL LOGIC, NOW AS A DEDICATED SUB-COMPONENT =============
+// ======================================================================
+function BlogPostDetailView({ post }) {
+    const { walletAddress, chainId, isConnected, isInitialized } = useContext(WalletContext);
+    const { walletProvider } = useWeb3ModalProvider();
     const targetChainId = useMemo(() => parseInt(getTargetChainIdHex(), 16), []);
     const [pageState, setPageState] = useState('initializing');
     const [errorMessage, setErrorMessage] = useState('');
@@ -39,29 +76,14 @@ function BlogPostPaywall() {
         return { premiumContentContract: null, usdcContract: null };
     }, [isConnected, walletProvider, chainId]);
     
-    const contentId = useMemo(() => post?.slug ? ethers.utils.id(post.slug) : null, [post]);
+    const contentId = useMemo(() => ethers.utils.id(post.slug), [post.slug]);
 
     useEffect(() => {
-        if (!isInitialized || !post) {
-            setPageState('initializing');
-            return;
-        }
-        if (post.frontmatter.premium !== true) {
-            setPageState('unlocked');
-            return;
-        }
-        if (!isConnected) {
-            setPageState('prompt_connect');
-            return;
-        }
-        if (chainId !== targetChainId) {
-            setPageState('unsupported_network');
-            return;
-        }
-        if (!premiumContentContract || !usdcContract) {
-            setPageState('initializing');
-            return;
-        }
+        if (!isInitialized) { setPageState('initializing'); return; }
+        if (post.frontmatter.premium !== true) { setPageState('unlocked'); return; }
+        if (!isConnected) { setPageState('prompt_connect'); return; }
+        if (chainId !== targetChainId) { setPageState('unsupported_network'); return; }
+        if (!premiumContentContract || !usdcContract) { setPageState('initializing'); return; }
         const checkAccess = async () => {
             setPageState('checking_access');
             try {
@@ -69,10 +91,11 @@ function BlogPostPaywall() {
                 if (hasPaid) {
                     setPageState('unlocked');
                 } else {
-                    const fee = await premiumContentContract.contentPrice();
+                    const feeInWei = await premiumContentContract.contentPrice();
+                    const decimals = 18;
+                    setPrice({ amount: ethers.utils.formatUnits(feeInWei, decimals), symbol: 'USDC', raw: feeInWei });
                     const allowance = await usdcContract.allowance(walletAddress, premiumContentContract.address);
-                    setPrice({ amount: ethers.utils.formatUnits(fee), symbol: 'USDC', raw: fee });
-                    setPageState(allowance.lt(fee) ? 'needs_approval' : 'ready_to_unlock');
+                    setPageState(allowance.lt(feeInWei) ? 'needs_approval' : 'ready_to_unlock');
                 }
             } catch (e) {
                 setPageState('error');
@@ -82,18 +105,13 @@ function BlogPostPaywall() {
         checkAccess();
     }, [isInitialized, post, isConnected, walletAddress, chainId, targetChainId, premiumContentContract, usdcContract, contentId]);
     
-    const handleApprove = useCallback(async () => { /* ... */ }, [usdcContract, premiumContentContract, price]);
-    const handleUnlock = useCallback(async () => { /* ... */ }, [premiumContentContract, contentId]);
-    const handleSwitchNetwork = useCallback(async () => { /* ... */ }, []);
+    const handleApprove = useCallback(async () => { /* ... Your correct logic ... */ }, [usdcContract, premiumContentContract, price]);
+    const handleUnlock = useCallback(async () => { /* ... Your correct logic ... */ }, [premiumContentContract, contentId]);
+    const handleSwitchNetwork = useCallback(async () => { /* ... Your correct logic ... */ }, []);
 
-    const renderPaywallActions = () => { /* ... */ };
+    const renderPaywallActions = () => { /* ... Your correct logic ... */ };
 
-    if (!isInitialized || !post || pageState === 'initializing') {
-        return <div className="page-container"><div className="blog-post-content-wrapper"><LoadingSpinner message="Loading..." /></div></div>;
-    }
-    
     if (pageState === 'unlocked') {
-        // Unlocked View
         return (
             <div className="blog-post-page">
                 <div className="blog-post-content-wrapper">
@@ -105,7 +123,6 @@ function BlogPostPaywall() {
         );
     }
     
-    // Locked View
     return (
         <div className="blog-post-page">
             <div className="blog-post-content-wrapper">
@@ -115,13 +132,10 @@ function BlogPostPaywall() {
                     <ReactMarkdown>{post.excerpt}</ReactMarkdown>
                     <div className="excerpt-fadeout" />
                 </div>
-                <div className="paywall">
-                    <h3>Unlock Full Access</h3>
-                    {renderPaywallActions()}
-                </div>
+                <div className="paywall"><h3>Unlock Full Access</h3>{renderPaywallActions()}</div>
             </div>
         </div>
     );
 }
 
-export default BlogPostPaywall;
+export default Blog;
