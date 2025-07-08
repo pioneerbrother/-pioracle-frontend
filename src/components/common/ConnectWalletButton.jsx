@@ -2,39 +2,44 @@
 
 import React, { useContext } from 'react';
 
-// --- THIS IS THE CRITICAL FIX ---
-// This path correctly goes up two directories from `common` and `components`,
-// then into `context` to find the file. The `.jsx` extension is included for safety.
-import { WalletContext } from '../../context/WalletContext.jsx';
-// --- END OF FIX ---
+// --- THIS IS THE CORRECTED IMPORT PATH ---
+// It goes up two directories from `/common` and `/components` to `src/`, then into `/pages`.
+import { WalletContext } from '../../pages/WalletProvider';
+// --- END OF CORRECTION ---
 
-import './ConnectWalletButton.css'; // Assuming this file exists.
+import './ConnectWalletButton.css'; // Assuming this file exists and you have styles for it.
 
 function ConnectWalletButton() {
-    // This line will now work because WalletContext is correctly imported.
+    // Consume the context to get the wallet state and functions.
     const walletContext = useContext(WalletContext);
 
-    // Guard against the initial render before context is available.
-    if (!walletContext) {
-        return <button className="wallet-button" disabled>Loading...</button>;
+    // Guard against the initial render before the provider's state is initialized.
+    if (!walletContext || !walletContext.isInitialized) {
+        return <button className="connect-wallet-button pioracle-button" disabled>Loading...</button>;
     }
 
-    const { walletAddress, isConnected, connectWallet, disconnectWallet } = walletContext;
+    const { walletAddress, connectWallet, disconnectWallet } = walletContext;
 
-    if (isConnected && walletAddress) {
+    // If a wallet is connected, show the address and a disconnect button.
+    if (walletAddress) {
         const truncatedAddress = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
+        
         return (
-            <div className="wallet-connected">
-                <span className="wallet-address">{truncatedAddress}</span>
-                <button onClick={disconnectWallet} className="wallet-button disconnect">
+            <div className="wallet-widget-container connected">
+                <span className="wallet-address">
+                    <span className="connection-indicator-dot"></span>
+                    {truncatedAddress}
+                </span>
+                <button onClick={disconnectWallet} className="disconnect-button pioracle-button">
                     Disconnect
                 </button>
             </div>
         );
     }
 
+    // If no wallet is connected, show the main connect button.
     return (
-        <button onClick={connectWallet} className="wallet-button connect">
+        <button onClick={connectWallet} className="connect-wallet-button pioracle-button">
             Connect Wallet
         </button>
     );
