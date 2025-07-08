@@ -28,6 +28,17 @@ const initialState = {
 export function WalletProvider({ children }) {
     const [connectionState, setConnectionState] = useState(initialState);
 
+    // --- ADD THIS TEMPORARY DEBUG CODE ---
+    useEffect(() => {
+      console.log("WalletContext State Update:", {
+        isInitialized: connectionState.isInitialized,
+        walletAddress: connectionState.walletAddress,
+        hasContract: !!connectionState.predictionMarketContract,
+        chainId: connectionState.chainId
+      });
+    }, [connectionState]);
+    // --- END OF DEBUG CODE ---
+
     const setupState = useCallback(async (provider, chainId, signer = null, address = null) => {
         if (provider && provider.getNetwork) {
             try {
