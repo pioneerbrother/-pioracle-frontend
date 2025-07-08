@@ -1,1 +1,670 @@
-[{"inputs":[{"internalType":"address payable","name":"_initialPlatformFeeWallet","type":"address"},{"internalType":"uint16","name":"_initialPlatformFeeBP","type":"uint16"},{"internalType":"uint256","name":"_initialMarketCreationListingFee","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},{"inputs":[],"name":"ReentrancyGuardReentrantCall","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":true,"internalType":"address","name":"bettor","type":"address"},{"indexed":false,"internalType":"bool","name":"predictedYes","type":"bool"},{"indexed":false,"internalType":"uint256","name":"grossAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"netAmountPooled","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"feeAmount","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":false,"internalType":"bool","name":"conditionMetAndResolved","type":"bool"},{"indexed":false,"internalType":"enum PredictionMarketP2P.MarketState","name":"resultingState","type":"uint8"},{"indexed":false,"internalType":"int256","name":"oraclePriceObserved","type":"int256"}],"name":"EarlyResolutionAttempt","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"string","name":"assetSymbol","type":"string"},{"indexed":false,"internalType":"address","name":"priceFeedAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"targetPrice","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"expiryTimestamp","type":"uint256"},{"indexed":false,"internalType":"bool","name":"isEventMarket","type":"bool"},{"indexed":false,"internalType":"uint256","name":"creationTimestamp","type":"uint256"}],"name":"MarketCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"MarketCreationListingFeeSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":false,"internalType":"enum PredictionMarketP2P.MarketState","name":"outcomeState","type":"uint8"},{"indexed":false,"internalType":"int256","name":"actualValue","type":"int256"}],"name":"MarketResolved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint16","name":"newFeeBasisPoints","type":"uint16"}],"name":"PlatformFeeSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"newWallet","type":"address"}],"name":"PlatformFeeWalletSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":true,"internalType":"address","name":"marketCreator","type":"address"},{"indexed":false,"internalType":"string","name":"assetSymbol","type":"string"},{"indexed":false,"internalType":"address","name":"priceFeedAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"targetPrice","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"expiryTimestamp","type":"uint256"},{"indexed":false,"internalType":"bool","name":"isEventMarket","type":"bool"},{"indexed":false,"internalType":"uint16","name":"creatorFeeBasisPoints","type":"uint16"},{"indexed":false,"internalType":"uint256","name":"creationTimestamp","type":"uint256"}],"name":"UserMarketCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":true,"internalType":"address","name":"bettor","type":"address"},{"indexed":false,"internalType":"uint256","name":"payoutAmount","type":"uint256"}],"name":"WinningsClaimed","type":"event"},{"inputs":[],"name":"MAX_CREATOR_FEE_BASIS_POINTS","outputs":[{"internalType":"uint16","name":"","type":"uint16"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_ORACLE_STALENESS_FOR_EARLY_RESOLUTION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_ORACLE_STALENESS_FOR_REGULAR_RESOLUTION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"}],"name":"claimWinnings","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_assetSymbol","type":"string"},{"internalType":"address","name":"_priceFeedAddress","type":"address"},{"internalType":"uint256","name":"_targetPrice","type":"uint256"},{"internalType":"uint256","name":"_expiryTimestamp","type":"uint256"},{"internalType":"bool","name":"_isEventMarket","type":"bool"}],"name":"createMarket","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_assetSymbol","type":"string"},{"internalType":"address","name":"_priceFeedAddress","type":"address"},{"internalType":"uint256","name":"_targetPrice","type":"uint256"},{"internalType":"uint256","name":"_expiryTimestamp","type":"uint256"},{"internalType":"bool","name":"_isEventMarket","type":"bool"},{"internalType":"uint16","name":"_creatorFeeBP","type":"uint16"}],"name":"createUserMarket","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"},{"internalType":"address","name":"_user","type":"address"}],"name":"didUserClaim","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"},{"internalType":"address","name":"_user","type":"address"}],"name":"getClaimableAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"}],"name":"getMarketStaticDetails","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"string","name":"assetSymbol","type":"string"},{"internalType":"address","name":"priceFeedAddress","type":"address"},{"internalType":"uint256","name":"targetPrice","type":"uint256"},{"internalType":"uint256","name":"expiryTimestamp","type":"uint256"},{"internalType":"uint256","name":"resolutionTimestamp","type":"uint256"},{"internalType":"uint256","name":"totalStakedYes","type":"uint256"},{"internalType":"uint256","name":"totalStakedNo","type":"uint256"},{"internalType":"enum PredictionMarketP2P.MarketState","name":"state","type":"uint8"},{"internalType":"int256","name":"actualOutcomeValue","type":"int256"},{"internalType":"bool","name":"exists","type":"bool"},{"internalType":"bool","name":"isEventMarket","type":"bool"},{"internalType":"uint256","name":"creationTimestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"},{"internalType":"address","name":"_user","type":"address"}],"name":"getUserStakeInMarket","outputs":[{"internalType":"uint256","name":"stakeYes","type":"uint256"},{"internalType":"uint256","name":"stakeNo","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"marketCreationListingFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"markets","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"string","name":"assetSymbol","type":"string"},{"internalType":"contract AggregatorV3Interface","name":"priceFeed","type":"address"},{"internalType":"uint256","name":"targetPrice","type":"uint256"},{"internalType":"uint256","name":"expiryTimestamp","type":"uint256"},{"internalType":"uint256","name":"resolutionTimestamp","type":"uint256"},{"internalType":"uint256","name":"creationTimestamp","type":"uint256"},{"internalType":"bool","name":"isEventMarket","type":"bool"},{"internalType":"address payable","name":"marketCreator","type":"address"},{"internalType":"uint16","name":"creatorFeeBasisPoints","type":"uint16"},{"internalType":"bool","name":"isUserCreated","type":"bool"},{"internalType":"uint256","name":"totalStakedYes","type":"uint256"},{"internalType":"uint256","name":"totalStakedNo","type":"uint256"},{"internalType":"enum PredictionMarketP2P.MarketState","name":"state","type":"uint8"},{"internalType":"int256","name":"actualOutcomeValue","type":"int256"},{"internalType":"bool","name":"exists","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextMarketId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"},{"internalType":"enum PredictionMarketP2P.MarketState","name":"_outcomeState","type":"uint8"}],"name":"ownerResolveEventMarket","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"},{"internalType":"bool","name":"_predictYes","type":"bool"}],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"platformFeeBasisPoints","outputs":[{"internalType":"uint16","name":"","type":"uint16"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"platformFeeWallet","outputs":[{"internalType":"address payable","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"}],"name":"resolvePriceFeedMarket","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_newListingFee","type":"uint256"}],"name":"setMarketCreationListingFee","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint16","name":"_newFeeBasisPoints","type":"uint16"}],"name":"setPlatformFee","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_marketId","type":"uint256"}],"name":"triggerEarlyPriceResolution","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address payable","name":"_to","type":"address"}],"name":"withdrawStuckEther","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}]
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "PredictionMarketP2P",
+  "sourceName": "contracts/PredictionMarketP2P.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address payable",
+          "name": "_initialPlatformFeeWallet",
+          "type": "address"
+        },
+        {
+          "internalType": "uint16",
+          "name": "_initialPlatformFeeBP",
+          "type": "uint16"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_initialMarketCreationListingFee",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableInvalidOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableUnauthorizedAccount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ReentrancyGuardReentrantCall",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "marketId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "bettor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "predictedYes",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "grossAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "netAmountPooled",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "feeAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "BetPlaced",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "marketId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "conditionMetAndResolved",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PredictionMarketP2P.MarketState",
+          "name": "resultingState",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "int256",
+          "name": "oraclePriceObserved",
+          "type": "int256"
+        }
+      ],
+      "name": "EarlyResolutionAttempt",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "assetSymbol",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "priceFeedAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "targetPrice",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "expiryTimestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "isEventMarket",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "creationTimestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "MarketCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newFee",
+          "type": "uint256"
+        }
+      ],
+      "name": "MarketCreationListingFeeSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "marketId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PredictionMarketP2P.MarketState",
+          "name": "outcomeState",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "int256",
+          "name": "actualValue",
+          "type": "int256"
+        }
+      ],
+      "name": "MarketResolved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
+          "name": "newFeeBasisPoints",
+          "type": "uint16"
+        }
+      ],
+      "name": "PlatformFeeSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newWallet",
+          "type": "address"
+        }
+      ],
+      "name": "PlatformFeeWalletSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "marketCreator",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "assetSymbol",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "priceFeedAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "targetPrice",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "expiryTimestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "isEventMarket",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint16",
+          "name": "creatorFeeBasisPoints",
+          "type": "uint16"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "creationTimestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "UserMarketCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "marketId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "bettor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "payoutAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "WinningsClaimed",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_CREATOR_FEE_BASIS_POINTS",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_ORACLE_STALENESS_FOR_EARLY_RESOLUTION",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_ORACLE_STALENESS_FOR_REGULAR_RESOLUTION",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getExistingMarketIds",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_marketId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getMarketInfo",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "assetSymbol",
+          "type": "string"
+        },
+        {
+          "internalType": "enum PredictionMarketP2P.MarketState",
+          "name": "state",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expiryTimestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "resolutionTimestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "creationTimestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalStakedYes",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalStakedNo",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_marketId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getMarketResolutionDetails",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "priceFeedAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "targetPrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "int256",
+          "name": "actualOutcomeValue",
+          "type": "int256"
+        },
+        {
+          "internalType": "bool",
+          "name": "isEventMarket",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "marketCreationListingFee",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "markets",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "assetSymbol",
+          "type": "string"
+        },
+        {
+          "internalType": "contract AggregatorV3Interface",
+          "name": "priceFeed",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "targetPrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expiryTimestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "resolutionTimestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "creationTimestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "isEventMarket",
+          "type": "bool"
+        },
+        {
+          "internalType": "address payable",
+          "name": "marketCreator",
+          "type": "address"
+        },
+        {
+          "internalType": "uint16",
+          "name": "creatorFeeBasisPoints",
+          "type": "uint16"
+        },
+        {
+          "internalType": "bool",
+          "name": "isUserCreated",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalStakedYes",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalStakedNo",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum PredictionMarketP2P.MarketState",
+          "name": "state",
+          "type": "uint8"
+        },
+        {
+          "internalType": "int256",
+          "name": "actualOutcomeValue",
+          "type": "int256"
+        },
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nextMarketId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "platformFeeBasisPoints",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "platformFeeWallet",
+      "outputs": [
+        {
+          "internalType": "address payable",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60803461019257601f610a1038819003918201601f191683019291906001600160401b038411838510176101975781606092849260409687528339810103126101925780516001600160a01b039190828116908190036101925760208201519161ffff8316908184036101925785015193331561017a576000543360018060a01b03198216176000558651913391167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0600080a360018055821561013857506103e8106100f4576004549161ffff60a01b9060a01b169160018060b01b03191617176004556005555161086290816101ae8239f35b835162461bcd60e51b815260206004820152601f60248201527f506c6174666f726d2066656520746f6f206869676820286d61782031302529006044820152606490fd5b62461bcd60e51b815260206004820152601b60248201527f496e76616c696420706c6174666f726d206665652077616c6c657400000000006044820152606490fd5b8551631e4fbdf760e01b815260006004820152602490fd5b600080fd5b634e487b7160e01b600052604160045260246000fdfe60406080815260048036101561001457600080fd5b600091823560e01c80630df0621d146104da5780630fdbfc0d146104705780633ec79193146103ca578063406ef2ef146103ab578063460c69d11461038d5780636312523714610370578063715018a6146103165780638664aa18146102f95780638da5cb5b146102d1578063b1283e77146101bd578063b5a9193a1461019a578063c58bfb6614610172578063e20fc1181461014a5763f2fde38b146100ba57600080fd5b34610146576020366003190112610146576001600160a01b03823581811693919290849003610142576100eb61072e565b831561012c57505082546001600160a01b0319811683178455167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08380a380f35b51631e4fbdf760e01b8152908101849052602490fd5b8480fd5b8280fd5b5090346101465782600319360112610146575490516001600160a01b03909116815260209150f35b5082346101975780600319360112610197575061ffff6020925460a01c169051908152f35b80fd5b8382346101b957816003193601126101b9576020906005549051908152f35b5080fd5b5091346101975760203660031901126101975782908235815260026020522082815491600181016101ed9061065d565b93600160a01b60019003908160028401541691600384015491840154906005850154906006860154600787015492600888015494600989015496600d8a015460ff1698600e8b01549a600f015460ff169b519e8f9e8f9e8f908152610200908160208201520161025c916105c2565b9d015260608d015260808c015260a08b015260c08a015260ff8216151560e08a01528160081c166101008901528060a81c61ffff1661012089015260b81c60ff1615156101408801526101608701526101808601526101a085016102bf91610602565b6101c084015215156101e08301520390f35b8382346101b957816003193601126101b957905490516001600160a01b039091168152602090f35b8382346101b957816003193601126101b9576020905161012c8152f35b833461019757806003193601126101975761032f61072e565b80546001600160a01b03198116825581906001600160a01b03167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a380f35b8382346101b957816003193601126101b957602090516138408152f35b8382346101b957816003193601126101b95760209051620151808152f35b8382346101b957816003193601126101b9576020906003549051908152f35b50823461019757602036600319011261019757819083358152600260205220906103fa60ff600f840154166107f3565b81549160ff600d8201541693810154600582015460068301549060088401549261045361042e60016009880154970161065d565b9861044a88519a8b9a8b526101008060208d01528b01906105c2565b97890190610602565b6060870152608086015260a085015260c084015260e08301520390f35b509034610146576020366003190112610146576080928291358152600260205220906104a260ff600f840154166107f3565b60018060a01b036002830154169160038101549160ff6007600e84015493015416928151948552602085015283015215156060820152f35b8382346101b957816003193601126101b957600354906104f982610772565b918390845b81811061058257505061051081610772565b92845b82811061055e5750505090815192839260208080860192818752855180945286019401925b82811061054757505050500390f35b835185528695509381019392810192600101610538565b8061056c61057d92846107c9565b5161057782886107c9565b526107a4565b610513565b808652600260205260ff600f8588200154166105a7575b6105a2906107a4565b6104fe565b916105ba81846105776105a294896107c9565b929050610599565b919082519283825260005b8481106105ee575050826000602080949584010152601f8019910116010190565b6020818301810151848301820152016105cd565b90600782101561060f5752565b634e487b7160e01b600052602160045260246000fd5b90601f8019910116810190811067ffffffffffffffff82111761064757604052565b634e487b7160e01b600052604160045260246000fd5b90604051906000835490600182811c90808416968715610724575b602094858410891461071057879884899798995290816000146106ee57506001146106af575b5050506106ad92500383610625565b565b600090815285812095935091905b8183106106d65750506106ad935082010138808061069e565b855488840185015294850194879450918301916106bd565b925050506106ad94925060ff191682840152151560051b82010138808061069e565b634e487b7160e01b85526022600452602485fd5b91607f1691610678565b6000546001600160a01b0316330361074257565b60405163118cdaa760e01b8152336004820152602490fd5b67ffffffffffffffff81116106475760051b60200190565b9061077c8261075a565b6107896040519182610625565b828152809261079a601f199161075a565b0190602036910137565b60001981146107b35760010190565b634e487b7160e01b600052601160045260246000fd5b80518210156107dd5760209160051b010190565b634e487b7160e01b600052603260045260246000fd5b156107fa57565b60405162461bcd60e51b815260206004820152600a6024820152694d61726b657420444e4560b01b6044820152606490fdfea26469706673582212201cd4a4e06b6507f0a5a8179f0245f0f9931d929fb53b8b2206402c8e8d1a76d464736f6c63430008140033",
+  "deployedBytecode": "0x60406080815260048036101561001457600080fd5b600091823560e01c80630df0621d146104da5780630fdbfc0d146104705780633ec79193146103ca578063406ef2ef146103ab578063460c69d11461038d5780636312523714610370578063715018a6146103165780638664aa18146102f95780638da5cb5b146102d1578063b1283e77146101bd578063b5a9193a1461019a578063c58bfb6614610172578063e20fc1181461014a5763f2fde38b146100ba57600080fd5b34610146576020366003190112610146576001600160a01b03823581811693919290849003610142576100eb61072e565b831561012c57505082546001600160a01b0319811683178455167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08380a380f35b51631e4fbdf760e01b8152908101849052602490fd5b8480fd5b8280fd5b5090346101465782600319360112610146575490516001600160a01b03909116815260209150f35b5082346101975780600319360112610197575061ffff6020925460a01c169051908152f35b80fd5b8382346101b957816003193601126101b9576020906005549051908152f35b5080fd5b5091346101975760203660031901126101975782908235815260026020522082815491600181016101ed9061065d565b93600160a01b60019003908160028401541691600384015491840154906005850154906006860154600787015492600888015494600989015496600d8a015460ff1698600e8b01549a600f015460ff169b519e8f9e8f9e8f908152610200908160208201520161025c916105c2565b9d015260608d015260808c015260a08b015260c08a015260ff8216151560e08a01528160081c166101008901528060a81c61ffff1661012089015260b81c60ff1615156101408801526101608701526101808601526101a085016102bf91610602565b6101c084015215156101e08301520390f35b8382346101b957816003193601126101b957905490516001600160a01b039091168152602090f35b8382346101b957816003193601126101b9576020905161012c8152f35b833461019757806003193601126101975761032f61072e565b80546001600160a01b03198116825581906001600160a01b03167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a380f35b8382346101b957816003193601126101b957602090516138408152f35b8382346101b957816003193601126101b95760209051620151808152f35b8382346101b957816003193601126101b9576020906003549051908152f35b50823461019757602036600319011261019757819083358152600260205220906103fa60ff600f840154166107f3565b81549160ff600d8201541693810154600582015460068301549060088401549261045361042e60016009880154970161065d565b9861044a88519a8b9a8b526101008060208d01528b01906105c2565b97890190610602565b6060870152608086015260a085015260c084015260e08301520390f35b509034610146576020366003190112610146576080928291358152600260205220906104a260ff600f840154166107f3565b60018060a01b036002830154169160038101549160ff6007600e84015493015416928151948552602085015283015215156060820152f35b8382346101b957816003193601126101b957600354906104f982610772565b918390845b81811061058257505061051081610772565b92845b82811061055e5750505090815192839260208080860192818752855180945286019401925b82811061054757505050500390f35b835185528695509381019392810192600101610538565b8061056c61057d92846107c9565b5161057782886107c9565b526107a4565b610513565b808652600260205260ff600f8588200154166105a7575b6105a2906107a4565b6104fe565b916105ba81846105776105a294896107c9565b929050610599565b919082519283825260005b8481106105ee575050826000602080949584010152601f8019910116010190565b6020818301810151848301820152016105cd565b90600782101561060f5752565b634e487b7160e01b600052602160045260246000fd5b90601f8019910116810190811067ffffffffffffffff82111761064757604052565b634e487b7160e01b600052604160045260246000fd5b90604051906000835490600182811c90808416968715610724575b602094858410891461071057879884899798995290816000146106ee57506001146106af575b5050506106ad92500383610625565b565b600090815285812095935091905b8183106106d65750506106ad935082010138808061069e565b855488840185015294850194879450918301916106bd565b925050506106ad94925060ff191682840152151560051b82010138808061069e565b634e487b7160e01b85526022600452602485fd5b91607f1691610678565b6000546001600160a01b0316330361074257565b60405163118cdaa760e01b8152336004820152602490fd5b67ffffffffffffffff81116106475760051b60200190565b9061077c8261075a565b6107896040519182610625565b828152809261079a601f199161075a565b0190602036910137565b60001981146107b35760010190565b634e487b7160e01b600052601160045260246000fd5b80518210156107dd5760209160051b010190565b634e487b7160e01b600052603260045260246000fd5b156107fa57565b60405162461bcd60e51b815260206004820152600a6024820152694d61726b657420444e4560b01b6044820152606490fdfea26469706673582212201cd4a4e06b6507f0a5a8179f0245f0f9931d929fb53b8b2206402c8e8d1a76d464736f6c63430008140033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
