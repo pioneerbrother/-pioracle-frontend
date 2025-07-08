@@ -13,7 +13,7 @@ import './PredictionMarketsListPage.css';
 function PredictionMarketsListPage() {
     const { predictionMarketContract, chainId, isInitialized, walletAddress } = useContext(WalletContext);
     const [markets, setMarkets] = useState([]);
-    const [pageState, setPageState] = useState('initializing'); // initializing, loading, success, error
+    const [pageState, setPageState] = useState('initializing'); // initializing, loading, success, error, prompt_connect
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
@@ -25,11 +25,10 @@ function PredictionMarketsListPage() {
                 return;
             }
             if (!walletAddress) {
-                setPageState('prompt_connect'); // New state for clarity
+                setPageState('prompt_connect');
                 return;
             }
             if (!predictionMarketContract) {
-                // This can happen briefly when switching networks. A loading state is appropriate.
                 setPageState('loading'); 
                 return;
             }
@@ -45,7 +44,7 @@ function PredictionMarketsListPage() {
 
                 if (marketIds.length === 0) {
                     setMarkets([]);
-                    setPageState('success'); // Success, but no markets to show
+                    setPageState('success');
                     return;
                 }
 
@@ -66,7 +65,7 @@ function PredictionMarketsListPage() {
                         };
                         return getMarketDisplayProperties(baseMarket);
                     })
-                    .sort((a, b) => b.creationTimestamp - a.creationTimestamp); // Sort by newest first
+                    .sort((a, b) => b.creationTimestamp - a.creationTimestamp);
 
                 setMarkets(formattedMarkets);
                 setPageState('success');
