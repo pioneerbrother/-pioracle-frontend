@@ -1,48 +1,58 @@
 // src/pages/PredictionMarketsListPage.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
-import { WalletContext } from './WalletProvider'; // --- THIS IS THE FINAL FIX ---
+import { WalletContext } from './WalletProvider';
  
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
+import ConnectWalletButton from '../components/common/ConnectWalletButton';
 import { getMarketDisplayProperties } from '../utils/marketutils.js';
 import './PredictionMarketsListPage.css';
 
 function PredictionMarketsListPage() {
     const { predictionMarketContract, chainId, isInitialized, walletAddress } = useContext(WalletContext);
-    const [allMarkets, setAllMarkets] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [markets, setMarkets] = useState([]);
+    const [pageState, setPageState] = useState('initializing'); // initializing, loading, success, error
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
-        const fetchMarkets = async () => {
-            if (!isInitialized) { setIsLoading(true); return; }
-            if (!walletAddress) { setIsLoading(false); setError("Please connect your wallet to view markets."); setAllMarkets([]); return; }
-            if (!predictionMarketContract) { setIsLoading(false); setError(`App not configured for Chain ID: ${chainId}.`); setAllMarkets([]); return; }
+        // This is the core logic that decides what to do
+        const fetchAndProcessMarkets = async () => {
+            // Guard conditions at the top
+            if (!isInitialized) {
+                setPageState('initializing');
+                return;
+            }
+            if (!walletAddress) {
+                setPageState('prompt_connect'); // New state for clarity
+                return;
+            }
+            if (!predictionMarketContract) {
+                // This can happen briefly when switching networks. A loading state is appropriate.
+                setPageState('loading'); 
+                return;
+            }
 
-            setIsLoading(true);
-            setError(null);
-            console.log(`PMLP (Chain ${chainId}): Contract is valid. Using nextMarketId fetch logic...`);
+            setPageState('loading');
+            setErrorMessage('');
+            console.log(`PMLP (Chain ${chainId}): Contract is valid. Starting fetch...`);
 
             try {
-                const nextId = await predictionMarketContract.nextMarketId();
-                const totalMarkets = nextId.toNumber();
+                // Using your new simplified getter strategy
+                const marketIds = await predictionMarketContract.getExistingMarketIds();
+                console.log(`PMLP: Found ${marketIds.length} existing market IDs.`);
 
-                if (totalMarkets === 0) {
-                    console.log("PMLP: No markets created on this contract.");
-                    setAllMarkets([]);
-                    setIsLoading(false);
+                if (marketIds.length === 0) {
+                    setMarkets([]);
+                    setPageState('success'); // Success, but no markets to show
                     return;
                 }
 
-                const marketPromises = [];
-                for (let i = 0; i < totalMarkets; i++) {
-                    marketPromises.push(predictionMarketContract.getMarketStaticDetails(i));
-                }
-                
+                // Fetch details for each valid market ID
+                const marketPromises = marketIds.map(id => predictionMarketContract.getMarketInfo(id));
                 const rawMarkets = await Promise.all(marketPromises);
-
+                
                 const formattedMarkets = rawMarkets
                     .map(raw => {
                         const baseMarket = {
@@ -50,47 +60,62 @@ function PredictionMarketsListPage() {
                             assetSymbol: raw.assetSymbol,
                             state: Number(raw.state),
                             expiryTimestamp: Number(raw.expiryTimestamp),
+                            creationTimestamp: Number(raw.creationTimestamp),
                             totalStakedYes: raw.totalStakedYes.toString(),
                             totalStakedNo: raw.totalStakedNo.toString(),
-                            exists: raw.exists,
                         };
                         return getMarketDisplayProperties(baseMarket);
                     })
-                    .sort((a, b) => parseInt(b.id) - parseInt(a.id));
+                    .sort((a, b) => b.creationTimestamp - a.creationTimestamp); // Sort by newest first
 
-                setAllMarkets(formattedMarkets);
+                setMarkets(formattedMarkets);
+                setPageState('success');
                 console.log("PMLP: Successfully fetched and formatted all markets.", formattedMarkets);
 
             } catch (err) {
                 console.error("PMLP: CRITICAL ERROR during market fetch:", err);
-                setError("A contract error occurred. Please check the network or contract configuration.");
-            } finally {
-                setIsLoading(false);
+                setPageState('error');
+                setErrorMessage("A contract error occurred. Please check the network or contract configuration.");
             }
         };
 
-        fetchMarkets();
+        fetchAndProcessMarkets();
     }, [predictionMarketContract, chainId, isInitialized, walletAddress]);
     
-    const marketsToDisplay = allMarkets;
-
+    // --- Render Logic Based on State ---
+    const renderContent = () => {
+        switch (pageState) {
+            case 'initializing':
+            case 'loading':
+                return <LoadingSpinner message="Fetching markets..." />;
+            case 'prompt_connect':
+                 return (
+                    <div className="centered-prompt">
+                        <p>Please connect your wallet to view the markets.</p>
+                        <ConnectWalletButton />
+                    </div>
+                 );
+            case 'error':
+                return <ErrorMessage title="Error Loading Markets" message={errorMessage} />;
+            case 'success':
+                return (
+                    <div className="market-grid">
+                        {markets.length > 0 ? (
+                            markets.map(market => <MarketCard key={market.id} market={market} />)
+                        ) : (
+                            <p>No open markets found on this network. Be the first to create one!</p>
+                        )}
+                    </div>
+                );
+            default:
+                return null; // Should not happen
+        }
+    };
+    
     return (
         <div className="page-container prediction-list-page">
             <h1>All Existing Markets (Chain ID: {chainId || 'Not Connected'})</h1>
-            
-            {isLoading && <LoadingSpinner message="Fetching markets..." />}
-            
-            {error && !isLoading && <ErrorMessage title="Error Loading Markets" message={error} />}
-            
-            {!isLoading && !error && (
-                 <div className="market-grid">
-                    {marketsToDisplay.length > 0 ? (
-                        marketsToDisplay.map(market => <MarketCard key={market.id} market={market} />)
-                    ) : (
-                        <p>No markets found on this network. Create one!</p>
-                    )}
-                </div>
-            )}
+            {renderContent()}
         </div>
     );
 }
