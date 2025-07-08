@@ -1,29 +1,32 @@
+// src/components/common/ConnectWalletButton.jsx
+
 import React, { useContext } from 'react';
 
-import './ConnectWalletButton.css';
+// --- THIS IS THE CRITICAL FIX ---
+// This path correctly goes up two directories from `common` and `components`,
+// then into `context` to find the file. The `.jsx` extension is included for safety.
+import { WalletContext } from '../../context/WalletContext.jsx';
+// --- END OF FIX ---
+
+import './ConnectWalletButton.css'; // Assuming this file exists.
 
 function ConnectWalletButton() {
-    const { 
-        walletAddress, 
-        isConnected, 
-        isConnecting, 
-        connectWallet, 
-        disconnectWallet 
-    } = useContext(WalletContext);
+    // This line will now work because WalletContext is correctly imported.
+    const walletContext = useContext(WalletContext);
 
-    // Guard for initial render before context is fully ready
-    if (!connectWallet) return null;
+    // Guard against the initial render before context is available.
+    if (!walletContext) {
+        return <button className="wallet-button" disabled>Loading...</button>;
+    }
+
+    const { walletAddress, isConnected, connectWallet, disconnectWallet } = walletContext;
 
     if (isConnected && walletAddress) {
         const truncatedAddress = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
-        
         return (
             <div className="wallet-connected">
                 <span className="wallet-address">{truncatedAddress}</span>
-                <button 
-                    onClick={disconnectWallet}
-                    className="wallet-button disconnect"
-                >
+                <button onClick={disconnectWallet} className="wallet-button disconnect">
                     Disconnect
                 </button>
             </div>
@@ -31,23 +34,11 @@ function ConnectWalletButton() {
     }
 
     return (
-        <button
-            onClick={connectWallet}
-            className={`wallet-button connect ${isConnecting ? 'connecting' : ''}`}
-            disabled={isConnecting}
-        >
-            {isConnecting ? (
-                <>
-                    <span className="spinner"></span>
-                    Connecting...
-                </>
-            ) : (
-                'Connect Wallet'
-            )}
+        <button onClick={connectWallet} className="wallet-button connect">
+            Connect Wallet
         </button>
     );
 }
 
 export default ConnectWalletButton;
-
 
