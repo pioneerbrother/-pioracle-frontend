@@ -1,6 +1,7 @@
 // src/pages/PredictionMarketsListPage.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
+import { WalletContext } from './WalletProvider'; // --- THIS IS THE FINAL FIX ---
  
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -42,9 +43,7 @@ function PredictionMarketsListPage() {
                 
                 const rawMarkets = await Promise.all(marketPromises);
 
-                // --- MODIFICATION: The filter for `market.exists` is removed for this test ---
                 const formattedMarkets = rawMarkets
-                    // .filter(market => market.exists === true) // Temporarily disabled to see all data
                     .map(raw => {
                         const baseMarket = {
                             id: raw.id.toString(),
@@ -53,7 +52,7 @@ function PredictionMarketsListPage() {
                             expiryTimestamp: Number(raw.expiryTimestamp),
                             totalStakedYes: raw.totalStakedYes.toString(),
                             totalStakedNo: raw.totalStakedNo.toString(),
-                            exists: raw.exists, // Pass the 'exists' flag through
+                            exists: raw.exists,
                         };
                         return getMarketDisplayProperties(baseMarket);
                     })
@@ -73,12 +72,10 @@ function PredictionMarketsListPage() {
         fetchMarkets();
     }, [predictionMarketContract, chainId, isInitialized, walletAddress]);
     
-    // --- MODIFICATION: Display ALL markets, not just open ones ---
     const marketsToDisplay = allMarkets;
 
     return (
         <div className="page-container prediction-list-page">
-            {/* The title is updated to be more accurate for this test */}
             <h1>All Existing Markets (Chain ID: {chainId || 'Not Connected'})</h1>
             
             {isLoading && <LoadingSpinner message="Fetching markets..." />}
