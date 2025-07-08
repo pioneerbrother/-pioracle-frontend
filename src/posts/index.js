@@ -8,7 +8,7 @@ import post1 from './invasion-plan-of-turkey-en.md?raw';
 // Create a simple map that links the slug to the raw content.
 const postContent = {
   'invasion-plan-of-turkey-en': post1,
-  'another-post-slug': post2,
+  
   // ... add one entry for every post, matching the slug to the import.
 };
 
