@@ -3,9 +3,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import matter from 'gray-matter';
-import './BlogPage.css';
+import './BlogPage.css'; // Your existing stylesheet
 
-// This Vite function imports all .md files as raw text
 const postModules = import.meta.glob('../posts/*.md', { 
     as: 'raw',
     eager: true 
@@ -14,9 +13,9 @@ const postModules = import.meta.glob('../posts/*.md', {
 const posts = Object.entries(postModules)
   .map(([path, rawContent]) => {
     // --- THIS IS THE FIX ---
-    // If for any reason the rawContent is null or undefined, skip it.
-    if (!rawContent) {
-        console.warn(`Skipping post from path: ${path} due to empty content.`);
+    // If for any reason the content is not a string, skip this file.
+    if (typeof rawContent !== 'string') {
+        console.warn(`Skipping post from path: ${path} because its content is invalid.`);
         return null;
     }
     // --- END OF FIX ---
@@ -25,23 +24,19 @@ const posts = Object.entries(postModules)
         const { data } = matter(rawContent);
         const slug = path.split('/').pop().replace('.md', '');
 
-        // Also check if title exists after parsing
-        if (!data.title) {
-            console.warn(`Post with slug '${slug}' is missing a 'title'. Skipping.`);
+        // A post must have a slug and a title to be displayed.
+        if (!slug || !data.title) {
+            console.warn(`Skipping post from path: ${path} due to missing slug or title.`);
             return null;
         }
 
-        return {
-            slug,
-            title: data.title,
-            date: data.date || 'No Date',
-        };
+        return { slug, title: data.title, date: data.date || 'No Date' };
     } catch (e) {
         console.error(`Failed to parse frontmatter for post at path: ${path}`, e);
         return null;
     }
   })
-  .filter(post => post !== null) // Filter out any posts that failed or were skipped
+  .filter(post => post !== null) // Remove any null entries from the final list
   .sort((a, b) => new Date(b.date) - new Date(a.date));
 
 
