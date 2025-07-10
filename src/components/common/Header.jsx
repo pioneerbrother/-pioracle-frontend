@@ -1,7 +1,8 @@
 // src/components/common/Header.jsx
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { WalletContext } from '../../pages/WalletProvider';
+// THIS IS THE NEW, CORRECT PATH
+import { WalletContext } from '../../contexts/WalletContext.jsx';
 import ConnectWalletButton from './ConnectWalletButton';
 
 import './Header.css';
