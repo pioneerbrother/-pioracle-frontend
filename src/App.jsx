@@ -17,6 +17,7 @@ import RecentlyResolvedPage from './pages/RecentlyResolvedPage.jsx';
 import MyPredictionsPage from './pages/MyPredictionsPage.jsx';
 import GuidePage from './pages/GuidePage.jsx';
 import MarketDetailPage from './pages/MarketDetailPage.jsx';
+import AdminResolvePage from './pages/AdminResolvePage.jsx'; // <-- ADD THIS IMPORT
 
 function App() {
   return (
@@ -35,7 +36,8 @@ function App() {
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/guide" element={<GuidePage />} />
 
-              {/* All other routes (Tip Jar, Blog, etc.) have been removed. */}
+              {/* The new admin route */}
+              <Route path="/admin-resolve" element={<AdminResolvePage />} /> {/* <-- ADD THIS ROUTE */}
               
             </Routes>
           </main>
