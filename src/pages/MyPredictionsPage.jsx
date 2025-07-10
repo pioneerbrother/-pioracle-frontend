@@ -11,6 +11,7 @@ import {
     MarketState as MarketStateEnumFromUtil 
 } from '../utils/marketutils.js'; // Ensure this path and filename are correct
 import './PredictionMarketsListPage.css'; // You can reuse styles or create specific ones
+import { WalletContext } from '../contexts/WalletContext.jsx';
 
 const MarketState = MarketStateEnumFromUtil; // Alias for clarity
 
