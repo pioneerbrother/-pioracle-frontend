@@ -3,22 +3,20 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-// Import the provider from its original location
+// Import the provider
 import { WalletProvider } from './pages/WalletProvider.jsx'; 
 
+// Import common components
 import Header from './components/common/Header.jsx'; 
 import Footer from './components/common/Footer.jsx';
 
-// Import all your page components
+// Import ONLY the page components that still exist
 import PredictionMarketsListPage from './pages/PredictionMarketsListPage.jsx';
 import CreateMarketPage from './pages/CreateMarketPage.jsx';
 import RecentlyResolvedPage from './pages/RecentlyResolvedPage.jsx';
 import MyPredictionsPage from './pages/MyPredictionsPage.jsx';
 import GuidePage from './pages/GuidePage.jsx';
-import TippingPage from './pages/TippingPage.jsx';
 import MarketDetailPage from './pages/MarketDetailPage.jsx';
-import BlogPage from './pages/BlogPage.jsx';
-import BlogPostDetail from './pages/BlogPostDetail.jsx'; // The simple detail page
 
 function App() {
   return (
@@ -28,6 +26,7 @@ function App() {
           <Header />
           <main>
             <Routes>
+              {/* Core Prediction Market Routes */}
               <Route path="/" element={<PredictionMarketsListPage />} />
               <Route path="/predictions" element={<PredictionMarketsListPage />} />
               <Route path="/predictions/:marketId" element={<MarketDetailPage />} />
@@ -35,11 +34,8 @@ function App() {
               <Route path="/recently-resolved" element={<RecentlyResolvedPage />} />
               <Route path="/my-predictions" element={<MyPredictionsPage />} />
               <Route path="/guide" element={<GuidePage />} />
-              <Route path="/tip-jar" element={<TippingPage />} />
 
-              {/* The original, simple blog routing */}
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/blog/:slug" element={<BlogPostDetail />} />
+              {/* All other routes (Tip Jar, Blog, etc.) have been removed. */}
               
             </Routes>
           </main>
