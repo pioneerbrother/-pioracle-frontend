@@ -3,6 +3,8 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
+// At the top of src/pages/WalletProvider.jsx
+import { WalletContext } from './WalletContext.jsx'; // Adjust path if needed
 
 import {
     getAllSupportedChainsForModal,
@@ -12,7 +14,6 @@ import {
 
 import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
 
-export const WalletContext = createContext(null);
 
 const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
 if (!WALLETCONNECT_PROJECT_ID) {

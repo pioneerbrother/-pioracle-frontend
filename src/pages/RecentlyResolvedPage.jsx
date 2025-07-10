@@ -2,32 +2,39 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
+// --- This import must match the one in your working MyPredictionsPage.jsx ---
+import { WalletContext } from '../contexts/WalletContext'; 
+
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { getMarketDisplayProperties, MarketState } from '../utils/marketutils.js';
-import './PredictionMarketsListPage.css'; // Reuse the same CSS for the grid layout
+import './PredictionMarketsListPage.css';
 
 function RecentlyResolvedPage() {
-    const { contract } = useContext(WalletContext);
+    // --- Using the same pattern as your working page ---
+    const { predictionMarketContract, chainId } = useContext(WalletContext);
+    
     const [allMarkets, setAllMarkets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // This useEffect fetches ALL markets. We will filter them later with useMemo.
     useEffect(() => {
-        if (!contract) {
-            setIsLoading(true);
+        // --- This logic is now safer, just like your working page ---
+        if (!predictionMarketContract) {
+            setIsLoading(true); // Keep loading until the contract is ready
             return;
         }
 
         const fetchAndProcessData = async () => {
             setIsLoading(true);
             setError(null);
+            console.log("RecentlyResolvedPage: Starting to fetch all markets...");
 
             try {
-                const nextMarketIdBN = await contract.nextMarketId();
+                const nextMarketIdBN = await predictionMarketContract.nextMarketId();
                 const nextMarketIdNum = nextMarketIdBN.toNumber();
+                console.log(`RecentlyResolvedPage: Found ${nextMarketIdNum} total markets.`);
                 if (nextMarketIdNum === 0) {
                     setAllMarkets([]);
                     setIsLoading(false);
@@ -36,47 +43,28 @@ function RecentlyResolvedPage() {
 
                 const marketPromises = [];
                 for (let id = 0; id < nextMarketIdNum; id++) {
-                    marketPromises.push(contract.getMarketStaticDetails(id));
+                    marketPromises.push(predictionMarketContract.getMarketStaticDetails(id));
                 }
                 const allRawDetails = await Promise.all(marketPromises);
+                console.log("RecentlyResolvedPage: Fetched raw details.", allRawDetails);
 
-                // Process the raw data into a clean, display-ready format
                 const processedMarkets = allRawDetails
-                    .map(rawDetails => {
-                        if (!rawDetails || rawDetails.exists !== true) return null;
-                        
-                        const intermediateMarket = {
-                            id: rawDetails[0].toString(),
-                            assetSymbol: rawDetails[1],
-                            priceFeedAddress: rawDetails[2],
-                            targetPrice: rawDetails[3].toString(),
-                            expiryTimestamp: Number(rawDetails[4]),
-                            resolutionTimestamp: Number(rawDetails[5]),
-                            totalStakedYesNet: rawDetails[6].toString(),
-                            totalStakedNoNet: rawDetails[7].toString(),
-                            state: Number(rawDetails[8]),
-                            actualOutcomeValue: rawDetails[9].toString(),
-                            exists: rawDetails[10],
-                            isEventMarket: rawDetails[11],
-                            creationTimestamp: Number(rawDetails[12]),
-                        };
-                        return getMarketDisplayProperties(intermediateMarket);
-                    })
-                    .filter(market => market !== null);
+                    .filter(rawDetails => rawDetails && rawDetails.exists === true)
+                    .map(rawDetails => getMarketDisplayProperties(rawDetails));
 
+                console.log("RecentlyResolvedPage: Processed markets.", processedMarkets);
                 setAllMarkets(processedMarkets);
             } catch (err) {
                 console.error("RecentlyResolvedPage: Failed to fetch markets:", err);
-                setError(err.message || "An error occurred.");
+                setError(err.message || "An error occurred fetching market data.");
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchAndProcessData();
-    }, [contract]);
+    }, [predictionMarketContract]); // Re-run only when the contract object changes
 
-    // This useMemo now handles all the filtering and sorting for this specific page
     const resolvedMarketsToDisplay = useMemo(() => {
         if (!allMarkets || allMarkets.length === 0) return [];
         
@@ -91,14 +79,13 @@ function RecentlyResolvedPage() {
                 resolvedStates.includes(market.state) && 
                 market.resolutionTimestamp >= oneMonthAgoTimestamp
             )
-            .sort((a, b) => b.resolutionTimestamp - a.resolutionTimestamp); // Sort by most recently resolved
+            .sort((a, b) => b.resolutionTimestamp - a.resolutionTimestamp);
     }, [allMarkets]);
-
 
     return (
         <div className="page-container prediction-list-page">
             <div className="market-list-header">
-                 <h2 className="section-title">Recently Resolved Markets</h2>
+                 <h2 className="section-title">Recently Resolved Markets (Chain ID: {chainId || 'N/A'})</h2>
                  <Link to="/predictions" className="button secondary">View Open Markets</Link>
             </div>
 
