@@ -10,7 +10,7 @@ import {
     getTargetChainIdHex,
 } from '../config/contractConfig';
 
-import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json'; // Ensure this ABI is up-to-date
+import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
 
 export const WalletContext = createContext(null);
 
@@ -19,13 +19,11 @@ if (!WALLETCONNECT_PROJECT_ID) {
     throw new Error("VITE_WALLETCONNECT_PROJECT_ID is not set in your .env file");
 }
 
-// --- THIS IS THE FIX: Restore the full, correct configuration ---
 const web3Modal = createWeb3Modal({
     ethersConfig: { metadata: { name: "PiOracle", description: "Decentralized Prediction Markets", url: "https://pioracle.online" } },
     chains: getAllSupportedChainsForModal(),
     projectId: WALLETCONNECT_PROJECT_ID,
 });
-// --- END OF FIX ---
 
 const initialState = {
     provider: null,
@@ -102,7 +100,14 @@ export function WalletProvider({ children }) {
     }, [setupReadOnlyState, setupState]);
 
     const connectWallet = useCallback(() => { web3Modal.open(); }, []);
-    const disconnectWallet = useCallback(() => { web3Modal.disconnect(); }, []);
+
+    // --- THIS IS THE FIX ---
+    const disconnectWallet = useCallback(async () => {
+        await web3Modal.clearCachedProvider();
+        // After clearing the cache, we reset to the initial, non-connected state.
+        setupReadOnlyState();
+    }, [setupReadOnlyState]);
+    // --- END OF FIX ---
 
     const contextValue = useMemo(() => ({
         ...connectionState,
