@@ -101,13 +101,16 @@ export function WalletProvider({ children }) {
 
     const connectWallet = useCallback(() => { web3Modal.open(); }, []);
 
-    // --- THIS IS THE FIX ---
-    const disconnectWallet = useCallback(async () => {
-        await web3Modal.clearCachedProvider();
-        // After clearing the cache, we reset to the initial, non-connected state.
-        setupReadOnlyState();
-    }, [setupReadOnlyState]);
-    // --- END OF FIX ---
+   const disconnectWallet = useCallback(() => {
+    // Manually reset the state to the disconnected (read-only) mode.
+    // The Web3Modal's internal state will handle the rest.
+    setupReadOnlyState();
+    // Also clear the cached provider to prevent auto-reconnection on next visit.
+    localStorage.removeItem("wagmi.cached-provider"); 
+    localStorage.removeItem("WEB3_CONNECT_CACHED_PROVIDER"); // Another common key
+    // You can optionally refresh to be 100% sure
+    window.location.reload(); 
+}, [setupReadOnlyState]);
 
     const contextValue = useMemo(() => ({
         ...connectionState,
