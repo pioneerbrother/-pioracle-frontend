@@ -4,7 +4,7 @@ import { WalletContext } from './WalletProvider.jsx';
 import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
 
 const OLD_CONTRACTS = {
-    137: '0x...YOUR_OLD_POLYGON_CONTRACT_ADDRESS',
+    137: '0x1F52a81DF45d8098E676285a436e51a49dC145BC',
     56: '0x3D93FD642837e61Ef34D6808cE0b29Ec3e15d1C8'
 };
 
