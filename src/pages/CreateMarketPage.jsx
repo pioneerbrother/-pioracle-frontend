@@ -3,7 +3,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers'; // This should be your v5 import
 // THIS IS THE NEW, CORRECT PATH
-import { WalletContext } from '../../contexts/WalletContext.jsx';
+import { WalletContext } from '../contexts/WalletContext.jsx';
 
 import ConnectWalletButton from '../components/common/ConnectWalletButton';
 import LoadingSpinner from '../components/common/LoadingSpinner';
