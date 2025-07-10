@@ -1,7 +1,7 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { ethers } from 'ethers';
 // At the top of src/pages/RecentlyResolvedPage.jsx
-import { WalletContext } from './WalletContext.jsx'; // Adjust path if needed
+import { WalletContext } from '../contexts/WalletContext.jsx'
 import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
 
 const OLD_CONTRACTS = {
