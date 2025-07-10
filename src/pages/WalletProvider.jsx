@@ -4,7 +4,8 @@ import React, { createContext, useState, useEffect, useCallback, useMemo } from 
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 // At the top of src/pages/WalletProvider.jsx
-import { WalletContext } from './WalletContext.jsx'; // Adjust path if needed
+import { WalletContext } from '../contexts/WalletContext.jsx'
+
 
 import {
     getAllSupportedChainsForModal,
