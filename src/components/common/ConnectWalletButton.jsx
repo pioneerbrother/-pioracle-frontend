@@ -4,7 +4,8 @@ import React, { useContext } from 'react';
 
 // --- THIS IS THE CORRECTED IMPORT PATH ---
 // It goes up two directories from `/common` and `/components` to `src/`, then into `/pages`.
-import { WalletContext } from '../../pages/WalletProvider';
+// THIS IS THE NEW, CORRECT PATH
+import { WalletContext } from '../../contexts/WalletContext.jsx';
 // --- END OF CORRECTION ---
 
 import './ConnectWalletButton.css'; // Assuming this file exists and you have styles for it.
