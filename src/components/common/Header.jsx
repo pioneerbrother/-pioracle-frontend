@@ -39,24 +39,21 @@ function Header() {
         closeMobileMenu();
     }, [location]);
 
-    const navLinks = (
-        <>
-            <NavLink to="/predictions" className={navLinkClass} onClick={closeMobileMenu}>Open Markets</NavLink>
-            <NavLink to="/recently-resolved" className={navLinkClass} onClick={closeMobileMenu}>Recently Resolved</NavLink>
-            {walletAddress && (
-                <NavLink to="/my-predictions" className={navLinkClass} onClick={closeMobileMenu}>My Predictions</NavLink>
-            )}
-            <NavLink to="/create-market" className={specialNavLinkClass} onClick={closeMobileMenu}>Create Market</NavLink>
-            
-            {/* --- ADDED TIP JAR LINK --- */}
-            <NavLink to="/tip-jar" className={navLinkClass} onClick={closeMobileMenu}>Tip Jar</NavLink>
-            {/* --- END OF ADDED LINK --- */}
-
-            <NavLink to="/blog" className={navLinkClass} onClick={closeMobileMenu}>Blog</NavLink>
-            <NavLink to="/guide" className={navLinkClass} onClick={closeMobileMenu}>Guide / How It Works</NavLink>
-        </>
-    );
-
+   // --- THIS IS THE NEW, SIMPLIFIED CODE ---
+const navLinks = (
+    <>
+        <NavLink to="/predictions" className={navLinkClass} onClick={closeMobileMenu}>Open Markets</NavLink>
+        <NavLink to="/recently-resolved" className={navLinkClass} onClick={closeMobileMenu}>Recently Resolved</NavLink>
+        {walletAddress && (
+            <NavLink to="/my-predictions" className={navLinkClass} onClick={closeMobileMenu}>My Predictions</NavLink>
+        )}
+        <NavLink to="/guide" className={navLinkClass} onClick={closeMobileMenu}>Guide / How It Works</NavLink>
+        
+        {/* The "Create Market" link is now a special button, so we handle it separately */}
+        {/* but we can keep it here if the design requires it for mobile */}
+        <NavLink to="/create-market" className={specialNavLinkClass} onClick={closeMobileMenu}>Create Market</NavLink>
+    </>
+);
     return (
         <header className="app-header">
             <div className="header-content">

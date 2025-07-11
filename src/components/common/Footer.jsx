@@ -21,7 +21,7 @@ function Footer() {
                     <ul>
                         <li><Link to="/predictions">Open Markets</Link></li>
                         <li><Link to="/create-market">Create a Market</Link></li>
-                        <li><Link to="/blog">Our Blog</Link></li>
+                        
                         <li><Link to="/guide">How It Works</Link></li>
                     </ul>
                 </div>
