@@ -7,11 +7,8 @@ import { createWeb3Modal } from '@web3modal/ethers5';
 import { WalletContext } from '../contexts/WalletContext.jsx'
 
 
-import {
-    getAllSupportedChainsForModal,
-    getConfigForChainId,
-    getTargetChainIdHex,
-} from '../config/contractConfig';
+
+
 
 import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
 
