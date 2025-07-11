@@ -5,7 +5,11 @@ import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 // At the top of src/pages/WalletProvider.jsx
 import { WalletContext } from '../contexts/WalletContext.jsx'
-
+// THIS IS THE CORRECTED IMPORT
+import { 
+    getConfigForChainId, // We still need this one
+    web3Modal // And we now import the modal instance
+} from '../config/contractConfig.js'; 
 
 
 
