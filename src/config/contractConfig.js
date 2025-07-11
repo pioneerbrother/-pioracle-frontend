@@ -1,6 +1,7 @@
 // src/config/contractConfig.js
 
 import PREDICTION_MARKET_P2P_ABI_JSON from './abis/PredictionMarketP2P.json';
+import { createWeb3Modal } from '@web3modal/ethers5'; 
 
 const chains = {
     bsc_testnet: {
@@ -51,3 +52,14 @@ const chains = {
 const VITE_NETWORK_TARGET = import.meta.env.VITE_NETWORK_TARGET || 'bsc_testnet';
 const defaultConfig = chains[VITE_NETWORK_TARGET];
 // ... and so on ...
+
+if (!WALLETCONNECT_PROJECT_ID) {
+    throw new Error("[contractConfig] VITE_WALLETCONNECT_PROJECT_ID is not set in your .env file");
+}
+
+// Create and export the web3Modal instance directly from the config file
+export const web3Modal = createWeb3Modal({
+    ethersConfig: { metadata: { name: "PiOracle", description: "Decentralized Prediction Markets", url: "https://pioracle.online" } },
+    chains: getAllSupportedChainsForModal(), // It can safely call its own function
+    projectId: WALLETCONNECT_PROJECT_ID,
+});
