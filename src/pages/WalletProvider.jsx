@@ -1,6 +1,6 @@
 // src/pages/WalletProvider.jsx
 
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react' ;
 import { ethers } from 'ethers';
 import { createWeb3Modal } from '@web3modal/ethers5';
 // At the top of src/pages/WalletProvider.jsx

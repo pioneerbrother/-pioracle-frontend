@@ -35,7 +35,7 @@ const chains = {
 
         // --- THIS IS THE FIX ---
         // We are temporarily ignoring the .env variable and hardcoding the OLD address.
-        predictionMarketContractAddress: '0x1F52a81DF45d8098E676285a436e51a49dC145BC',
+        predictionMarketContractAddress: '0x1F52a81DF45d8098E676285a436e51a49dC145BC' ,
 
         // --- These other addresses are likely for features we removed. We leave them as is. ---
         premiumContentContractAddress: "0x7EF0D2c97E28f6f91F17BD406CAf8ab4C01051DD",
