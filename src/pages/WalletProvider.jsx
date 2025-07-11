@@ -1,33 +1,20 @@
 // src/pages/WalletProvider.jsx
 
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react' ;
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal } from '@web3modal/ethers5';
-// At the top of src/pages/WalletProvider.jsx
-import { WalletContext } from '../contexts/WalletContext.jsx'
-// THIS IS THE CORRECTED IMPORT
-import { 
-    getConfigForChainId, // We still need this one
-    web3Modal // And we now import the modal instance
-} from '../config/contractConfig.js'; 
 
+// --- THIS IS THE MAIN FIX ---
+// We no longer import multiple functions. We only import the finished `web3Modal` instance
+// and one helper function that we still need. This solves the build error.
+import { web3Modal, getConfigForChainId } from '../config/contractConfig.js'; 
 
+// This import path must be correct for your project structure
+import { WalletContext } from '../contexts/WalletContext.jsx';
 
-
+// We still need the ABI for creating contract instances
 import PredictionMarketABI from '../config/abis/PredictionMarketP2P.json';
 
-
-const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
-if (!WALLETCONNECT_PROJECT_ID) {
-    throw new Error("VITE_WALLETCONNECT_PROJECT_ID is not set in your .env file");
-}
-
-const web3Modal = createWeb3Modal({
-    ethersConfig: { metadata: { name: "PiOracle", description: "Decentralized Prediction Markets", url: "https://pioracle.online" } },
-    chains: getAllSupportedChainsForModal(),
-    projectId: WALLETCONNECT_PROJECT_ID,
-});
-
+// The initial state for our context when no wallet is connected
 const initialState = {
     provider: null,
     signer: null,
@@ -40,30 +27,23 @@ export function WalletProvider({ children }) {
     const [isInitialized, setIsInitialized] = useState(false);
     const [connectionState, setConnectionState] = useState(initialState);
 
+    // This function sets up the ethers provider and contract instance.
+    // It's called for both read-only and connected states.
     const setupState = useCallback(async (provider, chainId, signer = null, address = null) => {
-        if (provider && provider.getNetwork) {
-            try {
-                const network = await provider.getNetwork();
-                if (network.chainId !== 1) { network.ensAddress = null; }
-            } catch (e) { console.error("Could not get network from provider", e); }
-        }
-
         const chainConfig = getConfigForChainId(chainId);
-        const effectiveSignerOrProvider = signer || provider;
         let predictionMarketContract = null;
 
-        const contractAddress = chainConfig?.predictionMarketContractAddress;
-
-        if (contractAddress && effectiveSignerOrProvider) {
+        if (chainConfig && chainConfig.predictionMarketContractAddress) {
             try {
-                const predictionMarketAbi = PredictionMarketABI.abi || PredictionMarketABI;
-                predictionMarketContract = new ethers.Contract(contractAddress, predictionMarketAbi, effectiveSignerOrProvider);
-                console.log(`Successfully created contract instance for chain ${chainId} at address ${contractAddress}`);
+                const effectiveSignerOrProvider = signer || provider;
+                const abi = PredictionMarketABI.abi || PredictionMarketABI;
+                predictionMarketContract = new ethers.Contract(chainConfig.predictionMarketContractAddress, abi, effectiveSignerOrProvider);
+                console.log(`WalletProvider: Successfully created contract instance for chain ${chainId}.`);
             } catch (e) {
-                console.error(`Failed to create contract instance for chain ${chainId}`, e);
+                console.error(`WalletProvider: Failed to create contract instance for chain ${chainId}.`, e);
             }
         } else {
-            console.log(`No PredictionMarket contract address configured for chain ${chainId}`);
+            console.log(`WalletProvider: No contract address configured for chain ${chainId}.`);
         }
 
         setConnectionState({
@@ -76,45 +56,57 @@ export function WalletProvider({ children }) {
         setIsInitialized(true);
     }, []);
 
+    // Sets up a read-only provider for when no wallet is connected
     const setupReadOnlyState = useCallback(() => {
-        const defaultChainId = parseInt(getTargetChainIdHex(), 16);
+        // We default to BNB mainnet for the read-only view
+        const defaultChainId = 56; 
         const chainConfig = getConfigForChainId(defaultChainId);
-        if (chainConfig?.rpcUrl) {
+        
+        if (chainConfig && chainConfig.rpcUrl) {
             const readOnlyProvider = new ethers.providers.StaticJsonRpcProvider(chainConfig.rpcUrl, defaultChainId);
             setupState(readOnlyProvider, defaultChainId);
         } else {
+            // Fallback if something is wrong with the config
             setConnectionState({ ...initialState, chainId: defaultChainId });
             setIsInitialized(true);
         }
     }, [setupState]);
 
+    // This effect runs once to subscribe to Web3Modal's state changes
     useEffect(() => {
         const unsubscribe = web3Modal.subscribeProvider(async ({ provider, address, chainId, isConnected }) => {
             if (isConnected && provider && address && chainId) {
+                // Wallet is connected
+                console.log("WalletProvider: Wallet connected.", { address, chainId });
                 const web3Provider = new ethers.providers.Web3Provider(provider, 'any');
                 const currentSigner = web3Provider.getSigner();
                 await setupState(web3Provider, chainId, currentSigner, address);
             } else if (!isConnected) {
+                // Wallet disconnected
+                console.log("WalletProvider: Wallet disconnected. Setting up read-only state.");
                 setupReadOnlyState();
             }
         });
+
+        // Initialize with a read-only state on first load
         setupReadOnlyState();
-        return () => unsubscribe();
+
+        // Cleanup function to unsubscribe when the component unmounts
+        return () => {
+            unsubscribe();
+        };
     }, [setupReadOnlyState, setupState]);
 
     const connectWallet = useCallback(() => { web3Modal.open(); }, []);
 
-   const disconnectWallet = useCallback(() => {
-    // Manually reset the state to the disconnected (read-only) mode.
-    // The Web3Modal's internal state will handle the rest.
-    setupReadOnlyState();
-    // Also clear the cached provider to prevent auto-reconnection on next visit.
-    localStorage.removeItem("wagmi.cached-provider"); 
-    localStorage.removeItem("WEB3_CONNECT_CACHED_PROVIDER"); // Another common key
-    // You can optionally refresh to be 100% sure
-    window.location.reload(); 
-}, [setupReadOnlyState]);
+    const disconnectWallet = useCallback(() => {
+        // The modern way to disconnect is to just clear the cache and let the subscription handle the state change.
+        localStorage.removeItem("wagmi.cached-provider");
+        localStorage.removeItem("WEB3_CONNECT_CACHED_PROVIDER");
+        window.location.reload(); // The simplest way to ensure a full state reset
+    }, []);
 
+    // The value that will be provided to all consuming components
     const contextValue = useMemo(() => ({
         ...connectionState,
         isInitialized,
@@ -125,8 +117,8 @@ export function WalletProvider({ children }) {
     return (
         <WalletContext.Provider value={contextValue}>
             {isInitialized ? children : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '1.2rem', color: '#ccc' }}>
-                    Initializing PiOracle...
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                    Initializing Application...
                 </div>
             )}
         </WalletContext.Provider>
