@@ -79,21 +79,23 @@ function PredictionMarketsListPage() {
         return markets.filter(m => m.state === MarketState.Open || m.state === MarketState.Resolvable);
     }, [markets]);
 
-    const renderContent = () => {
-        switch (pageState) {
-            case 'initializing':
-            case 'loading':
-                return <LoadingSpinner />;
-            case 'error':
-                return <ErrorMessage message={errorMessage} />;
-            case 'success':
-                if (openMarkets.length > 0) {
-                    return (
-                        <div className="markets-grid">
-                            {openMarkets.map(market => (
-                                <MarketCard key={market.id} market={market} />
-                            ))}
-                        </div>
+ const renderContent = () => {
+    switch (pageState) {
+        case 'initializing':
+        case 'loading':
+            return <LoadingSpinner />;
+        case 'error':
+            return <ErrorMessage message={errorMessage} />;
+        case 'success':
+            if (openMarkets.length > 0) {
+                // --- THIS IS THE FIX ---
+                // We wrap the market cards in a div with the correct class name.
+                return (
+                    <div className="market-grid"> 
+                        {openMarkets.map(market => (
+                            <MarketCard key={market.id} market={market} />
+                        ))}
+                    </div>
                     );
                 }
                 return <p className="no-markets-message">No open markets found on this network.</p>;
