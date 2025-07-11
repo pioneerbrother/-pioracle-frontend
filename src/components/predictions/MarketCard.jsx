@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 // We no longer import `getMarketIcon` because the icon path will come from the `market` prop.
+
 import './MarketCard.css';
 
 function MarketCard({ market }) {
