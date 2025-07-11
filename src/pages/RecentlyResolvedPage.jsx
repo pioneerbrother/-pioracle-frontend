@@ -2,17 +2,16 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-// --- This import must match the one in your working MyPredictionsPage.jsx ---
+// This path must be correct for your project structure
 import { WalletContext } from '../contexts/WalletContext'; 
 
 import MarketCard from '../components/predictions/MarketCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { getMarketDisplayProperties, MarketState } from '../utils/marketutils.js';
-import './PredictionMarketsListPage.css';
+import './PredictionMarketsListPage.css'; // Reusing the same CSS
 
 function RecentlyResolvedPage() {
-    // --- Using the same pattern as your working page ---
     const { predictionMarketContract, chainId } = useContext(WalletContext);
     
     const [allMarkets, setAllMarkets] = useState([]);
@@ -20,40 +19,41 @@ function RecentlyResolvedPage() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // --- This logic is now safer, just like your working page ---
+        // Guard clause: Don't do anything until the contract is ready.
         if (!predictionMarketContract) {
-            setIsLoading(true); // Keep loading until the contract is ready
+            setIsLoading(true); // Ensure loading spinner shows
             return;
         }
 
         const fetchAndProcessData = async () => {
             setIsLoading(true);
             setError(null);
-            console.log("RecentlyResolvedPage: Starting to fetch all markets...");
+            console.log(`RecentlyResolvedPage: Starting fetch on chain ${chainId}...`);
 
             try {
                 const nextMarketIdBN = await predictionMarketContract.nextMarketId();
-                const nextMarketIdNum = nextMarketIdBN.toNumber();
-                console.log(`RecentlyResolvedPage: Found ${nextMarketIdNum} total markets.`);
-                if (nextMarketIdNum === 0) {
+                const totalMarkets = nextMarketIdBN.toNumber();
+
+                if (totalMarkets === 0) {
                     setAllMarkets([]);
                     setIsLoading(false);
                     return;
                 }
 
                 const marketPromises = [];
-                for (let id = 0; id < nextMarketIdNum; id++) {
-                    marketPromises.push(predictionMarketContract.getMarketStaticDetails(id));
+                // Fetch newest markets first by iterating backwards
+                for (let i = 0; i < totalMarkets; i++) {
+                    const idToFetch = totalMarkets - 1 - i;
+                    marketPromises.push(predictionMarketContract.getMarketStaticDetails(idToFetch));
                 }
                 const allRawDetails = await Promise.all(marketPromises);
-                console.log("RecentlyResolvedPage: Fetched raw details.", allRawDetails);
 
                 const processedMarkets = allRawDetails
                     .filter(rawDetails => rawDetails && rawDetails.exists === true)
                     .map(rawDetails => getMarketDisplayProperties(rawDetails));
 
-                console.log("RecentlyResolvedPage: Processed markets.", processedMarkets);
                 setAllMarkets(processedMarkets);
+
             } catch (err) {
                 console.error("RecentlyResolvedPage: Failed to fetch markets:", err);
                 setError(err.message || "An error occurred fetching market data.");
@@ -63,7 +63,8 @@ function RecentlyResolvedPage() {
         };
 
         fetchAndProcessData();
-    }, [predictionMarketContract]); // Re-run only when the contract object changes
+    // This stable dependency array prevents infinite loops.
+    }, [predictionMarketContract, chainId]);
 
     const resolvedMarketsToDisplay = useMemo(() => {
         if (!allMarkets || allMarkets.length === 0) return [];
@@ -74,6 +75,7 @@ function RecentlyResolvedPage() {
             MarketState.ResolvedEarly_YesWon, MarketState.ResolvedEarly_NoWon
         ];
 
+        // This filtering logic is excellent. No changes needed.
         return allMarkets
             .filter(market => 
                 resolvedStates.includes(market.state) && 
@@ -82,6 +84,7 @@ function RecentlyResolvedPage() {
             .sort((a, b) => b.resolutionTimestamp - a.resolutionTimestamp);
     }, [allMarkets]);
 
+    // The JSX is already perfect, including the `market-grid` class. No changes needed.
     return (
         <div className="page-container prediction-list-page">
             <div className="market-list-header">
@@ -90,7 +93,7 @@ function RecentlyResolvedPage() {
             </div>
 
             {isLoading && <LoadingSpinner message="Loading recently resolved markets..." />}
-            {error && <ErrorMessage title="Error Loading Markets" message={error} />}
+            {error && <ErrorMessage title="Error Loading Markets" message={error} onRetry={fetchAndProcessData} />}
             
             {!isLoading && !error && resolvedMarketsToDisplay.length === 0 && (
                 <div className="no-markets-message">
